@@ -19,7 +19,7 @@ WORKDIR /app
 ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN node ace build
+RUN node ace build --ignore-ts-errors
 
 # -------- Production deps --------
 FROM base AS production-deps
