@@ -1,0 +1,16 @@
+node_modules
+build
+tmp
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+tests
+coverage
+.vscode
+.idea
+*.md
+.DS_Store
+storage/uploads/*
+!storage/uploads/.gitkeep
