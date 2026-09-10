@@ -311,5 +311,12 @@ router
       .get('cities', [controllers.Cities, 'index'])
       .use([middleware.auth(), middleware.superAdmin()])
 
+    /**
+     * Vehicle types catalog
+     */
+    router
+      .get('vehicle-types', [controllers.VehicleTypes, 'index'])
+      .use([middleware.auth()])
+
   })
   .prefix('/api/v1')

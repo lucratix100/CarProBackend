@@ -670,3 +670,18 @@ export class VehicleSchema extends BaseModel {
   @column()
   declare year: number | null
 }
+
+export class VehicleTypeSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'isActive', 'name', 'updatedAt'] as const
+  $columns = VehicleTypeSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare isActive: boolean
+  @column()
+  declare name: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}

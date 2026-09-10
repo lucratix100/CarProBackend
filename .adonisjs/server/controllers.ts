@@ -30,4 +30,5 @@ export const controllers = {
   Settings: () => import('#controllers/settings_controller'),
   VehicleExpenses: () => import('#controllers/vehicle_expenses_controller'),
   Vehicles: () => import('#controllers/vehicles_controller'),
+  VehicleTypes: () => import('#controllers/vehicle_types_controller'),
 }
