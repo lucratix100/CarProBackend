@@ -522,7 +522,7 @@ export class SettingSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['agencyId', 'createdAt', 'email', 'fullName', 'id', 'invitationExpiresAt', 'invitationToken', 'password', 'passwordSetAt', 'role', 'status', 'termsAcceptedAt', 'termsAcceptedIp', 'termsVersion', 'updatedAt'] as const
+  static $columns = ['agencyId', 'createdAt', 'email', 'fullName', 'id', 'invitationExpiresAt', 'invitationToken', 'password', 'passwordSetAt', 'phone', 'role', 'status', 'termsAcceptedAt', 'termsAcceptedIp', 'termsVersion', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column()
   declare agencyId: number | null
@@ -542,6 +542,8 @@ export class UserSchema extends BaseModel {
   declare password: string
   @column.dateTime()
   declare passwordSetAt: DateTime | null
+  @column()
+  declare phone: string | null
   @column()
   declare role: string
   @column()

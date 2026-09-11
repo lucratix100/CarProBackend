@@ -8,7 +8,7 @@ export const PLATFORM_TERMS = {
   version: CURRENT_PLATFORM_TERMS_VERSION,
   title: 'Conditions d’utilisation et politique de confidentialité — Profil Car Service',
   companyName: 'Profil Car Service',
-  body: `En créant votre compte administrateur d’agence sur Profil Car Service (PCS), vous acceptez les conditions suivantes.
+  body: `En créant votre compte gérant d’agence sur Profil Car Service (PCS), vous acceptez les conditions suivantes.
 
 ═══════════════════════════════════════
 A. CONDITIONS GÉNÉRALES D’UTILISATION

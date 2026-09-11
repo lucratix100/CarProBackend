@@ -13,6 +13,7 @@ type InviteAdminPayload = {
   agencyId: number
   fullName: string
   email: string
+  phone: string
 }
 
 export default class AdminInvitationService {
@@ -30,6 +31,7 @@ export default class AdminInvitationService {
         {
           fullName: payload.fullName,
           email: payload.email.toLowerCase(),
+          phone: payload.phone.trim(),
           password: temporaryPassword,
           role: 'admin',
           status: 'invited',

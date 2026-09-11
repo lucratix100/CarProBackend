@@ -44,7 +44,7 @@ export default class InvitationsController {
       expiresAt: adminUser.invitationExpiresAt,
       terms: PLATFORM_TERMS,
       message:
-        'Définissez un mot de passe fort et acceptez les conditions de la plateforme pour activer votre compte administrateur d’agence.',
+        'Définissez un mot de passe fort et acceptez les conditions de la plateforme pour activer votre compte gérant d’agence.',
     })
   }
 

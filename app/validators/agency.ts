@@ -15,6 +15,7 @@ export const createAgencyValidator = vine.create({
   cityId: vine.number().positive(),
   adminFullName: vine.string().trim().minLength(2).maxLength(120),
   adminEmail: email().unique({ table: 'users', column: 'email' }),
+  adminPhone: vine.string().trim().minLength(5).maxLength(40),
 })
 
 export const updateAgencyValidator = vine.create({
@@ -30,4 +31,5 @@ export const updateAgencyValidator = vine.create({
 export const inviteAgencyAdminValidator = vine.create({
   fullName: vine.string().trim().minLength(2).maxLength(120),
   email: email().unique({ table: 'users', column: 'email' }),
+  phone: vine.string().trim().minLength(5).maxLength(40),
 })

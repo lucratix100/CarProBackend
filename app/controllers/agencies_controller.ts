@@ -93,6 +93,7 @@ export default class AgenciesController {
       agencyId: agency.id,
       fullName: payload.adminFullName,
       email: payload.adminEmail,
+      phone: payload.adminPhone,
     })
 
     return response.created(
@@ -100,7 +101,7 @@ export default class AgenciesController {
         agency: AgencyTransformer.transform(agency),
         admin: UserTransformer.transform(user),
         message:
-          'Agence créée. Un email d’invitation a été envoyé (vérifier aussi les indésirables).',
+          'Agence créée. Un email d’invitation a été envoyé au gérant (vérifier aussi les indésirables).',
       })
     )
   }
@@ -151,7 +152,7 @@ export default class AgenciesController {
   async inviteAdmin({ params, request, response, serialize }: HttpContext) {
     const agency = await Agency.findOrFail(params.id)
     if (!agency.isActive) {
-      throw new Exception('Impossible d’inviter un admin sur une agence désactivée.', {
+      throw new Exception('Impossible d’inviter un gérant sur une agence désactivée.', {
         status: 422,
         code: 'E_AGENCY_INACTIVE',
       })
@@ -163,13 +164,14 @@ export default class AgenciesController {
       agencyId: agency.id,
       fullName: payload.fullName,
       email: payload.email,
+      phone: payload.phone,
     })
 
     return response.created(
       await serialize({
         admin: UserTransformer.transform(user),
         message:
-          'Invitation envoyée par email à l’administrateur. Vérifiez aussi les indésirables.',
+          'Invitation envoyée par email au gérant. Vérifiez aussi les indésirables.',
       })
     )
   }
