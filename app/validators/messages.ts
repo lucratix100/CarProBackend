@@ -97,6 +97,9 @@ export const validationMessages: ValidationMessages = {
   'phone.required': 'Veuillez saisir le téléphone.',
   'email.email': 'L’adresse email n’est pas valide.',
   'password.minLength': 'Le mot de passe doit contenir au moins {{ min }} caractères.',
+  'password.regex':
+    'Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
+  'acceptTerms.accepted': 'Vous devez accepter les conditions pour continuer.',
 }
 
 export const frenchMessagesProvider = new SimpleMessagesProvider(

@@ -31,7 +31,7 @@ export default class AdminInvitationNotification extends BaseMail {
     <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">Profil Car Service</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">Activez votre accès administrateur</h1>
     <p>Bonjour ${escapeHtml(name)},</p>
-    <p>Vous êtes invité(e) à administrer l’agence <strong>${escapeHtml(agency)}</strong>. Définissez votre mot de passe pour accéder à la console de gestion.</p>
+    <p>Vous êtes invité(e) à administrer l’agence <strong>${escapeHtml(agency)}</strong>. Définissez un mot de passe fort et acceptez les conditions de la plateforme pour accéder à la console de gestion.</p>
     <p style="margin: 28px 0;">
       <a href="${this.activationUrl}" style="display: inline-block; background: #0f4a42; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
         Activer mon compte
@@ -49,7 +49,7 @@ export default class AdminInvitationNotification extends BaseMail {
       `Bonjour ${name},`,
       '',
       `Vous êtes invité(e) à administrer l’agence « ${agency} ».`,
-      'Activez votre compte administrateur via ce lien :',
+      'Activez votre compte (mot de passe fort + acceptation des CGU) via ce lien :',
       this.activationUrl,
       '',
       'Ce lien expire dans 7 jours.',

@@ -1,7 +1,14 @@
 import vine from '@vinejs/vine'
 
 const email = () => vine.string().email().maxLength(254).toLowerCase()
-const password = () => vine.string().minLength(8).maxLength(64)
+
+/** Mot de passe fort : 10+ car., majuscule, minuscule, chiffre, symbole. */
+const password = () =>
+  vine
+    .string()
+    .minLength(10)
+    .maxLength(64)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/)
 
 /**
  * Shared rules for email and password.
@@ -27,10 +34,10 @@ export const loginValidator = vine.create({
 })
 
 /**
- * Accept invitation: password (+ terms for owners)
+ * Accept invitation: password + acceptation des termes (mandat ou plateforme)
  */
 export const acceptInvitationValidator = vine.create({
   password: password(),
   passwordConfirmation: password().sameAs('password'),
-  acceptTerms: vine.accepted().optional(),
+  acceptTerms: vine.accepted(),
 })

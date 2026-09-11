@@ -7,6 +7,7 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import Agency from '#models/agency'
 import AdminInvitationNotification from '#mails/admin_invitation_notification'
+import { CURRENT_PLATFORM_TERMS_VERSION } from '#constants/platform_terms'
 
 type InviteAdminPayload = {
   agencyId: number
@@ -89,7 +90,7 @@ export default class AdminInvitationService {
     return user
   }
 
-  async acceptInvitation(token: string, password: string) {
+  async acceptInvitation(token: string, password: string, ip: string | null) {
     const user = await this.findValidInvitation(token)
     if (!user) {
       throw new Error('Invitation invalide ou expirée.')
@@ -100,6 +101,9 @@ export default class AdminInvitationService {
     user.status = 'active'
     user.invitationToken = null
     user.invitationExpiresAt = null
+    user.termsVersion = CURRENT_PLATFORM_TERMS_VERSION
+    user.termsAcceptedAt = DateTime.now()
+    user.termsAcceptedIp = ip
     await user.save()
 
     return { user }
