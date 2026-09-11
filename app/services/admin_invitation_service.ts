@@ -4,6 +4,7 @@ import logger from '@adonisjs/core/services/logger'
 import mail from '@adonisjs/mail/services/main'
 import env from '#start/env'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import User from '#models/user'
 import Agency from '#models/agency'
 import AdminInvitationNotification from '#mails/admin_invitation_notification'
@@ -17,8 +18,19 @@ type InviteAdminPayload = {
 }
 
 export default class AdminInvitationService {
-  async invite(payload: InviteAdminPayload) {
-    const agency = await Agency.findOrFail(payload.agencyId)
+  /**
+   * Crée le compte gérant (invité). Peut s’exécuter dans une transaction parente.
+   * L’email est envoyé après commit si `sendEmail` est true.
+   */
+  async invite(
+    payload: InviteAdminPayload,
+    options?: { trx?: TransactionClientContract; sendEmail?: boolean }
+  ) {
+    const sendEmail = options?.sendEmail ?? true
+    const agencyQuery = Agency.query()
+    if (options?.trx) agencyQuery.useTransaction(options.trx)
+    const agency = await agencyQuery.where('id', payload.agencyId).firstOrFail()
+
     if (!agency.isActive) {
       throw new Error('Cette agence est désactivée.')
     }
@@ -26,7 +38,7 @@ export default class AdminInvitationService {
     const invitationToken = randomBytes(32).toString('hex')
     const temporaryPassword = randomBytes(24).toString('hex')
 
-    const user = await db.transaction(async (trx) => {
+    const createUser = async (trx: TransactionClientContract) => {
       return User.create(
         {
           fullName: payload.fullName,
@@ -45,12 +57,18 @@ export default class AdminInvitationService {
         },
         { client: trx }
       )
-    })
+    }
+
+    const user = options?.trx
+      ? await createUser(options.trx)
+      : await db.transaction((trx) => createUser(trx))
 
     const activationUrl = this.buildActivationUrl(invitationToken)
-    await this.dispatchInvitationEmail(user, agency, activationUrl)
+    if (sendEmail) {
+      await this.dispatchInvitationEmail(user, agency, activationUrl)
+    }
 
-    return { user, agency, activationUrl }
+    return { user, agency, activationUrl, invitationToken }
   }
 
   async resend(user: User) {
@@ -116,7 +134,7 @@ export default class AdminInvitationService {
     return `${frontend}/invite/${token}`
   }
 
-  private async dispatchInvitationEmail(
+  async dispatchInvitationEmail(
     user: User,
     agency: Agency | null,
     activationUrl: string

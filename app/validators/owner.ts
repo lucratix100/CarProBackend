@@ -8,6 +8,7 @@ export const createOwnerValidator = vine.create({
   phone: vine.string().trim().maxLength(40).optional(),
   city: vine.string().trim().maxLength(120).optional(),
   notes: vine.string().trim().maxLength(2000).optional(),
+  sendInvitation: vine.boolean().optional(),
 })
 
 export const updateOwnerValidator = vine.create({

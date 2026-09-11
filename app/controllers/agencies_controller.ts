@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
+import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
 import Agency from '#models/agency'
 import City from '#models/city'
@@ -49,6 +50,7 @@ export default class AgenciesController {
 
   /**
    * Create agency + first admin invitation + default settings.
+   * Tout est atomique : si le gérant échoue, l’agence n’est pas créée.
    */
   async store({ request, response, serialize }: HttpContext) {
     const payload = await request.validateUsing(createAgencyValidator)
@@ -60,41 +62,62 @@ export default class AgenciesController {
     }
 
     const city = await City.findOrFail(payload.cityId)
-
-    const agency = await db.transaction(async (trx) => {
-      const created = await Agency.create(
-        {
-          name: payload.name,
-          slug,
-          isActive: true,
-          isVerified: false,
-          notes: payload.notes ?? null,
-          cityId: city.id,
-          publishOnMarketplace: false,
-        },
-        { client: trx }
-      )
-
-      await Setting.create(
-        {
-          agencyId: created.id,
-          companyName: payload.name,
-          commissionPerDay: 10000,
-          tvaRate: '0.18',
-        },
-        { client: trx }
-      )
-
-      return created
-    })
-
     const invitation = new AdminInvitationService()
-    const { user } = await invitation.invite({
-      agencyId: agency.id,
-      fullName: payload.adminFullName,
-      email: payload.adminEmail,
-      phone: payload.adminPhone,
-    })
+
+    let agency: Agency
+    let user: User
+    let activationUrl: string
+
+    try {
+      ;({ agency, user, activationUrl } = await db.transaction(async (trx) => {
+        const created = await Agency.create(
+          {
+            name: payload.name,
+            slug,
+            isActive: true,
+            isVerified: false,
+            notes: payload.notes ?? null,
+            cityId: city.id,
+            publishOnMarketplace: false,
+          },
+          { client: trx }
+        )
+
+        await Setting.create(
+          {
+            agencyId: created.id,
+            companyName: payload.name,
+            commissionPerDay: 10000,
+            tvaRate: '0.18',
+          },
+          { client: trx }
+        )
+
+        const invited = await invitation.invite(
+          {
+            agencyId: created.id,
+            fullName: payload.adminFullName,
+            email: payload.adminEmail,
+            phone: payload.adminPhone,
+          },
+          { trx, sendEmail: false }
+        )
+
+        return {
+          agency: created,
+          user: invited.user,
+          activationUrl: invited.activationUrl,
+        }
+      }))
+    } catch (error) {
+      logger.error({ err: error }, '[agencies] Échec création agence + gérant')
+      throw new Exception(
+        'Impossible de créer l’agence. Vérifiez les informations ou réessayez plus tard.',
+        { status: 422, code: 'E_AGENCY_CREATE' }
+      )
+    }
+
+    await invitation.dispatchInvitationEmail(user, agency, activationUrl)
 
     return response.created(
       await serialize({
@@ -160,20 +183,28 @@ export default class AgenciesController {
 
     const payload = await request.validateUsing(inviteAgencyAdminValidator)
     const invitation = new AdminInvitationService()
-    const { user } = await invitation.invite({
-      agencyId: agency.id,
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-    })
-
-    return response.created(
-      await serialize({
-        admin: UserTransformer.transform(user),
-        message:
-          'Invitation envoyée par email au gérant. Vérifiez aussi les indésirables.',
+    try {
+      const { user } = await invitation.invite({
+        agencyId: agency.id,
+        fullName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone,
       })
-    )
+
+      return response.created(
+        await serialize({
+          admin: UserTransformer.transform(user),
+          message:
+            'Invitation envoyée par email au gérant. Vérifiez aussi les indésirables.',
+        })
+      )
+    } catch (error) {
+      logger.error({ err: error }, '[agencies] Échec invitation gérant')
+      throw new Exception(
+        'Impossible d’inviter ce gérant. Vérifiez l’email ou réessayez plus tard.',
+        { status: 422, code: 'E_AGENCY_ADMIN_INVITE' }
+      )
+    }
   }
 
   async resendAdminInvitation({ params, serialize }: HttpContext) {

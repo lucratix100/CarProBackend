@@ -32,18 +32,20 @@ export default class OwnersController {
   }
 
   /**
-   * Create owner + send invitation email with mandate terms.
+   * Create owner. Invitation email is optional (default: no email).
    */
   async store({ request, serialize, response, agencyId }: HttpContext) {
     const payload = await request.validateUsing(createOwnerValidator)
+    const sendInvitation = payload.sendInvitation === true
     const invitation = new OwnerInvitationService()
-    const { owner } = await invitation.invite({
+    const { owner } = await invitation.create({
       agencyId: agencyId!,
       fullName: payload.fullName,
       email: payload.email,
       phone: payload.phone,
       city: payload.city,
       notes: payload.notes,
+      sendInvitation,
     })
 
     await owner.load('user')
@@ -51,8 +53,9 @@ export default class OwnersController {
     return response.created(
       await serialize({
         owner: OwnerTransformer.transform(owner).useVariant('withUser'),
-        message:
-          'Invitation envoyée par email. Demandez au destinataire de vérifier sa boîte de réception et ses indésirables.',
+        message: sendInvitation
+          ? 'Invitation envoyée par email. Demandez au destinataire de vérifier sa boîte de réception et ses indésirables.'
+          : 'Propriétaire créé. Vous pouvez rattacher des véhicules, puis l’inviter plus tard.',
       })
     )
   }
@@ -150,11 +153,15 @@ export default class OwnersController {
     const invitation = new OwnerInvitationService()
 
     try {
+      await owner.load('user')
+      const firstInvite = !owner.user.invitationExpiresAt
       await invitation.resend(owner)
       await owner.load('user')
       return serialize({
         owner: OwnerTransformer.transform(owner).useVariant('withUser'),
-        message: 'Invitation renvoyée par email. Vérifiez aussi les indésirables côté destinataire.',
+        message: firstInvite
+          ? 'Invitation envoyée par email. Vérifiez aussi les indésirables côté destinataire.'
+          : 'Invitation renvoyée par email. Vérifiez aussi les indésirables côté destinataire.',
       })
     } catch (error) {
       throw new Exception((error as Error).message, { status: 422, code: 'E_INVITE_RESEND' })

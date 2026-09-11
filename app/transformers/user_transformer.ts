@@ -22,6 +22,7 @@ export default class UserTransformer extends BaseTransformer<User> {
         'termsVersion',
         'termsAcceptedAt',
         'passwordSetAt',
+        'invitationExpiresAt',
         'createdAt',
         'updatedAt',
         'initials',

@@ -9,21 +9,25 @@ import Owner from '#models/owner'
 import OwnerInvitationNotification from '#mails/owner_invitation_notification'
 import { CURRENT_TERMS_VERSION } from '#constants/mandate_terms'
 
-type InviteOwnerPayload = {
+type CreateOwnerPayload = {
   agencyId: number
   fullName: string
   email: string
   phone?: string | null
   city?: string | null
   notes?: string | null
+  /** Si true, génère le token et envoie l’email d’activation. */
+  sendInvitation?: boolean
 }
 
 export default class OwnerInvitationService {
   /**
-   * Creates an invited owner account and sends the activation email.
+   * Crée un propriétaire. L’email d’invitation est optionnel
+   * (permet de rattacher des véhicules avant d’inviter).
    */
-  async invite(payload: InviteOwnerPayload) {
-    const invitationToken = randomBytes(32).toString('hex')
+  async create(payload: CreateOwnerPayload) {
+    const sendInvitation = payload.sendInvitation === true
+    const invitationToken = sendInvitation ? randomBytes(32).toString('hex') : null
     const temporaryPassword = randomBytes(24).toString('hex')
 
     const { user, owner } = await db.transaction(async (trx) => {
@@ -36,7 +40,7 @@ export default class OwnerInvitationService {
           status: 'invited',
           agencyId: payload.agencyId,
           invitationToken,
-          invitationExpiresAt: DateTime.now().plus({ days: 7 }),
+          invitationExpiresAt: sendInvitation ? DateTime.now().plus({ days: 7 }) : null,
           passwordSetAt: null,
           termsVersion: null,
           termsAcceptedAt: null,
@@ -60,12 +64,23 @@ export default class OwnerInvitationService {
       return { user: createdUser, owner: createdOwner }
     })
 
-    const activationUrl = this.buildActivationUrl(invitationToken)
-    await this.dispatchInvitationEmail(user, activationUrl)
+    let activationUrl: string | null = null
+    if (sendInvitation && invitationToken) {
+      activationUrl = this.buildActivationUrl(invitationToken)
+      await this.dispatchInvitationEmail(user, activationUrl)
+    }
 
     return { user, owner, activationUrl }
   }
 
+  /** @deprecated Prefer `create({ sendInvitation: true })` */
+  async invite(payload: Omit<CreateOwnerPayload, 'sendInvitation'>) {
+    return this.create({ ...payload, sendInvitation: true })
+  }
+
+  /**
+   * Première invitation ou renvoi : génère un token et envoie l’email.
+   */
   async resend(owner: Owner) {
     await owner.load('user')
     const user = owner.user
@@ -138,7 +153,6 @@ export default class OwnerInvitationService {
         { err: error, to: user.email, activationUrl },
         '[invitation] Échec envoi email propriétaire — le compte a bien été créé'
       )
-      // Ne pas faire échouer la création : le lien reste disponible (toast UI / resend)
     }
   }
 }
