@@ -281,9 +281,9 @@ export default class VehiclesController {
 
     const currentCount = vehicle.photos.length
     if (replace || currentCount === 0) {
-      if (validFiles.length < VEHICLE_PHOTOS_MIN || validFiles.length > VEHICLE_PHOTOS_MAX) {
+      if (validFiles.length < 1 || validFiles.length > VEHICLE_PHOTOS_MAX) {
         throw new Exception(
-          `Ajoutez entre ${VEHICLE_PHOTOS_MIN} et ${VEHICLE_PHOTOS_MAX} photos du véhicule.`,
+          `Ajoutez entre 1 et ${VEHICLE_PHOTOS_MAX} photos du véhicule.`,
           { status: 422, code: 'E_VEHICLE_PHOTOS_COUNT' }
         )
       }
@@ -362,9 +362,13 @@ export default class VehiclesController {
       throw new Exception('Photo introuvable.', { status: 404, code: 'E_VEHICLE_PHOTO' })
     }
 
-    if (vehicle.photos.length <= VEHICLE_PHOTOS_MIN) {
+    const onCatalogue =
+      vehicle.marketplacePublicationStatus === 'published' ||
+      vehicle.marketplacePublicationStatus === 'pending_review'
+
+    if (onCatalogue && vehicle.photos.length <= VEHICLE_PHOTOS_MIN) {
       throw new Exception(
-        `Conservez au moins ${VEHICLE_PHOTOS_MIN} photos. Remplacez-les plutôt que de supprimer.`,
+        `Conservez au moins ${VEHICLE_PHOTOS_MIN} photos tant que l’annonce est en revue ou publiée. Remplacez-les plutôt que de supprimer.`,
         { status: 422, code: 'E_VEHICLE_PHOTOS_MIN' }
       )
     }

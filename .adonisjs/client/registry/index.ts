@@ -714,6 +714,12 @@ const routes = {
     tokens: [{"old":"/api/v1/cities","type":0,"val":"api","end":""},{"old":"/api/v1/cities","type":0,"val":"v1","end":""},{"old":"/api/v1/cities","type":0,"val":"cities","end":""}],
     types: placeholder as Registry['cities.index']['types'],
   },
+  'vehicle_types.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/vehicle-types',
+    tokens: [{"old":"/api/v1/vehicle-types","type":0,"val":"api","end":""},{"old":"/api/v1/vehicle-types","type":0,"val":"v1","end":""},{"old":"/api/v1/vehicle-types","type":0,"val":"vehicle-types","end":""}],
+    types: placeholder as Registry['vehicle_types.index']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }

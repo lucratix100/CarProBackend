@@ -212,4 +212,7 @@ export interface ApiDefinition {
   cities: {
     index: typeof routes['cities.index']
   }
+  vehicleTypes: {
+    index: typeof routes['vehicle_types.index']
+  }
 }

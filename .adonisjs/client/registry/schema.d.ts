@@ -1423,4 +1423,16 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/cities_controller').default['index']>>>
     }
   }
+  'vehicle_types.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/vehicle-types'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_types_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_types_controller').default['index']>>>
+    }
+  }
 }
