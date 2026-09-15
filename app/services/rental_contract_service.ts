@@ -79,7 +79,7 @@ function text(doc: Doc, value: string, x: number, y: number, opts: PDFKit.Mixins
   doc.y = py
 }
 
-function hline(doc: Doc, x: number, y: number, w: number, color = C.lineSoft) {
+function hline(doc: Doc, x: number, y: number, w: number, color: string = C.lineSoft) {
   doc.save()
   doc.moveTo(x, y).lineTo(x + w, y).lineWidth(0.6).stroke(color)
   doc.restore()

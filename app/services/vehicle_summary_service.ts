@@ -29,11 +29,11 @@ export default class VehicleSummaryService {
       .orderBy('performedOn', 'desc')
       .orderBy('id', 'desc')
 
-    const appliedMaintenances = await scopeAppliedExpenses(
+    const appliedMaintenances = (await scopeAppliedExpenses(
       Maintenance.query().where('vehicleId', vehicle.id)
     )
       .orderBy('performedOn', 'desc')
-      .orderBy('id', 'desc')
+      .orderBy('id', 'desc')) as Maintenance[]
 
     const vehicleExpenses = await VehicleExpense.query()
       .where('vehicleId', vehicle.id)

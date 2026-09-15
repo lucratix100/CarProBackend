@@ -73,12 +73,12 @@ export default class OwnerPortalController {
             .whereNot('status', 'Annulée')
             .preload('vehicle')
 
-    const maintenances =
+    const maintenances: Maintenance[] =
       vehicleIds.length === 0
         ? []
-        : await scopeAppliedExpenses(
+        : ((await scopeAppliedExpenses(
             Maintenance.query().whereIn('vehicleId', vehicleIds)
-          )
+          )) as Maintenance[])
 
     let netRevenue = 0
     let daysRented = 0
@@ -170,11 +170,11 @@ export default class OwnerPortalController {
       .where('ownerId', ownerId)
       .firstOrFail()
 
-    const rows = await scopeAppliedExpenses(
+    const rows = (await scopeAppliedExpenses(
       Maintenance.query().where('vehicleId', vehicle.id)
     )
       .orderBy('performedOn', 'desc')
-      .orderBy('id', 'desc')
+      .orderBy('id', 'desc')) as Maintenance[]
 
     let totalExpenses = 0
     const expenses = rows.map((row) => {
@@ -304,12 +304,12 @@ export default class OwnerPortalController {
             .preload('vehicle')
             .orderBy('startDate', 'desc')
 
-    const maintenances =
+    const maintenances: Maintenance[] =
       vehicleIds.length === 0
         ? []
-        : await scopeAppliedExpenses(
+        : ((await scopeAppliedExpenses(
             Maintenance.query().whereIn('vehicleId', vehicleIds).preload('vehicle')
-          ).orderBy('performedOn', 'desc')
+          ).orderBy('performedOn', 'desc')) as Maintenance[])
 
     let totalNet = 0
     const lines = []

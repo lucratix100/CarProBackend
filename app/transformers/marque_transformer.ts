@@ -11,7 +11,7 @@ export default class MarqueTransformer extends BaseTransformer<Marque> {
     return {
       ...this.toObject(),
       modeles: (this.resource.modeles ?? []).map((modele) =>
-        ModeleTransformer.transform(modele).toObject()
+        ModeleTransformer.transform(modele)
       ),
     }
   }

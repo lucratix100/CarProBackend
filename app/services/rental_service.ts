@@ -7,6 +7,7 @@ import Rental from '#models/rental'
 import Vehicle from '#models/vehicle'
 import Invoice from '#models/invoice'
 import Setting from '#models/setting'
+import ClientAccount from '#models/client_account'
 import { daysBetween, rentalFinancials, resolveRentalStatus, todayISO } from '#services/finance_service'
 import InvoicePaymentService from '#services/invoice_payment_service'
 import OwnerNotificationService from '#services/owner_notification_service'
@@ -57,19 +58,20 @@ export default class RentalService {
     if (rental.source !== 'marketplace') return
 
     try {
-      await rental.load('client', (q) => q.preload('account'))
+      await rental.load('client')
       await rental.load('vehicle', (vq) => vq.preload('agency'))
 
-      const email =
-        rental.client?.account?.email ||
-        rental.client?.email ||
-        null
+      const account = rental.client
+        ? await ClientAccount.query().where('clientId', rental.client.id).first()
+        : null
+
+      const email = account?.email || rental.client?.email || null
       if (!email) return
 
       await mail.send(
         new MarketplaceBookingDecisionNotification({
           email,
-          fullName: rental.client?.account?.fullName || rental.client?.fullName || null,
+          fullName: account?.fullName || rental.client?.fullName || null,
           vehicleLabel: rental.vehicle?.label ?? `Véhicule #${rental.vehicleId}`,
           agencyName: rental.vehicle?.agency?.name ?? null,
           startDate: rental.startDate.toISODate()!,

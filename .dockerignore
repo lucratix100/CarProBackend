@@ -6,7 +6,6 @@ tmp
 .env
 .env.*
 !.env.example
-tests
 coverage
 .vscode
 .idea
