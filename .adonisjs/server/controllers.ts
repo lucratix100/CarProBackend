@@ -25,6 +25,7 @@ export const controllers = {
   NewAccount: () => import('#controllers/new_account_controller'),
   OwnerPortal: () => import('#controllers/owner_portal_controller'),
   Owners: () => import('#controllers/owners_controller'),
+  PasswordResets: () => import('#controllers/password_resets_controller'),
   Profile: () => import('#controllers/profile_controller'),
   Rentals: () => import('#controllers/rentals_controller'),
   Settings: () => import('#controllers/settings_controller'),

@@ -6,6 +6,11 @@ export interface ApiDefinition {
     accessTokens: {
       store: typeof routes['auth.access_tokens.store']
     }
+    passwordResets: {
+      store: typeof routes['auth.password_resets.store']
+      show: typeof routes['auth.password_resets.show']
+      update: typeof routes['auth.password_resets.update']
+    }
   }
   invitations: {
     invitations: {
@@ -16,6 +21,7 @@ export interface ApiDefinition {
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
+      changePassword: typeof routes['profile.profile.change_password']
     }
     accessTokens: {
       destroy: typeof routes['profile.access_tokens.destroy']
@@ -27,6 +33,10 @@ export interface ApiDefinition {
       store: typeof routes['agencies.agencies.store']
       show: typeof routes['agencies.agencies.show']
       update: typeof routes['agencies.agencies.update']
+      logoFile: typeof routes['agencies.agencies.logo_file']
+      pendingLogoFile: typeof routes['agencies.agencies.pending_logo_file']
+      approveLogo: typeof routes['agencies.agencies.approve_logo']
+      rejectLogo: typeof routes['agencies.agencies.reject_logo']
       inviteAdmin: typeof routes['agencies.agencies.invite_admin']
       resendAdminInvitation: typeof routes['agencies.agencies.resend_admin_invitation']
       revokeAdmin: typeof routes['agencies.agencies.revoke_admin']
@@ -54,6 +64,7 @@ export interface ApiDefinition {
     owners: {
       index: typeof routes['owners.owners.index']
       store: typeof routes['owners.owners.store']
+      statement: typeof routes['owners.owners.statement']
       show: typeof routes['owners.owners.show']
       update: typeof routes['owners.owners.update']
       destroy: typeof routes['owners.owners.destroy']
@@ -149,6 +160,10 @@ export interface ApiDefinition {
     settings: {
       show: typeof routes['settings.settings.show']
       update: typeof routes['settings.settings.update']
+      uploadLogo: typeof routes['settings.settings.upload_logo']
+      destroyLogo: typeof routes['settings.settings.destroy_logo']
+      logoFile: typeof routes['settings.settings.logo_file']
+      pendingLogoFile: typeof routes['settings.settings.pending_logo_file']
     }
   }
   adminNotifications: {
@@ -162,6 +177,7 @@ export interface ApiDefinition {
   ownerPortal: {
     ownerPortal: {
       dashboard: typeof routes['owner_portal.owner_portal.dashboard']
+      logoFile: typeof routes['owner_portal.owner_portal.logo_file']
       vehicles: typeof routes['owner_portal.owner_portal.vehicles']
       vehicleExpenses: typeof routes['owner_portal.owner_portal.vehicle_expenses']
       vehicleSummary: typeof routes['owner_portal.owner_portal.vehicle_summary']
@@ -181,6 +197,7 @@ export interface ApiDefinition {
       show: typeof routes['marketplace.marketplace_catalog.show']
       availability: typeof routes['marketplace.marketplace_catalog.availability']
       photoFile: typeof routes['marketplace.marketplace_catalog.photo_file']
+      agencyLogo: typeof routes['marketplace.marketplace_catalog.agency_logo']
     }
     marketplaceReview: {
       forVehicle: typeof routes['marketplace.marketplace_review.for_vehicle']

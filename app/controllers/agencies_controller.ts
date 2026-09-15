@@ -12,9 +12,13 @@ import AdminInvitationService from '#services/admin_invitation_service'
 import { slugifyAgencyName } from '#services/agency_context'
 import AgencyTransformer from '#transformers/agency_transformer'
 import UserTransformer from '#transformers/user_transformer'
+import AgencyLogoUploadService, {
+  agencyLogoStatus,
+} from '#services/agency_logo_upload_service'
 import {
   createAgencyValidator,
   inviteAgencyAdminValidator,
+  rejectAgencyLogoValidator,
   updateAgencyValidator,
 } from '#validators/agency'
 
@@ -24,6 +28,20 @@ async function countTotal(query: { count: Function }) {
 }
 
 export default class AgenciesController {
+  #logos = new AgencyLogoUploadService()
+
+  #brandingPayload(agency: Agency, settings: Setting) {
+    return {
+      canUseCustomLogo: Boolean(agency.canUseCustomLogo),
+      logoStatus: agencyLogoStatus(settings),
+      logoUrl: settings.logoPath ? `/agencies/${agency.id}/logo` : null,
+      pendingLogoUrl: settings.logoPendingPath
+        ? `/agencies/${agency.id}/logo/pending`
+        : null,
+      logoRejectionReason: settings.logoRejectionReason,
+    }
+  }
+
   /**
    * List all agencies (super admin).
    */
@@ -131,14 +149,15 @@ export default class AgenciesController {
 
   async show({ params, serialize }: HttpContext) {
     const agency = await Agency.query().where('id', params.id).preload('city').firstOrFail()
-    const admins = await User.query()
-      .where('agencyId', agency.id)
-      .where('role', 'admin')
-      .orderBy('id', 'desc')
+    const [admins, settings] = await Promise.all([
+      User.query().where('agencyId', agency.id).where('role', 'admin').orderBy('id', 'desc'),
+      Setting.current(agency.id),
+    ])
 
     return serialize({
       agency: AgencyTransformer.transform(agency),
       admins: UserTransformer.transform(admins),
+      branding: this.#brandingPayload(agency, settings),
     })
   }
 
@@ -151,6 +170,10 @@ export default class AgenciesController {
       notes: payload.notes === undefined ? agency.notes : payload.notes,
       isActive: payload.isActive === undefined ? agency.isActive : payload.isActive,
       isVerified: payload.isVerified === undefined ? agency.isVerified : payload.isVerified,
+      canUseCustomLogo:
+        payload.canUseCustomLogo === undefined
+          ? agency.canUseCustomLogo
+          : payload.canUseCustomLogo,
       cityId: payload.cityId === undefined ? agency.cityId : payload.cityId,
       publishOnMarketplace:
         payload.publishOnMarketplace === undefined
@@ -167,6 +190,87 @@ export default class AgenciesController {
     await agency.load('city')
 
     return serialize(AgencyTransformer.transform(agency))
+  }
+
+  async approveLogo({ params, serialize }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    if (!agency.canUseCustomLogo) {
+      throw new Exception('Activez d’abord le logo personnalisé pour cette agence.', {
+        status: 422,
+        code: 'E_AGENCY_LOGO_DISABLED',
+      })
+    }
+
+    const settings = await Setting.current(agency.id)
+    if (!settings.logoPendingPath) {
+      throw new Exception('Aucun logo en attente de validation.', {
+        status: 422,
+        code: 'E_AGENCY_LOGO_NO_PENDING',
+      })
+    }
+
+    const previousApproved = settings.logoPath
+    const pending = settings.logoPendingPath
+    settings.logoPath = pending
+    settings.logoPendingPath = null
+    settings.logoRejectionReason = null
+    await settings.save()
+
+    if (previousApproved && previousApproved !== pending) {
+      await this.#logos.removeIfExists(previousApproved)
+    }
+
+    return serialize({
+      agency: AgencyTransformer.transform(agency),
+      branding: this.#brandingPayload(agency, settings),
+      message: 'Logo approuvé.',
+    })
+  }
+
+  async rejectLogo({ params, request, serialize }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const payload = await request.validateUsing(rejectAgencyLogoValidator)
+    const settings = await Setting.current(agency.id)
+
+    if (!settings.logoPendingPath) {
+      throw new Exception('Aucun logo en attente de validation.', {
+        status: 422,
+        code: 'E_AGENCY_LOGO_NO_PENDING',
+      })
+    }
+
+    await this.#logos.removeIfExists(settings.logoPendingPath)
+    settings.logoPendingPath = null
+    settings.logoRejectionReason =
+      payload.reason?.trim() || 'Logo refusé. Merci de soumettre un autre fichier.'
+    await settings.save()
+
+    return serialize({
+      agency: AgencyTransformer.transform(agency),
+      branding: this.#brandingPayload(agency, settings),
+      message: 'Logo refusé.',
+    })
+  }
+
+  async logoFile({ params, response }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const settings = await Setting.current(agency.id)
+    if (!settings.logoPath) {
+      throw new Exception('Aucun logo approuvé.', { status: 404, code: 'E_AGENCY_LOGO' })
+    }
+    return this.#logos.streamFile(response, settings.logoPath)
+  }
+
+  async pendingLogoFile({ params, response }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const settings = await Setting.current(agency.id)
+    if (!settings.logoPendingPath) {
+      throw new Exception('Aucun logo en attente.', {
+        status: 404,
+        code: 'E_AGENCY_LOGO_PENDING',
+      })
+    }
+    return this.#logos.streamFile(response, settings.logoPendingPath)
   }
 
   /**

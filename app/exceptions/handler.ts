@@ -35,6 +35,14 @@ function publicMessageFor(error: unknown, status: number) {
   return 'Une erreur est survenue. Réessayez plus tard.'
 }
 
+function isValidationError(
+  error: unknown
+): error is Exception & { code: string; messages: unknown[]; status: number } {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { code?: string; messages?: unknown }
+  return err.code === 'E_VALIDATION_ERROR' && Array.isArray(err.messages)
+}
+
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * In debug mode, the exception handler will display verbose errors
@@ -48,6 +56,19 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    */
   async handle(error: unknown, ctx: HttpContext) {
     const wantsJson = ctx.request.accepts(['json', 'html']) === 'json'
+
+    // Garder les messages champ par champ (Vine) pour le front.
+    if (isValidationError(error)) {
+      if (wantsJson) {
+        return ctx.response.status(error.status ?? 422).send({
+          message: 'Vérifiez les informations saisies.',
+          errors: error.messages,
+          code: error.code,
+        })
+      }
+      return super.handle(error, ctx)
+    }
+
     const status =
       error instanceof Exception
         ? error.status

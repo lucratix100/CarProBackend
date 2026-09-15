@@ -1,8 +1,11 @@
 import PDFDocument from 'pdfkit'
 import { DateTime } from 'luxon'
+import app from '@adonisjs/core/services/app'
 import type Rental from '#models/rental'
+import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
+import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 
 const C = {
   brand: '#0f4a42',
@@ -110,7 +113,8 @@ function drawHeader(
   settings: Setting,
   contractRef: string,
   issuedOn: DateTime,
-  cancelled: boolean
+  cancelled: boolean,
+  logoAbsolutePath: string | null
 ) {
   const y = M.top
   const h = 62
@@ -119,12 +123,35 @@ function drawHeader(
   doc.rect(0, 0, PAGE_W, y + h).fill(C.brand)
   doc.restore()
 
-  // Logo mark
-  doc.save()
-  doc.roundedRect(M.left, y + 12, 36, 36, 6).fill('#1a6b5f')
-  doc.restore()
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
-  text(doc, 'PCS', M.left + 7, y + 24)
+  // Logo mark (custom agency logo or carPro fallback)
+  const logoX = M.left
+  const logoY = y + 12
+  const logoSize = 36
+  let usedCustomLogo = false
+
+  if (logoAbsolutePath) {
+    try {
+      doc.save()
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
+      doc.image(logoAbsolutePath, logoX, logoY, {
+        fit: [logoSize, logoSize],
+        align: 'center',
+        valign: 'center',
+      })
+      doc.restore()
+      usedCustomLogo = true
+    } catch {
+      usedCustomLogo = false
+    }
+  }
+
+  if (!usedCustomLogo) {
+    doc.save()
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill('#1a6b5f')
+    doc.restore()
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+    text(doc, 'PCS', logoX + 7, logoY + 12)
+  }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
   text(doc, settings.companyName, M.left + 48, y + 14)
@@ -364,6 +391,10 @@ export default class RentalContractService {
 
   async generate(rental: Rental) {
     const settings = await Setting.current(rental.agencyId)
+    const agency = await Agency.find(rental.agencyId)
+    const publicLogoPath =
+      agency && settings ? resolvePublicLogoPath(agency, settings) : null
+    const logoAbsolutePath = publicLogoPath ? app.makePath(publicLogoPath) : null
     const finance = await rentalFinancials(rental)
     const vehicle = rental.vehicle
     const client = rental.client
@@ -440,7 +471,8 @@ export default class RentalContractService {
         settings,
         contractRef,
         issuedOn,
-        rental.status === 'Annulée'
+        rental.status === 'Annulée',
+        logoAbsolutePath
       )
       y = drawPartiesIntro(doc, y, settings.companyName, displayValue(client.fullName))
 

@@ -19,6 +19,42 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/access_tokens_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'auth.password_resets.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/auth/forgot-password'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/user').forgotPasswordValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/user').forgotPasswordValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'auth.password_resets.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/auth/reset-password/:token'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { token: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['show']>>>
+    }
+  }
+  'auth.password_resets.update': {
+    methods: ["POST"]
+    pattern: '/api/v1/auth/reset-password/:token'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/user').resetPasswordValidator)>>
+      paramsTuple: [ParamValue]
+      params: { token: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/user').resetPasswordValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/password_resets_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'invitations.invitations.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/invitations/:token'
@@ -53,6 +89,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
+    }
+  }
+  'profile.profile.change_password': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/change-password'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/user').changePasswordValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/user').changePasswordValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['changePassword']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['changePassword']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'profile.access_tokens.destroy': {
@@ -113,6 +161,54 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/agency').updateAgencyValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['update']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'agencies.agencies.logo_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/agencies/:id/logo'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['logoFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['logoFile']>>>
+    }
+  }
+  'agencies.agencies.pending_logo_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/agencies/:id/logo/pending'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['pendingLogoFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['pendingLogoFile']>>>
+    }
+  }
+  'agencies.agencies.approve_logo': {
+    methods: ["POST"]
+    pattern: '/api/v1/agencies/:id/logo/approve'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['approveLogo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['approveLogo']>>>
+    }
+  }
+  'agencies.agencies.reject_logo': {
+    methods: ["POST"]
+    pattern: '/api/v1/agencies/:id/logo/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/agency').rejectAgencyLogoValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/agency').rejectAgencyLogoValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectLogo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectLogo']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'agencies.agencies.invite_admin': {
@@ -293,6 +389,18 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/owner').createOwnerValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'owners.owners.statement': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/owners/:id/statement'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['statement']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['statement']>>>
     }
   }
   'owners.owners.show': {
@@ -979,6 +1087,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'settings.settings.upload_logo': {
+    methods: ["POST"]
+    pattern: '/api/v1/settings/logo'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['uploadLogo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['uploadLogo']>>>
+    }
+  }
+  'settings.settings.destroy_logo': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/settings/logo'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['destroyLogo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['destroyLogo']>>>
+    }
+  }
+  'settings.settings.logo_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/settings/logo'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['logoFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['logoFile']>>>
+    }
+  }
+  'settings.settings.pending_logo_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/settings/logo/pending'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingLogoFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingLogoFile']>>>
+    }
+  }
   'admin_notifications.admin_notifications.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/admin-notifications'
@@ -1037,6 +1193,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/owner_portal_controller').default['dashboard']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owner_portal_controller').default['dashboard']>>>
+    }
+  }
+  'owner_portal.owner_portal.logo_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/owner/logo'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/owner_portal_controller').default['logoFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owner_portal_controller').default['logoFile']>>>
     }
   }
   'owner_portal.owner_portal.vehicles': {
@@ -1217,6 +1385,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_catalog_controller').default['photoFile']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_catalog_controller').default['photoFile']>>>
+    }
+  }
+  'marketplace.marketplace_catalog.agency_logo': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/agencies/:id/logo'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_catalog_controller').default['agencyLogo']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_catalog_controller').default['agencyLogo']>>>
     }
   }
   'marketplace.marketplace_review.for_vehicle': {

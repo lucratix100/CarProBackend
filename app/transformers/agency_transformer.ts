@@ -10,6 +10,7 @@ export default class AgencyTransformer extends BaseTransformer<Agency> {
         'slug',
         'isActive',
         'isVerified',
+        'canUseCustomLogo',
         'notes',
         'cityId',
         'publishOnMarketplace',

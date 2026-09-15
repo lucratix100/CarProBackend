@@ -34,6 +34,28 @@ export const loginValidator = vine.create({
 })
 
 /**
+ * Mot de passe oublié : demande d’envoi d’un lien de réinitialisation
+ */
+export const forgotPasswordValidator = vine.create({
+  email: email(),
+})
+
+/**
+ * Définir un nouveau mot de passe via le lien reçu par email
+ */
+export const resetPasswordValidator = vine.create({
+  password: password(),
+  passwordConfirmation: password().sameAs('password'),
+})
+
+/**
+ * Demande un lien de changement de mot de passe (utilisateur connecté)
+ */
+export const changePasswordValidator = vine.create({
+  currentPassword: vine.string().minLength(1),
+})
+
+/**
  * Accept invitation: password + acceptation des termes (mandat ou plateforme)
  */
 export const acceptInvitationValidator = vine.create({

@@ -108,12 +108,12 @@ export default class ClientsController {
       fullName: payload.fullName,
       phone: payload.phone,
       email: payload.email ?? null,
-      licenseNumber: payload.licenseNumber,
-      licenseExpiresAt: DateTime.fromISO(payload.licenseExpiresAt),
-      idCardNumber: payload.idCardNumber,
+      licenseNumber: payload.licenseNumber ?? null,
+      licenseExpiresAt: toDate(payload.licenseExpiresAt) ?? null,
+      idCardNumber: payload.idCardNumber ?? null,
       city: payload.city ?? null,
       birthDate: toDate(payload.birthDate) ?? null,
-      type: payload.type,
+      type: payload.type ?? 'particulier',
       notes: payload.notes ?? null,
       isActive: payload.isActive ?? true,
     })
@@ -148,7 +148,7 @@ export default class ClientsController {
     }
 
     if (payload.licenseExpiresAt !== undefined) {
-      client.licenseExpiresAt = DateTime.fromISO(payload.licenseExpiresAt)
+      client.licenseExpiresAt = toDate(payload.licenseExpiresAt) ?? null
     }
 
     await client.save()

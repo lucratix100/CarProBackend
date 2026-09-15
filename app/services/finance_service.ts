@@ -15,12 +15,12 @@ export type RentalFinancials = {
   ttc: number
 }
 
-/** Inclusive day count between two ISO dates / DateTimes. Always >= 1. */
+/** Day count in 24h periods (end exclusive). Always >= 1. Ex: 20→25 = 5 days. */
 export function daysBetween(start: DateTime | string, end: DateTime | string) {
   const a = typeof start === 'string' ? DateTime.fromISO(start) : start.startOf('day')
   const b = typeof end === 'string' ? DateTime.fromISO(end) : end.startOf('day')
   if (!a.isValid || !b.isValid) return 1
-  return Math.max(1, Math.floor(b.diff(a, 'days').days) + 1)
+  return Math.max(1, Math.floor(b.diff(a, 'days').days))
 }
 
 export function todayISO() {

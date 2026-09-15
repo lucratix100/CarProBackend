@@ -12,6 +12,24 @@ const routes = {
     tokens: [{"old":"/api/v1/auth/login","type":0,"val":"api","end":""},{"old":"/api/v1/auth/login","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/login","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/login","type":0,"val":"login","end":""}],
     types: placeholder as Registry['auth.access_tokens.store']['types'],
   },
+  'auth.password_resets.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/auth/forgot-password',
+    tokens: [{"old":"/api/v1/auth/forgot-password","type":0,"val":"api","end":""},{"old":"/api/v1/auth/forgot-password","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/forgot-password","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/forgot-password","type":0,"val":"forgot-password","end":""}],
+    types: placeholder as Registry['auth.password_resets.store']['types'],
+  },
+  'auth.password_resets.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/auth/reset-password/:token',
+    tokens: [{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"api","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"reset-password","end":""},{"old":"/api/v1/auth/reset-password/:token","type":1,"val":"token","end":""}],
+    types: placeholder as Registry['auth.password_resets.show']['types'],
+  },
+  'auth.password_resets.update': {
+    methods: ["POST"],
+    pattern: '/api/v1/auth/reset-password/:token',
+    tokens: [{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"api","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/reset-password/:token","type":0,"val":"reset-password","end":""},{"old":"/api/v1/auth/reset-password/:token","type":1,"val":"token","end":""}],
+    types: placeholder as Registry['auth.password_resets.update']['types'],
+  },
   'invitations.invitations.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/invitations/:token',
@@ -29,6 +47,12 @@ const routes = {
     pattern: '/api/v1/account/profile',
     tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
     types: placeholder as Registry['profile.profile.show']['types'],
+  },
+  'profile.profile.change_password': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/change-password',
+    tokens: [{"old":"/api/v1/account/change-password","type":0,"val":"api","end":""},{"old":"/api/v1/account/change-password","type":0,"val":"v1","end":""},{"old":"/api/v1/account/change-password","type":0,"val":"account","end":""},{"old":"/api/v1/account/change-password","type":0,"val":"change-password","end":""}],
+    types: placeholder as Registry['profile.profile.change_password']['types'],
   },
   'profile.access_tokens.destroy': {
     methods: ["POST"],
@@ -59,6 +83,30 @@ const routes = {
     pattern: '/api/v1/agencies/:id',
     tokens: [{"old":"/api/v1/agencies/:id","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['agencies.agencies.update']['types'],
+  },
+  'agencies.agencies.logo_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/agencies/:id/logo',
+    tokens: [{"old":"/api/v1/agencies/:id/logo","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/logo","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/logo","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['agencies.agencies.logo_file']['types'],
+  },
+  'agencies.agencies.pending_logo_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/agencies/:id/logo/pending',
+    tokens: [{"old":"/api/v1/agencies/:id/logo/pending","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/logo/pending","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/logo/pending","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/logo/pending","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/logo/pending","type":0,"val":"logo","end":""},{"old":"/api/v1/agencies/:id/logo/pending","type":0,"val":"pending","end":""}],
+    types: placeholder as Registry['agencies.agencies.pending_logo_file']['types'],
+  },
+  'agencies.agencies.approve_logo': {
+    methods: ["POST"],
+    pattern: '/api/v1/agencies/:id/logo/approve',
+    tokens: [{"old":"/api/v1/agencies/:id/logo/approve","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/logo/approve","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/logo/approve","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/logo/approve","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/logo/approve","type":0,"val":"logo","end":""},{"old":"/api/v1/agencies/:id/logo/approve","type":0,"val":"approve","end":""}],
+    types: placeholder as Registry['agencies.agencies.approve_logo']['types'],
+  },
+  'agencies.agencies.reject_logo': {
+    methods: ["POST"],
+    pattern: '/api/v1/agencies/:id/logo/reject',
+    tokens: [{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"logo","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"reject","end":""}],
+    types: placeholder as Registry['agencies.agencies.reject_logo']['types'],
   },
   'agencies.agencies.invite_admin': {
     methods: ["POST"],
@@ -149,6 +197,12 @@ const routes = {
     pattern: '/api/v1/owners',
     tokens: [{"old":"/api/v1/owners","type":0,"val":"api","end":""},{"old":"/api/v1/owners","type":0,"val":"v1","end":""},{"old":"/api/v1/owners","type":0,"val":"owners","end":""}],
     types: placeholder as Registry['owners.owners.store']['types'],
+  },
+  'owners.owners.statement': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/owners/:id/statement',
+    tokens: [{"old":"/api/v1/owners/:id/statement","type":0,"val":"api","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"v1","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"owners","end":""},{"old":"/api/v1/owners/:id/statement","type":1,"val":"id","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"statement","end":""}],
+    types: placeholder as Registry['owners.owners.statement']['types'],
   },
   'owners.owners.show': {
     methods: ["GET","HEAD"],
@@ -492,6 +546,30 @@ const routes = {
     tokens: [{"old":"/api/v1/settings","type":0,"val":"api","end":""},{"old":"/api/v1/settings","type":0,"val":"v1","end":""},{"old":"/api/v1/settings","type":0,"val":"settings","end":""}],
     types: placeholder as Registry['settings.settings.update']['types'],
   },
+  'settings.settings.upload_logo': {
+    methods: ["POST"],
+    pattern: '/api/v1/settings/logo',
+    tokens: [{"old":"/api/v1/settings/logo","type":0,"val":"api","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['settings.settings.upload_logo']['types'],
+  },
+  'settings.settings.destroy_logo': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/settings/logo',
+    tokens: [{"old":"/api/v1/settings/logo","type":0,"val":"api","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['settings.settings.destroy_logo']['types'],
+  },
+  'settings.settings.logo_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/settings/logo',
+    tokens: [{"old":"/api/v1/settings/logo","type":0,"val":"api","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['settings.settings.logo_file']['types'],
+  },
+  'settings.settings.pending_logo_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/settings/logo/pending',
+    tokens: [{"old":"/api/v1/settings/logo/pending","type":0,"val":"api","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"logo","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"pending","end":""}],
+    types: placeholder as Registry['settings.settings.pending_logo_file']['types'],
+  },
   'admin_notifications.admin_notifications.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/admin-notifications',
@@ -521,6 +599,12 @@ const routes = {
     pattern: '/api/v1/owner/dashboard',
     tokens: [{"old":"/api/v1/owner/dashboard","type":0,"val":"api","end":""},{"old":"/api/v1/owner/dashboard","type":0,"val":"v1","end":""},{"old":"/api/v1/owner/dashboard","type":0,"val":"owner","end":""},{"old":"/api/v1/owner/dashboard","type":0,"val":"dashboard","end":""}],
     types: placeholder as Registry['owner_portal.owner_portal.dashboard']['types'],
+  },
+  'owner_portal.owner_portal.logo_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/owner/logo',
+    tokens: [{"old":"/api/v1/owner/logo","type":0,"val":"api","end":""},{"old":"/api/v1/owner/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/owner/logo","type":0,"val":"owner","end":""},{"old":"/api/v1/owner/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['owner_portal.owner_portal.logo_file']['types'],
   },
   'owner_portal.owner_portal.vehicles': {
     methods: ["GET","HEAD"],
@@ -611,6 +695,12 @@ const routes = {
     pattern: '/api/v1/marketplace/vehicles/:id/photos/:photoId',
     tokens: [{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":0,"val":"vehicles","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":0,"val":"photos","end":""},{"old":"/api/v1/marketplace/vehicles/:id/photos/:photoId","type":1,"val":"photoId","end":""}],
     types: placeholder as Registry['marketplace.marketplace_catalog.photo_file']['types'],
+  },
+  'marketplace.marketplace_catalog.agency_logo': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace/agencies/:id/logo',
+    tokens: [{"old":"/api/v1/marketplace/agencies/:id/logo","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/agencies/:id/logo","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/agencies/:id/logo","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/agencies/:id/logo","type":0,"val":"agencies","end":""},{"old":"/api/v1/marketplace/agencies/:id/logo","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace/agencies/:id/logo","type":0,"val":"logo","end":""}],
+    types: placeholder as Registry['marketplace.marketplace_catalog.agency_logo']['types'],
   },
   'marketplace.marketplace_review.for_vehicle': {
     methods: ["GET","HEAD"],

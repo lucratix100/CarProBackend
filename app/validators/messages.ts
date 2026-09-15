@@ -102,6 +102,12 @@ export const validationMessages: ValidationMessages = {
   'password.minLength': 'Le mot de passe doit contenir au moins {{ min }} caractères.',
   'password.regex':
     'Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
+  'birthDate.regex': 'La date de naissance doit être au format AAAA-MM-JJ.',
+  'licenseExpiresAt.regex': 'L’expiration du permis doit être au format AAAA-MM-JJ.',
+  'licenseNumber.minLength': 'Le N° de permis doit contenir au moins {{ min }} caractères.',
+  'idCardNumber.minLength': 'Le N° de carte d’identité doit contenir au moins {{ min }} caractères.',
+  'phone.minLength': 'Le téléphone doit contenir au moins {{ min }} caractères.',
+  'fullName.minLength': 'Le nom complet doit contenir au moins {{ min }} caractères.',
   'acceptTerms.accepted': 'Vous devez accepter les conditions pour continuer.',
 }
 

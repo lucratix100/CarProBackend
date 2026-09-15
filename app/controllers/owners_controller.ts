@@ -3,6 +3,7 @@ import { Exception } from '@adonisjs/core/exceptions'
 import Owner from '#models/owner'
 import OwnerInvitationService from '#services/owner_invitation_service'
 import OwnerNotificationService from '#services/owner_notification_service'
+import OwnerStatementService from '#services/owner_statement_service'
 import OwnerTransformer from '#transformers/owner_transformer'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { createOwnerValidator, updateOwnerValidator } from '#validators/owner'
@@ -16,6 +17,8 @@ async function safeNotify(ownerId: number, payload: Parameters<OwnerNotification
 }
 
 export default class OwnersController {
+  #statementService = new OwnerStatementService()
+
   async #findScoped(id: number | string, agencyId: number) {
     return Owner.query().where('id', id).where('agencyId', agencyId).preload('user').firstOrFail()
   }
@@ -66,6 +69,25 @@ export default class OwnersController {
   async show({ params, serialize, agencyId }: HttpContext) {
     const owner = await this.#findScoped(params.id, agencyId!)
     return serialize(OwnerTransformer.transform(owner).useVariant('withUser'))
+  }
+
+  /**
+   * Export owner account statement as PDF (admin).
+   * Query: from, to (ISO dates, optional).
+   */
+  async statement({ params, request, response, agencyId }: HttpContext) {
+    const data = await this.#statementService.build(Number(params.id), agencyId!, {
+      from: request.input('from'),
+      to: request.input('to'),
+    })
+    const pdf = await this.#statementService.generatePdf(data)
+    const fromSlug = data.from ?? 'debut'
+    const toSlug = data.to ?? 'fin'
+    const filename = `releve-compte-${data.ownerId}-${fromSlug}_${toSlug}.pdf`
+
+    response.header('Content-Type', 'application/pdf')
+    response.header('Content-Disposition', `inline; filename="${filename}"`)
+    return response.send(pdf)
   }
 
   /**

@@ -23,6 +23,9 @@ router
     router
       .group(() => {
         router.post('login', [controllers.AccessTokens, 'store'])
+        router.post('forgot-password', [controllers.PasswordResets, 'store'])
+        router.get('reset-password/:token', [controllers.PasswordResets, 'show'])
+        router.post('reset-password/:token', [controllers.PasswordResets, 'update'])
       })
       .prefix('auth')
       .as('auth')
@@ -44,6 +47,7 @@ router
     router
       .group(() => {
         router.get('profile', [controllers.Profile, 'show'])
+        router.post('change-password', [controllers.Profile, 'changePassword'])
         router.post('logout', [controllers.AccessTokens, 'destroy'])
       })
       .prefix('account')
@@ -59,6 +63,10 @@ router
         router.post('/', [controllers.Agencies, 'store'])
         router.get('/:id', [controllers.Agencies, 'show'])
         router.patch('/:id', [controllers.Agencies, 'update'])
+        router.get('/:id/logo', [controllers.Agencies, 'logoFile'])
+        router.get('/:id/logo/pending', [controllers.Agencies, 'pendingLogoFile'])
+        router.post('/:id/logo/approve', [controllers.Agencies, 'approveLogo'])
+        router.post('/:id/logo/reject', [controllers.Agencies, 'rejectLogo'])
         router.post('/:id/admins', [controllers.Agencies, 'inviteAdmin'])
         router.post('/:id/admins/:adminId/resend-invitation', [
           controllers.Agencies,
@@ -104,6 +112,7 @@ router
       .group(() => {
         router.get('/', [controllers.Owners, 'index'])
         router.post('/', [controllers.Owners, 'store'])
+        router.get('/:id/statement', [controllers.Owners, 'statement'])
         router.get('/:id', [controllers.Owners, 'show'])
         router.patch('/:id', [controllers.Owners, 'update'])
         router.delete('/:id', [controllers.Owners, 'destroy'])
@@ -224,6 +233,10 @@ router
       .group(() => {
         router.get('/', [controllers.Settings, 'show'])
         router.patch('/', [controllers.Settings, 'update'])
+        router.post('/logo', [controllers.Settings, 'uploadLogo'])
+        router.delete('/logo', [controllers.Settings, 'destroyLogo'])
+        router.get('/logo', [controllers.Settings, 'logoFile'])
+        router.get('/logo/pending', [controllers.Settings, 'pendingLogoFile'])
       })
       .prefix('settings')
       .as('settings')
@@ -246,6 +259,7 @@ router
     router
       .group(() => {
         router.get('dashboard', [controllers.OwnerPortal, 'dashboard'])
+        router.get('logo', [controllers.OwnerPortal, 'logoFile'])
         router.get('vehicles', [controllers.OwnerPortal, 'vehicles'])
         router.get('vehicles/:id/expenses', [controllers.OwnerPortal, 'vehicleExpenses'])
         router.get('vehicles/:id/summary', [controllers.OwnerPortal, 'vehicleSummary'])
@@ -280,6 +294,7 @@ router
         router.get('vehicles/:id', [controllers.MarketplaceCatalog, 'show'])
         router.get('vehicles/:id/availability', [controllers.MarketplaceCatalog, 'availability'])
         router.get('vehicles/:id/photos/:photoId', [controllers.MarketplaceCatalog, 'photoFile'])
+        router.get('agencies/:id/logo', [controllers.MarketplaceCatalog, 'agencyLogo'])
         router.get('vehicles/:id/reviews', [controllers.MarketplaceReview, 'forVehicle'])
         router.post('reports', [controllers.MarketplaceReport, 'store'])
         router.post('auth/sync', [controllers.MarketplaceAuth, 'sync'])

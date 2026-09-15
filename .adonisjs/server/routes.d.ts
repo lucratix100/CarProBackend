@@ -5,14 +5,22 @@ type ParamValue = string | number | bigint | boolean
 export type ScannedRoutes = {
   ALL: {
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
+    'auth.password_resets.store': { paramsTuple?: []; params?: {} }
+    'auth.password_resets.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
+    'auth.password_resets.update': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.accept': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'profile.profile.change_password': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.store': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.approve_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.reject_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.invite_admin': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.resend_admin_invitation': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
     'agencies.agencies.revoke_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
@@ -28,6 +36,7 @@ export type ScannedRoutes = {
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.store': { paramsTuple?: []; params?: {} }
+    'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -85,11 +94,16 @@ export type ScannedRoutes = {
     'maintenances.maintenances.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'settings.settings.show': { paramsTuple?: []; params?: {} }
     'settings.settings.update': { paramsTuple?: []; params?: {} }
+    'settings.settings.upload_logo': { paramsTuple?: []; params?: {} }
+    'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
+    'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_notifications.admin_notifications.mark_all_read': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
+    'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicle_expenses': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.vehicle_summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -105,6 +119,7 @@ export type ScannedRoutes = {
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
+    'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_report.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.sync': { paramsTuple?: []; params?: {} }
@@ -125,10 +140,13 @@ export type ScannedRoutes = {
     'vehicle_types.index': { paramsTuple?: []; params?: {} }
   }
   GET: {
+    'auth.password_resets.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.agencies': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
@@ -136,6 +154,7 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
+    'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marques.marques.index': { paramsTuple?: []; params?: {} }
     'marques.marques.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -159,9 +178,12 @@ export type ScannedRoutes = {
     'maintenances.maintenances.index': { paramsTuple?: []; params?: {} }
     'maintenances.maintenances.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'settings.settings.show': { paramsTuple?: []; params?: {} }
+    'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
+    'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicle_expenses': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.vehicle_summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -175,6 +197,7 @@ export type ScannedRoutes = {
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
+    'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_auth.me': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.index': { paramsTuple?: []; params?: {} }
@@ -185,10 +208,13 @@ export type ScannedRoutes = {
     'vehicle_types.index': { paramsTuple?: []; params?: {} }
   }
   HEAD: {
+    'auth.password_resets.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.agencies': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
@@ -196,6 +222,7 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
+    'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marques.marques.index': { paramsTuple?: []; params?: {} }
     'marques.marques.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -219,9 +246,12 @@ export type ScannedRoutes = {
     'maintenances.maintenances.index': { paramsTuple?: []; params?: {} }
     'maintenances.maintenances.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'settings.settings.show': { paramsTuple?: []; params?: {} }
+    'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
+    'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicle_expenses': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.vehicle_summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -235,6 +265,7 @@ export type ScannedRoutes = {
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
+    'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_auth.me': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.index': { paramsTuple?: []; params?: {} }
@@ -246,9 +277,14 @@ export type ScannedRoutes = {
   }
   POST: {
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
+    'auth.password_resets.store': { paramsTuple?: []; params?: {} }
+    'auth.password_resets.update': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.accept': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
+    'profile.profile.change_password': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'agencies.agencies.store': { paramsTuple?: []; params?: {} }
+    'agencies.agencies.approve_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.reject_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.invite_admin': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.resend_admin_invitation': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
     'marketplace_publications.marketplace_publications.bulk_approve': { paramsTuple?: []; params?: {} }
@@ -273,6 +309,7 @@ export type ScannedRoutes = {
     'invoices.invoices.store': { paramsTuple?: []; params?: {} }
     'invoices.invoice_payments.store': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
     'maintenances.maintenances.store': { paramsTuple?: []; params?: {} }
+    'settings.settings.upload_logo': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_all_read': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.mark_all_notifications_read': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_report.store': { paramsTuple?: []; params?: {} }
@@ -309,6 +346,7 @@ export type ScannedRoutes = {
     'invoices.invoice_payments.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'invoiceId': ParamValue,'paymentId': ParamValue} }
     'invoices.invoices.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'maintenances.maintenances.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.destroy': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
   }
 }

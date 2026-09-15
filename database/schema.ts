@@ -33,8 +33,10 @@ export class AdminNotificationSchema extends BaseModel {
 }
 
 export class AgencySchema extends BaseModel {
-  static $columns = ['cityId', 'createdAt', 'id', 'isActive', 'isVerified', 'marketplacePublishBannedUntil', 'marketplaceRejectionStreak', 'name', 'notes', 'publishOnMarketplace', 'slug', 'updatedAt'] as const
+  static $columns = ['canUseCustomLogo', 'cityId', 'createdAt', 'id', 'isActive', 'isVerified', 'marketplacePublishBannedUntil', 'marketplaceRejectionStreak', 'name', 'notes', 'publishOnMarketplace', 'slug', 'updatedAt'] as const
   $columns = AgencySchema.$columns
+  @column()
+  declare canUseCustomLogo: boolean
   @column()
   declare cityId: number | null
   @column.dateTime({ autoCreate: true })
@@ -499,7 +501,7 @@ export class RentalSchema extends BaseModel {
 }
 
 export class SettingSchema extends BaseModel {
-  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'id', 'rentalConditions', 'tvaRate', 'updatedAt'] as const
+  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'id', 'logoPath', 'logoPendingPath', 'logoRejectionReason', 'rentalConditions', 'tvaRate', 'updatedAt'] as const
   $columns = SettingSchema.$columns
   @column()
   declare agencyId: number
@@ -514,6 +516,12 @@ export class SettingSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
   @column()
+  declare logoPath: string | null
+  @column()
+  declare logoPendingPath: string | null
+  @column()
+  declare logoRejectionReason: string | null
+  @column()
   declare rentalConditions: string | null
   @column()
   declare tvaRate: string
@@ -522,7 +530,7 @@ export class SettingSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['agencyId', 'createdAt', 'email', 'fullName', 'id', 'invitationExpiresAt', 'invitationToken', 'password', 'passwordSetAt', 'phone', 'role', 'status', 'termsAcceptedAt', 'termsAcceptedIp', 'termsVersion', 'updatedAt'] as const
+  static $columns = ['agencyId', 'createdAt', 'email', 'fullName', 'id', 'invitationExpiresAt', 'invitationToken', 'password', 'passwordResetExpiresAt', 'passwordResetToken', 'passwordSetAt', 'phone', 'role', 'status', 'termsAcceptedAt', 'termsAcceptedIp', 'termsVersion', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column()
   declare agencyId: number | null
@@ -540,6 +548,10 @@ export class UserSchema extends BaseModel {
   declare invitationToken: string | null
   @column({ serializeAs: null })
   declare password: string
+  @column.dateTime()
+  declare passwordResetExpiresAt: DateTime | null
+  @column()
+  declare passwordResetToken: string | null
   @column.dateTime()
   declare passwordSetAt: DateTime | null
   @column()
@@ -671,19 +683,4 @@ export class VehicleSchema extends BaseModel {
   declare vehicleType: string
   @column()
   declare year: number | null
-}
-
-export class VehicleTypeSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'isActive', 'name', 'updatedAt'] as const
-  $columns = VehicleTypeSchema.$columns
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare isActive: boolean
-  @column()
-  declare name: string
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
 }

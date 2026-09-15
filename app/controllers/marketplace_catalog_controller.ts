@@ -5,16 +5,21 @@ import { Exception } from '@adonisjs/core/exceptions'
 import Vehicle from '#models/vehicle'
 import VehiclePhoto from '#models/vehicle_photo'
 import City from '#models/city'
+import Agency from '#models/agency'
 import Setting from '#models/setting'
 import Rental from '#models/rental'
 import RentalService from '#services/rental_service'
 import MarketplaceReviewService from '#services/marketplace_review_service'
+import AgencyLogoUploadService, {
+  marketplaceLogoUrl,
+} from '#services/agency_logo_upload_service'
 import CityTransformer from '#transformers/city_transformer'
 import { todayISO } from '#services/finance_service'
 
 export default class MarketplaceCatalogController {
   #rentals = new RentalService()
   #reviews = new MarketplaceReviewService()
+  #logos = new AgencyLogoUploadService()
 
   #photoUrls(vehicle: Vehicle) {
     const photos = (vehicle.photos ?? []).map((photo) => ({
@@ -27,6 +32,48 @@ export default class MarketplaceCatalogController {
       photosCount: photos.length,
       photoUrl: photos[0]?.url ?? null,
     }
+  }
+
+  #agencyPayload(
+    agency: Agency | null | undefined,
+    options?: {
+      settings?: Setting | null
+      ratingAvg?: number | null
+      ratingCount?: number
+      includeTerms?: boolean
+    }
+  ) {
+    if (!agency) return null
+    const settings = options?.settings ?? null
+    return {
+      id: agency.id,
+      name: agency.name,
+      slug: agency.slug,
+      isVerified: Boolean(agency.isVerified),
+      city: agency.city
+        ? {
+            id: agency.city.id,
+            name: agency.city.name,
+            region: agency.city.region,
+          }
+        : null,
+      logoUrl: settings ? marketplaceLogoUrl(agency, settings) : null,
+      ...(options?.includeTerms
+        ? {
+            rentalConditions: settings?.rentalConditions ?? null,
+            depositAmount: settings?.depositAmount ?? null,
+          }
+        : {}),
+      ratingAvg: options?.ratingAvg ?? null,
+      ratingCount: options?.ratingCount ?? 0,
+    }
+  }
+
+  async #settingsByAgencyIds(agencyIds: number[]) {
+    const unique = [...new Set(agencyIds.filter(Boolean))]
+    if (unique.length === 0) return new Map<number, Setting>()
+    const rows = await Setting.query().whereIn('agencyId', unique)
+    return new Map(rows.map((row) => [row.agencyId, row]))
   }
 
   #publishedVehicleQuery() {
@@ -123,6 +170,9 @@ export default class MarketplaceCatalogController {
       const agencyRatings = await this.#reviews.aggregatesForAgencies(
         rows.map((v) => v.agencyId).filter(Boolean)
       )
+      const settingsByAgency = await this.#settingsByAgencyIds(
+        rows.map((v) => v.agencyId).filter(Boolean)
+      )
       rows = [...rows].sort((a, b) => {
         const ratingA = agencyRatings.get(a.agencyId)?.avg ?? -1
         const ratingB = agencyRatings.get(b.agencyId)?.avg ?? -1
@@ -151,23 +201,11 @@ export default class MarketplaceCatalogController {
             label: vehicle.label,
             ratingAvg: rating.avg,
             ratingCount: rating.count,
-            agency: vehicle.agency
-              ? {
-                  id: vehicle.agency.id,
-                  name: vehicle.agency.name,
-                  slug: vehicle.agency.slug,
-                  isVerified: Boolean(vehicle.agency.isVerified),
-                  city: vehicle.agency.city
-                    ? {
-                        id: vehicle.agency.city.id,
-                        name: vehicle.agency.city.name,
-                        region: vehicle.agency.city.region,
-                      }
-                    : null,
-                  ratingAvg: rating.avg,
-                  ratingCount: rating.count,
-                }
-              : null,
+            agency: this.#agencyPayload(vehicle.agency, {
+              settings: settingsByAgency.get(vehicle.agencyId) ?? null,
+              ratingAvg: rating.avg,
+              ratingCount: rating.count,
+            }),
             marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
             modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
             ...this.#photoUrls(vehicle),
@@ -193,6 +231,9 @@ export default class MarketplaceCatalogController {
     const agencyRatings = await this.#reviews.aggregatesForAgencies(
       rows.map((v) => v.agencyId).filter(Boolean)
     )
+    const settingsByAgency = await this.#settingsByAgencyIds(
+      rows.map((v) => v.agencyId).filter(Boolean)
+    )
 
     return response.ok({
       data: rows.map((vehicle) => {
@@ -209,23 +250,11 @@ export default class MarketplaceCatalogController {
           label: vehicle.label,
           ratingAvg: rating.avg,
           ratingCount: rating.count,
-          agency: vehicle.agency
-            ? {
-                id: vehicle.agency.id,
-                name: vehicle.agency.name,
-                slug: vehicle.agency.slug,
-                isVerified: Boolean(vehicle.agency.isVerified),
-                city: vehicle.agency.city
-                  ? {
-                      id: vehicle.agency.city.id,
-                      name: vehicle.agency.city.name,
-                      region: vehicle.agency.city.region,
-                    }
-                  : null,
-                ratingAvg: rating.avg,
-                ratingCount: rating.count,
-              }
-            : null,
+          agency: this.#agencyPayload(vehicle.agency, {
+            settings: settingsByAgency.get(vehicle.agencyId) ?? null,
+            ratingAvg: rating.avg,
+            ratingCount: rating.count,
+          }),
           marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
           modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
           ...this.#photoUrls(vehicle),
@@ -271,25 +300,12 @@ export default class MarketplaceCatalogController {
       ratingCount: agencyRating.count,
       vehicleRatingAvg: vehicleRating.avg,
       vehicleRatingCount: vehicleRating.count,
-      agency: vehicle.agency
-        ? {
-            id: vehicle.agency.id,
-            name: vehicle.agency.name,
-            slug: vehicle.agency.slug,
-            isVerified: Boolean(vehicle.agency.isVerified),
-            city: vehicle.agency.city
-              ? {
-                  id: vehicle.agency.city.id,
-                  name: vehicle.agency.city.name,
-                  region: vehicle.agency.city.region,
-                }
-              : null,
-            rentalConditions: settings.rentalConditions,
-            depositAmount: settings.depositAmount,
-            ratingAvg: agencyRating.avg,
-            ratingCount: agencyRating.count,
-          }
-        : null,
+      agency: this.#agencyPayload(vehicle.agency, {
+        settings,
+        ratingAvg: agencyRating.avg,
+        ratingCount: agencyRating.count,
+        includeTerms: true,
+      }),
       marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
       modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
       ...this.#photoUrls(vehicle),
@@ -368,5 +384,21 @@ export default class MarketplaceCatalogController {
     else response.header('Content-Type', 'image/jpeg')
 
     return response.stream(createReadStream(absolutePath))
+  }
+
+  async agencyLogo({ params, response }: HttpContext) {
+    const agency = await Agency.query()
+      .where('id', params.id)
+      .where('isActive', true)
+      .where('publishOnMarketplace', true)
+      .where('canUseCustomLogo', true)
+      .firstOrFail()
+
+    const settings = await Setting.current(agency.id)
+    if (!settings.logoPath) {
+      throw new Exception('Logo introuvable.', { status: 404, code: 'E_AGENCY_LOGO' })
+    }
+
+    return this.#logos.streamFile(response, settings.logoPath)
   }
 }

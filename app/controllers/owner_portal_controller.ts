@@ -3,11 +3,15 @@ import { Exception } from '@adonisjs/core/exceptions'
 import Vehicle from '#models/vehicle'
 import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
+import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { rentalFinancials, todayISO } from '#services/finance_service'
 import { scopeAppliedExpenses } from '#services/maintenance_expense_service'
 import VehicleSummaryService from '#services/vehicle_summary_service'
 import OwnerNotificationService from '#services/owner_notification_service'
+import AgencyLogoUploadService, {
+  resolvePublicLogoPath,
+} from '#services/agency_logo_upload_service'
 import VehicleTransformer from '#transformers/vehicle_transformer'
 import RentalTransformer from '#transformers/rental_transformer'
 import OwnerNotificationTransformer from '#transformers/owner_notification_transformer'
@@ -25,6 +29,8 @@ type VehicleMoneyRow = {
 }
 
 export default class OwnerPortalController {
+  #logos = new AgencyLogoUploadService()
+
   #ownerId(auth: HttpContext['auth']) {
     const user = auth.use('api').getUserOrFail()
     if (!user.owner) {
@@ -33,21 +39,29 @@ export default class OwnerPortalController {
     return user.owner.id
   }
 
+  #agencyId(auth: HttpContext['auth']) {
+    const user = auth.use('api').getUserOrFail()
+    const agencyId = user.agencyId ?? user.owner?.agencyId
+    if (!agencyId) {
+      throw new Exception('Aucune agence associée à ce compte.', {
+        status: 403,
+        code: 'E_NO_AGENCY',
+      })
+    }
+    return agencyId
+  }
+
   #notifications() {
     return new OwnerNotificationService()
   }
 
   async dashboard({ auth, serialize }: HttpContext) {
     const ownerId = this.#ownerId(auth)
-    const user = auth.use('api').getUserOrFail()
-    const settingsAgencyId = user.agencyId ?? user.owner?.agencyId
-    if (!settingsAgencyId) {
-      throw new Exception('Aucune agence associée à ce compte.', {
-        status: 403,
-        code: 'E_NO_AGENCY',
-      })
-    }
-    const settings = await Setting.current(settingsAgencyId)
+    const settingsAgencyId = this.#agencyId(auth)
+    const [settings, agency] = await Promise.all([
+      Setting.current(settingsAgencyId),
+      Agency.find(settingsAgencyId),
+    ])
     const vehicles = await Vehicle.query().where('ownerId', ownerId)
     const vehicleIds = vehicles.map((v) => v.id)
 
@@ -85,6 +99,8 @@ export default class OwnerPortalController {
     }
 
     const totalExpenses = maintenances.reduce((sum, row) => sum + Number(row.cost || 0), 0)
+    const publicLogo =
+      agency && settings ? resolvePublicLogoPath(agency, settings) : null
 
     return serialize({
       kpis: {
@@ -97,7 +113,21 @@ export default class OwnerPortalController {
         balance: netRevenue - totalExpenses,
       },
       companyName: settings.companyName,
+      logoUrl: publicLogo ? '/owner/logo' : null,
     })
+  }
+
+  async logoFile({ auth, response }: HttpContext) {
+    const agencyId = this.#agencyId(auth)
+    const [agency, settings] = await Promise.all([
+      Agency.findOrFail(agencyId),
+      Setting.current(agencyId),
+    ])
+    const path = resolvePublicLogoPath(agency, settings)
+    if (!path) {
+      throw new Exception('Logo introuvable.', { status: 404, code: 'E_AGENCY_LOGO' })
+    }
+    return this.#logos.streamFile(response, path)
   }
 
   async vehicles({ auth, serialize }: HttpContext) {

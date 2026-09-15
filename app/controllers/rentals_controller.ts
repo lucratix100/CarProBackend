@@ -118,7 +118,8 @@ export default class RentalsController {
     if (vehicleId) query.where('vehicleId', vehicleId)
     if (clientId) query.where('clientId', clientId)
 
-    const paginator = await query.orderBy('createdAt', 'desc').orderBy('id', 'desc').paginate(page, perPage)
+    // Ordre d’arrivée stable (id) — une modification ne change pas la position.
+    const paginator = await query.orderBy('id', 'desc').paginate(page, perPage)
     paginator.baseUrl('/rentals')
     paginator.queryString(request.qs())
 
@@ -126,8 +127,15 @@ export default class RentalsController {
       paginator.all().map((rental) => this.#withFinance(rental, serialize))
     )
 
+    const rawMeta = paginator.getMeta() as Record<string, unknown>
     return {
-      meta: paginator.getMeta(),
+      meta: {
+        total: Number(rawMeta.total ?? 0),
+        perPage: Number(rawMeta.perPage ?? rawMeta.per_page ?? perPage),
+        currentPage: Number(rawMeta.currentPage ?? rawMeta.current_page ?? page),
+        lastPage: Number(rawMeta.lastPage ?? rawMeta.last_page ?? 1),
+        firstPage: Number(rawMeta.firstPage ?? rawMeta.first_page ?? 1),
+      },
       data,
     }
   }
