@@ -5,7 +5,7 @@ import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
 import Agency from '#models/agency'
 import Setting from '#models/setting'
-import { rentalFinancials, todayISO } from '#services/finance_service'
+import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
 import { scopeAppliedExpenses } from '#services/maintenance_expense_service'
 import VehicleSummaryService from '#services/vehicle_summary_service'
 import OwnerNotificationService from '#services/owner_notification_service'
@@ -92,7 +92,7 @@ export default class OwnerPortalController {
       if (
         rental.status === 'En cours' &&
         rental.startDate.toISODate()! <= today &&
-        rental.endDate.toISODate()! >= today
+        occupancyEndExclusive(rental.startDate.toISODate()!, rental.endDate.toISODate()!) > today
       ) {
         activeRentals += 1
       }

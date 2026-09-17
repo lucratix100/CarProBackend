@@ -5,6 +5,7 @@ import { Exception } from '@adonisjs/core/exceptions'
 import type { HttpContext } from '@adonisjs/core/http'
 import Client from '#models/client'
 import ClientLicenseUploadService from '#services/client_license_upload_service'
+import IdentityScanService from '#services/identity_scan_service'
 import ClientTransformer from '#transformers/client_transformer'
 import { createClientValidator, updateClientValidator } from '#validators/client'
 
@@ -51,9 +52,69 @@ function withLicenseFlags(client: Client, serialized: unknown) {
 
 export default class ClientsController {
   #uploads = new ClientLicenseUploadService()
+  #identityScan = new IdentityScanService()
 
   async #findScoped(id: number | string, agencyId: number) {
     return Client.query().where('id', id).where('agencyId', agencyId).firstOrFail()
+  }
+
+  /**
+   * Analyse OCR / MRZ d’une pièce d’identité ou d’un permis.
+   * Ne crée pas le client — retourne les champs pour vérification humaine.
+   */
+  async scanIdentity({ request }: HttpContext) {
+    const file = this.#identityScan.validateScanFile(request.file('file'))
+    const result = await this.#identityScan.scanFile(file)
+
+    if (result.warnings.includes('unreadable') && !result.fields.fullName) {
+      throw new Exception('Photo illisible. Veuillez reprendre la photo.', {
+        status: 422,
+        code: 'E_SCAN_UNREADABLE',
+      })
+    }
+
+    return result
+  }
+
+  /**
+   * Recherche anti-doublon par n° de pièce et/ou n° de permis (scopé agence).
+   */
+  async lookup({ request, serialize, agencyId }: HttpContext) {
+    const idCardNumber = String(request.input('idCardNumber') || '')
+      .trim()
+      .toUpperCase()
+    const licenseNumber = String(request.input('licenseNumber') || '')
+      .trim()
+      .toUpperCase()
+
+    if (!idCardNumber && !licenseNumber) {
+      throw new Exception('Indiquez un n° de pièce ou un n° de permis.', {
+        status: 422,
+        code: 'E_LOOKUP_EMPTY',
+      })
+    }
+
+    const query = Client.query().where('agencyId', agencyId!)
+    query.where((builder) => {
+      if (idCardNumber) {
+        builder.orWhereRaw('UPPER(TRIM(id_card_number)) = ?', [idCardNumber])
+      }
+      if (licenseNumber) {
+        builder.orWhereRaw('UPPER(TRIM(license_number)) = ?', [licenseNumber])
+      }
+    })
+
+    const client = await query.orderBy('id', 'desc').first()
+    if (!client) {
+      return { found: false, client: null }
+    }
+
+    const serialized = await serialize(ClientTransformer.transform(client))
+    return {
+      found: true,
+      client: withLicenseFlags(client, serialized),
+      message: 'Ce client existe déjà dans la base Profil Car Service.',
+    }
   }
 
   async index({ request, serialize, agencyId }: HttpContext) {
@@ -80,6 +141,8 @@ export default class ClientsController {
           .whereILike('fullName', `%${q}%`)
           .orWhereILike('phone', `%${q}%`)
           .orWhereILike('email', `%${q}%`)
+          .orWhereILike('idCardNumber', `%${q}%`)
+          .orWhereILike('licenseNumber', `%${q}%`)
       })
     }
 

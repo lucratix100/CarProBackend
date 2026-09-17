@@ -372,6 +372,18 @@ const routes = {
     tokens: [{"old":"/api/v1/clients","type":0,"val":"api","end":""},{"old":"/api/v1/clients","type":0,"val":"v1","end":""},{"old":"/api/v1/clients","type":0,"val":"clients","end":""}],
     types: placeholder as Registry['clients.clients.store']['types'],
   },
+  'clients.clients.scan_identity': {
+    methods: ["POST"],
+    pattern: '/api/v1/clients/scan-identity',
+    tokens: [{"old":"/api/v1/clients/scan-identity","type":0,"val":"api","end":""},{"old":"/api/v1/clients/scan-identity","type":0,"val":"v1","end":""},{"old":"/api/v1/clients/scan-identity","type":0,"val":"clients","end":""},{"old":"/api/v1/clients/scan-identity","type":0,"val":"scan-identity","end":""}],
+    types: placeholder as Registry['clients.clients.scan_identity']['types'],
+  },
+  'clients.clients.lookup': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/clients/lookup',
+    tokens: [{"old":"/api/v1/clients/lookup","type":0,"val":"api","end":""},{"old":"/api/v1/clients/lookup","type":0,"val":"v1","end":""},{"old":"/api/v1/clients/lookup","type":0,"val":"clients","end":""},{"old":"/api/v1/clients/lookup","type":0,"val":"lookup","end":""}],
+    types: placeholder as Registry['clients.clients.lookup']['types'],
+  },
   'clients.clients.upload_license': {
     methods: ["POST"],
     pattern: '/api/v1/clients/:id/license',

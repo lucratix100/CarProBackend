@@ -8,7 +8,13 @@ import Vehicle from '#models/vehicle'
 import Invoice from '#models/invoice'
 import Setting from '#models/setting'
 import ClientAccount from '#models/client_account'
-import { daysBetween, rentalFinancials, resolveRentalStatus, todayISO } from '#services/finance_service'
+import {
+  daysBetween,
+  occupancyEndExclusive,
+  rentalFinancials,
+  resolveRentalStatus,
+  todayISO,
+} from '#services/finance_service'
 import InvoicePaymentService from '#services/invoice_payment_service'
 import OwnerNotificationService from '#services/owner_notification_service'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
@@ -90,6 +96,7 @@ export default class RentalService {
   }
   /**
    * Returns an overlapping non-cancelled rental for the same vehicle, if any.
+   * Fin exclusive : le jour de retour est libre pour une nouvelle location.
    */
   async findConflict(
     vehicleId: number,
@@ -97,11 +104,15 @@ export default class RentalService {
     endDate: string,
     excludeRentalId?: number
   ) {
+    const requestOccEnd = occupancyEndExclusive(startDate, endDate)
     const query = Rental.query()
       .where('vehicleId', vehicleId)
       .whereNot('status', 'Annulée')
-      .where('startDate', '<=', endDate)
-      .where('endDate', '>=', startDate)
+      .where('startDate', '<', requestOccEnd)
+      .whereRaw(
+        `(CASE WHEN end_date = start_date THEN end_date + INTERVAL '1 day' ELSE end_date END) > ?::date`,
+        [startDate]
+      )
 
     if (excludeRentalId) {
       query.whereNot('id', excludeRentalId)
@@ -148,7 +159,10 @@ export default class RentalService {
       .where('vehicleId', vehicleId)
       .where('status', 'En cours')
       .where('startDate', '<=', today)
-      .where('endDate', '>=', today)
+      .whereRaw(
+        `(CASE WHEN end_date = start_date THEN end_date + INTERVAL '1 day' ELSE end_date END) > ?::date`,
+        [today]
+      )
       .first()
 
     if (active) {

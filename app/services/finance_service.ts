@@ -27,16 +27,37 @@ export function todayISO() {
   return DateTime.now().toISODate()!
 }
 
+/**
+ * Borne exclusive d'occupation calendaire.
+ * Fin exclusive (12→13 occupe le 12, libre le 13). Si start===end (1 jour facturé),
+ * occupe [start, start+1).
+ */
+export function occupancyEndExclusive(startDate: string, endDate: string) {
+  if (endDate > startDate) return endDate
+  return DateTime.fromISO(startDate).plus({ days: 1 }).toISODate()!
+}
+
+/** Chevauchement de périodes avec fin exclusive (turnover le jour de retour autorisé). */
+export function rentalsOverlap(
+  startA: string,
+  endA: string,
+  startB: string,
+  endB: string
+) {
+  return startA < occupancyEndExclusive(startB, endB) && occupancyEndExclusive(startA, endA) > startB
+}
+
 export type ComputedRentalStatus = 'Réservée' | 'En cours' | 'Terminée'
 
-/** Statut dérivé des dates (hors Annulée). */
+/** Statut dérivé des dates (hors Annulée). Fin exclusive : terminée dès le jour de retour. */
 export function resolveRentalStatus(
   startDate: string,
   endDate: string,
   today: string = todayISO()
 ): ComputedRentalStatus {
-  if (endDate < today) return 'Terminée'
-  if (startDate <= today && endDate >= today) return 'En cours'
+  const occupiedUntil = occupancyEndExclusive(startDate, endDate)
+  if (occupiedUntil <= today) return 'Terminée'
+  if (startDate <= today && occupiedUntil > today) return 'En cours'
   return 'Réservée'
 }
 

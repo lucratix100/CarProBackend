@@ -176,6 +176,8 @@ router
       .group(() => {
         router.get('/', [controllers.Clients, 'index'])
         router.post('/', [controllers.Clients, 'store'])
+        router.post('/scan-identity', [controllers.Clients, 'scanIdentity'])
+        router.get('/lookup', [controllers.Clients, 'lookup'])
         router.post('/:id/license', [controllers.Clients, 'uploadLicense'])
         router.get('/:id/license/:side', [controllers.Clients, 'licenseFile'])
         router.get('/:id', [controllers.Clients, 'show'])

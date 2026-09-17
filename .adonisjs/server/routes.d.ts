@@ -65,6 +65,8 @@ export type ScannedRoutes = {
     'vehicle_expenses.vehicle_expenses.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.index': { paramsTuple?: []; params?: {} }
     'clients.clients.store': { paramsTuple?: []; params?: {} }
+    'clients.clients.scan_identity': { paramsTuple?: []; params?: {} }
+    'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.upload_license': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -167,6 +169,7 @@ export type ScannedRoutes = {
     'vehicle_expenses.vehicle_expenses.index': { paramsTuple?: []; params?: {} }
     'vehicle_expenses.vehicle_expenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.index': { paramsTuple?: []; params?: {} }
+    'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.index': { paramsTuple?: []; params?: {} }
@@ -235,6 +238,7 @@ export type ScannedRoutes = {
     'vehicle_expenses.vehicle_expenses.index': { paramsTuple?: []; params?: {} }
     'vehicle_expenses.vehicle_expenses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.index': { paramsTuple?: []; params?: {} }
+    'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.index': { paramsTuple?: []; params?: {} }
@@ -301,6 +305,7 @@ export type ScannedRoutes = {
     'vehicles.vehicles.unpublish_marketplace': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicle_expenses.vehicle_expenses.store': { paramsTuple?: []; params?: {} }
     'clients.clients.store': { paramsTuple?: []; params?: {} }
+    'clients.clients.scan_identity': { paramsTuple?: []; params?: {} }
     'clients.clients.upload_license': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.store': { paramsTuple?: []; params?: {} }
     'rentals.rentals.extend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

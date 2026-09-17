@@ -3,7 +3,7 @@ import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
 import VehicleExpense from '#models/vehicle_expense'
 import Setting from '#models/setting'
-import { rentalFinancials, todayISO } from '#services/finance_service'
+import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
 import { isExpenseApplied, scopeAppliedExpenses } from '#services/maintenance_expense_service'
 
 export type VehicleSummaryOptions = {
@@ -55,7 +55,7 @@ export default class VehicleSummaryService {
       if (
         rental.status === 'En cours' &&
         rental.startDate.toISODate()! <= today &&
-        rental.endDate.toISODate()! >= today
+        occupancyEndExclusive(rental.startDate.toISODate()!, rental.endDate.toISODate()!) > today
       ) {
         activeRentals += 1
       }

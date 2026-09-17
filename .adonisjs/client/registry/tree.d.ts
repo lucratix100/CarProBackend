@@ -113,6 +113,8 @@ export interface ApiDefinition {
     clients: {
       index: typeof routes['clients.clients.index']
       store: typeof routes['clients.clients.store']
+      scanIdentity: typeof routes['clients.clients.scan_identity']
+      lookup: typeof routes['clients.clients.lookup']
       uploadLicense: typeof routes['clients.clients.upload_license']
       licenseFile: typeof routes['clients.clients.license_file']
       show: typeof routes['clients.clients.show']

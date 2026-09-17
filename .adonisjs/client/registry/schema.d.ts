@@ -739,6 +739,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'clients.clients.scan_identity': {
+    methods: ["POST"]
+    pattern: '/api/v1/clients/scan-identity'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['scanIdentity']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['scanIdentity']>>>
+    }
+  }
+  'clients.clients.lookup': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/clients/lookup'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['lookup']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['lookup']>>>
+    }
+  }
   'clients.clients.upload_license': {
     methods: ["POST"]
     pattern: '/api/v1/clients/:id/license'
