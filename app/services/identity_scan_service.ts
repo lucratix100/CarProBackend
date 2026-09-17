@@ -45,14 +45,29 @@ export const MAX_SCAN_LABEL = '4 Mo'
 const DATE_LABEL =
   /(?:date\s*(?:de\s*)?(?:naissance|birth|naiss)|née?\s*le|born|dob|né\(e\)\s*le)/i
 const EXPIRY_LABEL =
-  /(?:date\s*(?:d['’])?exp(?:iration)?|expire|valid(?:ité| until| thru)|valable\s*jusqu)/i
+  /(?:date\s*(?:d['’])?exp(?:iration)?|date\s*of\s*expiry|expire|valid(?:ité| until| thru)|valable\s*jusqu)/i
+const ISSUE_LABEL =
+  /(?:date\s*(?:de\s*)?d[ée]livrance|date\s*of\s*issue|issued)/i
 const DOC_NUMBER_LABEL =
-  /(?:n[°o.]?\s*(?:cni|cin|pièce|document|passport|passeport|id)|document\s*no|passport\s*no|num(?:éro)?\s*(?:de\s*)?(?:pièce|cni|cin))/i
+  /(?:n[°ºo.]?\s*(?:de\s*la\s*)?(?:carte|cni|cin|pi[eè]ce|document|passport|passeport|id)|identity\s*card\s*number|document\s*no|passport\s*no|num(?:[eé]ro)?\s*(?:de\s*)?(?:la\s*)?(?:carte|pi[eè]ce|cni|cin))/i
 const LICENSE_NUMBER_LABEL =
   /(?:n[°o.]?\s*(?:de\s*)?permis|license\s*no|permis\s*n|dl\s*no|driving\s*licen[cs]e)/i
 const PLACE_BIRTH_LABEL = /(?:lieu\s*de\s*naissance|place\s*of\s*birth|né\(e\)\s*à)/i
 const NATIONALITY_LABEL = /(?:nationalité|nationality|citoyenneté)/i
+const ADDRESS_LABEL = /(?:adresse(?:\s*du\s*domicile)?|address|residence)/i
 const CATEGORY_LABEL = /(?:cat(?:égorie|egory)?(?:s)?|categories?)\s*[:.]?\s*([A-Z0-9\s,/+-]{1,20})/i
+
+/** Labels « Prénoms » CNI CEDEAO (FR/EN/PT) */
+const FIRST_NAME_LABEL =
+  /^(?:pr[eé]noms?|given\s*names?|first\s*names?|nomes?\s*pr[oó]prios?)\b/i
+/** Labels « Nom » (éviter « Nomes próprios » portugais) */
+const LAST_NAME_LABEL = /^(?:nom(?!es\b)|noms\b|surname|family\s*name|apelido)\b/i
+
+const TRANSLATION_ONLY =
+  /^(?:given\s*names?|first\s*names?|surname|family\s*name|nomes?\s*pr[oó]prios?|apelidos?|identity\s*card(?:\s*number)?|date\s*of\s*(?:birth|expiry|issue)|place\s*of\s*birth|address|sexo|sex|height|taille)\s*$/i
+
+const NOISE_LINE =
+  /^(?:republique|république|senegal|sénégal|cedeao|ecowas|carte\s*d|identity\s*card|cart[aã]o|prod-?daf|centre\s*d|registration|sexo|sexe|sex\b|taille|height|cm\b)/i
 
 let workerPromise: Promise<Worker> | null = null
 
@@ -87,6 +102,97 @@ function titleCaseName(value: string) {
   return normalizeSpaces(value)
     .toLowerCase()
     .replace(/(^|[\s'-])(\p{L})/gu, (_, sep: string, ch: string) => `${sep}${ch.toUpperCase()}`)
+}
+
+/** Prénoms + Nom → nom complet (ex. « Serigne Saliou Mbacke Ndiaye ») */
+function composeFullName(firstNames: string | null, lastName: string | null): string | null {
+  const first = firstNames ? normalizeSpaces(firstNames) : ''
+  const last = lastName ? normalizeSpaces(lastName) : ''
+  const combined = normalizeSpaces(`${first} ${last}`.trim())
+  if (combined.length < 3) return null
+  return titleCaseName(combined)
+}
+
+function isLikelyPersonName(value: string): boolean {
+  const v = normalizeSpaces(value)
+  if (v.length < 2 || v.length > 80) return false
+  if (/\d/.test(v)) return false
+  if (NOISE_LINE.test(v)) return false
+  if (TRANSLATION_ONLY.test(v)) return false
+  if (/^(?:date|lieu|adresse|national|carte|numero|numéro|n°)/i.test(v)) return false
+  // Au moins 2 lettres
+  if ((v.match(/\p{L}/gu) || []).length < 2) return false
+  return /^[\p{L}'\-\s.]+$/u.test(v)
+}
+
+function stripLabelPrefix(line: string, label: RegExp): string {
+  return normalizeSpaces(line.replace(label, '').replace(/^[\s:.\-–—|/]+/, ''))
+}
+
+/**
+ * Extrait une valeur après un label (même ligne ou lignes suivantes),
+ * en ignorant les traductions EN/PT sur la même ligne.
+ */
+function extractLabeledValue(
+  text: string,
+  label: RegExp,
+  options?: { allowDigits?: boolean; maxLookahead?: number }
+): string | null {
+  const allowDigits = options?.allowDigits ?? true
+  const maxLookahead = options?.maxLookahead ?? 3
+  const lines = text.split(/\r?\n/).map((l) => normalizeSpaces(l)).filter(Boolean)
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!label.test(line)) continue
+
+    // Valeur après le label sur la même ligne (après éventuelles traductions)
+    let after = stripLabelPrefix(line, label)
+    // « Prénoms / Given names / Nomes » → enlever suites de labels bilingues
+    after = after
+      .replace(/^(?:given\s*names?|first\s*names?|nomes?\s*pr[oó]prios?|surname|family\s*name|apelidos?)\s*[/:|]?\s*/i, '')
+      .replace(/^(?:identity\s*card\s*number|date\s*of\s*(?:birth|expiry|issue)|place\s*of\s*birth|address)\s*[/:|]?\s*/i, '')
+      .trim()
+
+    if (after.length >= 2 && (allowDigits || !/^\d/.test(after)) && !label.test(after)) {
+      // Enlever enchaînement de traductions restantes (Surname / Apelido)
+      let cleaned = after
+      for (let k = 0; k < 4; k++) {
+        const next = cleaned.replace(
+          /^(?:given\s*names?|first\s*names?|nomes?\s*pr[oó]prios?|surname|family\s*name|apelidos?|identity\s*card\s*number|date\s*of\s*(?:birth|expiry|issue)|place\s*of\s*birth|address)\s*[/:|]?\s*/i,
+          ''
+        )
+        if (next === cleaned) break
+        cleaned = next.trim()
+      }
+      after = cleaned
+      if (
+        after.length >= 2 &&
+        !TRANSLATION_ONLY.test(after) &&
+        !NOISE_LINE.test(after) &&
+        (allowDigits || isLikelyPersonName(after) || /^[\d\s]+$/.test(after))
+      ) {
+        return after
+      }
+    }
+
+    for (let j = 1; j <= maxLookahead; j++) {
+      const next = lines[i + j]
+      if (!next) break
+      if (label.test(next)) continue
+      if (FIRST_NAME_LABEL.test(next) || LAST_NAME_LABEL.test(next)) break
+      if (DATE_LABEL.test(next) || EXPIRY_LABEL.test(next) || ISSUE_LABEL.test(next)) break
+      if (PLACE_BIRTH_LABEL.test(next) || DOC_NUMBER_LABEL.test(next) || ADDRESS_LABEL.test(next)) break
+      if (TRANSLATION_ONLY.test(next)) continue
+      if (NOISE_LINE.test(next) && !/\d{2}[-/.]\d{2}/.test(next)) continue
+      if (/^(?:given\s*names?|surname|family\s*name|date\s*of|place\s*of|identity\s*card|nomes?|apelidos?)\b/i.test(next)) {
+        continue
+      }
+      if (!allowDigits && /\d/.test(next) && !/[A-Za-zÀ-ÿ]{3,}/.test(next)) continue
+      return next
+    }
+  }
+  return null
 }
 
 /** YYMMDD → YYYY-MM-DD (siècle glissant : < 15 ans dans le futur = 2000+, sinon 1900+) */
@@ -133,8 +239,9 @@ function extractDateNearLabel(text: string, label: RegExp): string | null {
       const parsed = parseFlexibleDate(same[1])
       if (parsed) return parsed
     }
-    const next = lines[i + 1]
-    if (next) {
+    for (let j = 1; j <= 2; j++) {
+      const next = lines[i + j]
+      if (!next) break
       const m = next.match(/(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}[-/.]\d{1,2}[-/.]\d{1,2})/)
       if (m?.[1]) {
         const parsed = parseFlexibleDate(m[1])
@@ -146,16 +253,123 @@ function extractDateNearLabel(text: string, label: RegExp): string | null {
 }
 
 function extractValueNearLabel(text: string, label: RegExp): string | null {
-  const lines = text.split(/\r?\n/)
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (!label.test(line)) continue
-    const after = line.replace(label, '').replace(/^[\s:.\-–—]+/, '').trim()
-    if (after.length >= 3 && !/^\d{1,2}[-/.]/.test(after)) return normalizeSpaces(after)
-    const next = lines[i + 1]?.trim()
-    if (next && next.length >= 3) return normalizeSpaces(next)
+  return extractLabeledValue(text, label, { allowDigits: true })
+}
+
+/** N° CNI CEDEAO du type « 1 07 19970202 00099 6 » */
+function extractSenegalCardNumber(text: string): string | null {
+  const labeled = extractLabeledValue(text, DOC_NUMBER_LABEL, { allowDigits: true, maxLookahead: 4 })
+  if (labeled) {
+    const digits = labeled.replace(/[^\d]/g, '')
+    if (digits.length >= 10 && digits.length <= 20) {
+      return normalizeSpaces(labeled.replace(/[^\d\s]/g, ''))
+    }
+  }
+
+  // Fallback : longue suite de chiffres typique CEDEAO
+  const match = text.match(/\b(\d(?:[\s\-.]?\d){12,18})\b/)
+  if (match?.[1]) {
+    const digits = match[1].replace(/[^\d]/g, '')
+    if (digits.length >= 14 && digits.length <= 20) {
+      return normalizeSpaces(match[1].replace(/[^\d\s]/g, ''))
+    }
   }
   return null
+}
+
+function isSenegalCedeaoCard(text: string): boolean {
+  const upper = text.toUpperCase()
+  return (
+    /CEDEAO|ECOWAS|SENEGAL|SÉNÉGAL/.test(upper) &&
+    /CARTE\s*D.?IDENTIT|IDENTITY\s*CARD|CNI/.test(upper)
+  ) || /N[°ºO.]?\s*DE\s*LA\s*CARTE\s*D.?IDENTIT/i.test(text)
+}
+
+/**
+ * Parseur dédié CNI CEDEAO Sénégal :
+ * fullName = Prénoms + Nom
+ */
+function parseSenegalCedeaoFields(text: string): {
+  fields: Partial<IdentityScanFields>
+  confidence: Partial<Record<keyof IdentityScanFields, number>>
+} {
+  const fields: Partial<IdentityScanFields> = {}
+  const confidence: Partial<Record<keyof IdentityScanFields, number>> = {}
+
+  const rawFirst = extractLabeledValue(text, FIRST_NAME_LABEL, {
+    allowDigits: false,
+    maxLookahead: 4,
+  })
+  const rawLast = extractLabeledValue(text, LAST_NAME_LABEL, {
+    allowDigits: false,
+    maxLookahead: 4,
+  })
+
+  const firstNames =
+    rawFirst && isLikelyPersonName(rawFirst) ? rawFirst : null
+  // « Nom » seul : une ligne courte type NDIAYE (éviter de reprendre « Nomes próprios »)
+  let lastName: string | null = null
+  if (rawLast && isLikelyPersonName(rawLast)) {
+    // Si OCR a collé « Nom NDIAYE » déjà stripé
+    lastName = rawLast
+  }
+
+  // Si LAST_NAME_LABEL a matché « Nomes » à tort, rawLast peut être les prénoms :
+  // on préfère une ligne majuscules courte après un vrai label « Nom / Surname »
+  if (firstNames && lastName && firstNames.toUpperCase() === lastName.toUpperCase()) {
+    lastName = null
+  }
+
+  const fullName = composeFullName(firstNames, lastName)
+  if (fullName) {
+    fields.fullName = fullName
+    confidence.fullName = firstNames && lastName ? 0.9 : 0.7
+  }
+
+  const birth = extractDateNearLabel(text, DATE_LABEL)
+  if (birth) {
+    fields.birthDate = birth
+    confidence.birthDate = 0.85
+  }
+
+  // Expiration : éviter de prendre la date de délivrance
+  const expiry = extractDateNearLabel(text, EXPIRY_LABEL)
+  const issued = extractDateNearLabel(text, ISSUE_LABEL)
+  if (expiry && expiry !== issued) {
+    fields.documentExpiresAt = expiry
+    confidence.documentExpiresAt = 0.8
+  } else if (expiry) {
+    fields.documentExpiresAt = expiry
+    confidence.documentExpiresAt = 0.65
+  }
+
+  const cardNo = extractSenegalCardNumber(text)
+  if (cardNo) {
+    fields.idCardNumber = cardNo
+    confidence.idCardNumber = 0.85
+  }
+
+  const place = extractLabeledValue(text, PLACE_BIRTH_LABEL, { allowDigits: false })
+  if (place && isLikelyPersonName(place)) {
+    fields.placeOfBirth = titleCaseName(place)
+    confidence.placeOfBirth = 0.75
+    fields.city = titleCaseName(place.split(/[/,]/)[0] || place)
+    confidence.city = 0.6
+  }
+
+  const address = extractLabeledValue(text, ADDRESS_LABEL, { allowDigits: true, maxLookahead: 3 })
+  if (address && address.length >= 5 && !fields.city) {
+    const cityGuess = address.split(/[/,]/)[0]?.trim()
+    if (cityGuess && cityGuess.length >= 3) {
+      fields.city = titleCaseName(cityGuess)
+      confidence.city = 0.45
+    }
+  }
+
+  fields.nationality = fields.nationality ?? 'Sénégalaise'
+  confidence.nationality = 0.7
+
+  return { fields, confidence }
 }
 
 function findMrzLines(text: string): string[] {
@@ -205,28 +419,38 @@ function detectDocumentType(text: string, mrzCode: string | null): IdentityDocum
     return 'driving_license'
   }
   if (/PASSEPORT|PASSPORT/.test(upper)) return 'passport'
-  if (/CARTE\s+NATIONALE|CNI|IDENTITY\s+CARD|CARTE\s+D.?IDENTIT/.test(upper)) return 'cni'
+  if (
+    isSenegalCedeaoCard(text) ||
+    /CARTE\s+NATIONALE|CNI|IDENTITY\s+CARD|CARTE\s+D.?IDENTIT|CEDEAO/.test(upper)
+  ) {
+    return 'cni'
+  }
   return 'unknown'
 }
 
+/** Nom complet = Prénoms + Nom (ordre civil sénégalais / FR) */
 function guessFullNameFromText(text: string): string | null {
+  const first = extractLabeledValue(text, FIRST_NAME_LABEL, { allowDigits: false, maxLookahead: 4 })
+  const last = extractLabeledValue(text, LAST_NAME_LABEL, { allowDigits: false, maxLookahead: 4 })
+  const composed = composeFullName(
+    first && isLikelyPersonName(first) ? first : null,
+    last && isLikelyPersonName(last) ? last : null
+  )
+  if (composed) return composed
+
+  // Une seule partie détectée
+  if (first && isLikelyPersonName(first)) return titleCaseName(first)
+  if (last && isLikelyPersonName(last)) return titleCaseName(last)
+
   const lines = text
     .split(/\r?\n/)
     .map((l) => normalizeSpaces(l))
     .filter((l) => l.length >= 4 && l.length <= 60)
 
-  const nom = lines.find((l) => /^(?:nom|surname|name)\b/i.test(l))
-  const prenom = lines.find((l) => /^(?:pr[ée]noms?|given\s*names?|first\s*name)\b/i.test(l))
-  if (nom || prenom) {
-    const last = nom?.replace(/^(?:nom|surname|name)\s*[:.]?\s*/i, '').trim() ?? ''
-    const first = prenom?.replace(/^(?:pr[ée]noms?|given\s*names?|first\s*name)\s*[:.]?\s*/i, '').trim() ?? ''
-    const combined = normalizeSpaces(`${first} ${last}`.trim())
-    if (combined.length >= 3) return titleCaseName(combined)
-  }
-
-  // Ligne en majuscules type NOM PRENOM (hors labels)
+  // Ligne en majuscules type PRENOMS NOM (hors labels)
   for (const line of lines) {
-    if (/^(NOM|PRENOM|DATE|N°|NO |NATIONAL|SEXE|NE |NÉ)/i.test(line)) continue
+    if (/^(NOM|PRENOM|DATE|N°|NO |NATIONAL|SEXE|NE |NÉ|LIEU|ADRESSE)/i.test(line)) continue
+    if (NOISE_LINE.test(line)) continue
     if (/^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{6,}$/.test(line) && /[A-Z]{2,}\s+[A-Z]{2,}/.test(line)) {
       return titleCaseName(line)
     }
@@ -237,6 +461,26 @@ function guessFullNameFromText(text: string): string | null {
 function isExpired(isoDate: string | null): boolean {
   if (!isoDate) return false
   return isoDate < new Date().toISOString().slice(0, 10)
+}
+
+function mergeFields(
+  target: IdentityScanFields,
+  targetConfidence: IdentityScanResult['fieldConfidence'],
+  source: Partial<IdentityScanFields>,
+  sourceConfidence: Partial<Record<keyof IdentityScanFields, number>>,
+  overwrite = false
+) {
+  for (const key of Object.keys(source) as (keyof IdentityScanFields)[]) {
+    const value = source[key]
+    if (value == null || value === '') continue
+    if (!overwrite && target[key]) continue
+    const incoming = sourceConfidence[key] ?? 0.5
+    const current = targetConfidence[key] ?? 0
+    if (!target[key] || incoming >= current) {
+      ;(target as Record<string, string | null>)[key] = value
+      targetConfidence[key] = incoming
+    }
+  }
 }
 
 export default class IdentityScanService {
@@ -328,6 +572,11 @@ export default class IdentityScanService {
       }
     }
 
+    return this.parseOcrText(text, ocrConfidence)
+  }
+
+  /** Parse le texte OCR (exposé pour tests / CNI CEDEAO). */
+  parseOcrText(text: string, ocrConfidence = 0.7): IdentityScanResult {
     const fields = emptyFields()
     const fieldConfidence: IdentityScanResult['fieldConfidence'] = {}
     const warnings: IdentityScanWarning[] = []
@@ -342,10 +591,10 @@ export default class IdentityScanService {
         const f = parsed.fields
         mrzDocCode = f.documentCode ?? null
 
-        const last = f.lastName?.trim() || ''
-        const first = f.firstName?.trim() || ''
-        if (last || first) {
-          fields.fullName = titleCaseName(`${first} ${last}`.trim())
+        // Nom complet = prénom(s) + nom
+        const fullName = composeFullName(f.firstName?.trim() || null, f.lastName?.trim() || null)
+        if (fullName) {
+          fields.fullName = fullName
           fieldConfidence.fullName = 0.95
         }
         const birth = mrzDateToIso(f.birthDate)
@@ -371,7 +620,14 @@ export default class IdentityScanService {
       }
     }
 
-    const documentType = detectDocumentType(text, mrzDocCode)
+    let documentType = detectDocumentType(text, mrzDocCode)
+
+    // CNI CEDEAO Sénégal : parseur dédié (Prénoms + Nom → fullName)
+    if (isSenegalCedeaoCard(text) || documentType === 'cni') {
+      documentType = documentType === 'unknown' ? 'cni' : documentType
+      const senegal = parseSenegalCedeaoFields(text)
+      mergeFields(fields, fieldConfidence, senegal.fields, senegal.confidence, !usedMrz)
+    }
 
     if (!fields.fullName) {
       const name = guessFullNameFromText(text)
@@ -392,8 +648,10 @@ export default class IdentityScanService {
     const expiry = extractDateNearLabel(text, EXPIRY_LABEL)
     if (expiry) {
       if (documentType === 'driving_license') {
-        fields.licenseExpiresAt = expiry
-        fieldConfidence.licenseExpiresAt = usedMrz ? 0.7 : 0.6
+        if (!fields.licenseExpiresAt) {
+          fields.licenseExpiresAt = expiry
+          fieldConfidence.licenseExpiresAt = usedMrz ? 0.7 : 0.6
+        }
       } else if (!fields.documentExpiresAt) {
         fields.documentExpiresAt = expiry
         fieldConfidence.documentExpiresAt = 0.6
@@ -401,10 +659,16 @@ export default class IdentityScanService {
     }
 
     if (!fields.idCardNumber && documentType !== 'driving_license') {
-      const docNo = extractValueNearLabel(text, DOC_NUMBER_LABEL)
-      if (docNo) {
-        fields.idCardNumber = docNo.replace(/\s+/g, '').toUpperCase()
-        fieldConfidence.idCardNumber = 0.55
+      const senegalNo = extractSenegalCardNumber(text)
+      if (senegalNo) {
+        fields.idCardNumber = senegalNo
+        fieldConfidence.idCardNumber = 0.7
+      } else {
+        const docNo = extractValueNearLabel(text, DOC_NUMBER_LABEL)
+        if (docNo) {
+          fields.idCardNumber = docNo.replace(/\s+/g, ' ').trim().toUpperCase()
+          fieldConfidence.idCardNumber = 0.55
+        }
       }
     }
 
@@ -414,19 +678,20 @@ export default class IdentityScanService {
         fields.licenseNumber = lic.replace(/\s+/g, '').toUpperCase()
         fieldConfidence.licenseNumber = 0.6
       } else if (documentType === 'driving_license' && fields.idCardNumber && !fields.licenseNumber) {
-        // Sur certains permis, le n° document MRZ = n° permis
         fields.licenseNumber = fields.idCardNumber
         fieldConfidence.licenseNumber = 0.5
       }
     }
 
-    const place = extractValueNearLabel(text, PLACE_BIRTH_LABEL)
-    if (place) {
-      fields.placeOfBirth = place
-      fieldConfidence.placeOfBirth = 0.5
-      if (!fields.city) {
-        fields.city = place.split(',')[0]?.trim() || place
-        fieldConfidence.city = 0.4
+    if (!fields.placeOfBirth) {
+      const place = extractValueNearLabel(text, PLACE_BIRTH_LABEL)
+      if (place) {
+        fields.placeOfBirth = place
+        fieldConfidence.placeOfBirth = 0.5
+        if (!fields.city) {
+          fields.city = place.split(/[/,]/)[0]?.trim() || place
+          fieldConfidence.city = 0.4
+        }
       }
     }
 
@@ -478,7 +743,10 @@ export default class IdentityScanService {
       confidenceScores.length > 0
         ? confidenceScores.reduce((a, b) => a + (b || 0), 0) / confidenceScores.length
         : 0
-    const confidence = Math.min(1, Math.max(0, usedMrz ? 0.55 + avgField * 0.4 : ocrConfidence * 0.5 + avgField * 0.5))
+    const confidence = Math.min(
+      1,
+      Math.max(0, usedMrz ? 0.55 + avgField * 0.4 : ocrConfidence * 0.5 + avgField * 0.5)
+    )
 
     return {
       documentType,
