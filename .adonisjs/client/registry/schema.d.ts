@@ -163,6 +163,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'agencies.agencies.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/agencies/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['destroy']>>>
+    }
+  }
   'agencies.agencies.logo_file': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/agencies/:id/logo'

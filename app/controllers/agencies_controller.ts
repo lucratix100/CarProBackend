@@ -7,6 +7,10 @@ import City from '#models/city'
 import User from '#models/user'
 import Vehicle from '#models/vehicle'
 import Client from '#models/client'
+import Owner from '#models/owner'
+import Rental from '#models/rental'
+import Invoice from '#models/invoice'
+import VehicleExpense from '#models/vehicle_expense'
 import Setting from '#models/setting'
 import AdminInvitationService from '#services/admin_invitation_service'
 import { slugifyAgencyName } from '#services/agency_context'
@@ -17,10 +21,21 @@ import AgencyLogoUploadService, {
 } from '#services/agency_logo_upload_service'
 import {
   createAgencyValidator,
+  deleteAgencyValidator,
   inviteAgencyAdminValidator,
   rejectAgencyLogoValidator,
   updateAgencyValidator,
 } from '#validators/agency'
+
+type AgencyUsageCounts = {
+  admins: number
+  owners: number
+  vehicles: number
+  clients: number
+  rentals: number
+  invoices: number
+  expenses: number
+}
 
 async function countTotal(query: { count: Function }) {
   const rows = await query.count('* as total')
@@ -42,6 +57,38 @@ export default class AgenciesController {
     }
   }
 
+  async #usageCounts(agencyId: number): Promise<AgencyUsageCounts> {
+    const [admins, owners, vehicles, clients, rentals, invoices, expenses] = await Promise.all([
+      countTotal(User.query().where('agencyId', agencyId).where('role', 'admin')),
+      countTotal(Owner.query().where('agencyId', agencyId)),
+      countTotal(Vehicle.query().where('agencyId', agencyId)),
+      countTotal(Client.query().where('agencyId', agencyId)),
+      countTotal(Rental.query().where('agencyId', agencyId)),
+      countTotal(Invoice.query().where('agencyId', agencyId)),
+      countTotal(VehicleExpense.query().where('agencyId', agencyId)),
+    ])
+    return { admins, owners, vehicles, clients, rentals, invoices, expenses }
+  }
+
+  #hasBusinessData(counts: AgencyUsageCounts) {
+    return (
+      counts.vehicles > 0 ||
+      counts.clients > 0 ||
+      counts.owners > 0 ||
+      counts.rentals > 0 ||
+      counts.invoices > 0 ||
+      counts.expenses > 0
+    )
+  }
+
+  #confirmationMatches(agency: Agency, confirmation: string) {
+    const normalized = confirmation.trim().toLowerCase().replace(/^\//, '')
+    return (
+      normalized === agency.name.trim().toLowerCase() ||
+      normalized === agency.slug.trim().toLowerCase()
+    )
+  }
+
   /**
    * List all agencies (super admin).
    */
@@ -49,17 +96,17 @@ export default class AgenciesController {
     const agencies = await Agency.query().preload('city').orderBy('id', 'desc')
     const withCounts = await Promise.all(
       agencies.map(async (agency) => {
-        const [admins, owners, vehicles, clients] = await Promise.all([
-          countTotal(User.query().where('agencyId', agency.id).where('role', 'admin')),
-          countTotal(User.query().where('agencyId', agency.id).where('role', 'owner')),
-          countTotal(Vehicle.query().where('agencyId', agency.id)),
-          countTotal(Client.query().where('agencyId', agency.id)),
-        ])
+        const counts = await this.#usageCounts(agency.id)
         const base = await serialize(AgencyTransformer.transform(agency))
         const data = (base as { data?: Record<string, unknown> }).data ?? base
         return {
           ...data,
-          counts: { admins, owners, vehicles, clients },
+          counts: {
+            admins: counts.admins,
+            owners: counts.owners,
+            vehicles: counts.vehicles,
+            clients: counts.clients,
+          },
         }
       })
     )
@@ -149,16 +196,66 @@ export default class AgenciesController {
 
   async show({ params, serialize }: HttpContext) {
     const agency = await Agency.query().where('id', params.id).preload('city').firstOrFail()
-    const [admins, settings] = await Promise.all([
+    const [admins, settings, counts] = await Promise.all([
       User.query().where('agencyId', agency.id).where('role', 'admin').orderBy('id', 'desc'),
       Setting.current(agency.id),
+      this.#usageCounts(agency.id),
     ])
 
     return serialize({
       agency: AgencyTransformer.transform(agency),
       admins: UserTransformer.transform(admins),
       branding: this.#brandingPayload(agency, settings),
+      counts: {
+        admins: counts.admins,
+        owners: counts.owners,
+        vehicles: counts.vehicles,
+        clients: counts.clients,
+        rentals: counts.rentals,
+        invoices: counts.invoices,
+        expenses: counts.expenses,
+      },
     })
+  }
+
+  /**
+   * Hard-delete an empty agency (no business data).
+   * Confirmation must match the agency name or slug.
+   */
+  async destroy({ params, request, response }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const payload = await request.validateUsing(deleteAgencyValidator)
+
+    if (!this.#confirmationMatches(agency, payload.confirmation)) {
+      throw new Exception(
+        'Confirmation incorrecte. Saisissez le nom ou le slug exact de l’agence.',
+        { status: 422, code: 'E_AGENCY_DELETE_CONFIRM' }
+      )
+    }
+
+    const counts = await this.#usageCounts(agency.id)
+    if (this.#hasBusinessData(counts)) {
+      throw new Exception(
+        'Impossible de supprimer une agence qui contient encore des données (véhicules, clients, propriétaires, locations ou factures). Désactivez-la plutôt.',
+        { status: 422, code: 'E_AGENCY_NOT_EMPTY' }
+      )
+    }
+
+    const settings = await Setting.query().where('agencyId', agency.id).first()
+    const logoPaths = [settings?.logoPath, settings?.logoPendingPath].filter(
+      (path): path is string => Boolean(path)
+    )
+
+    await db.transaction(async (trx) => {
+      await User.query({ client: trx }).where('agencyId', agency.id).delete()
+      await Setting.query({ client: trx }).where('agencyId', agency.id).delete()
+      agency.useTransaction(trx)
+      await agency.delete()
+    })
+
+    await Promise.all(logoPaths.map((path) => this.#logos.removeIfExists(path)))
+
+    return response.ok({ message: 'Agence supprimée définitivement.' })
   }
 
   async update({ params, request, serialize }: HttpContext) {

@@ -38,3 +38,7 @@ export const inviteAgencyAdminValidator = vine.create({
   email: email().unique({ table: 'users', column: 'email' }),
   phone: vine.string().trim().minLength(5).maxLength(40),
 })
+
+export const deleteAgencyValidator = vine.create({
+  confirmation: vine.string().trim().minLength(1).maxLength(160),
+})

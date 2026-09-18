@@ -110,7 +110,7 @@ function composeFullName(firstNames: string | null, lastName: string | null): st
   const last = lastName ? normalizeSpaces(lastName) : ''
   const combined = normalizeSpaces(`${first} ${last}`.trim())
   if (combined.length < 3) return null
-  return titleCaseName(combined)
+  return sanitizeFullName(titleCaseName(combined))
 }
 
 function isLikelyPersonName(value: string): boolean {
@@ -119,10 +119,24 @@ function isLikelyPersonName(value: string): boolean {
   if (/\d/.test(v)) return false
   if (NOISE_LINE.test(v)) return false
   if (TRANSLATION_ONLY.test(v)) return false
+  // Rejets OCR fréquents près de « Sexe / Sex » ou hologrammes (ex. « Fs »)
+  if (/^(?:sex|sexe|m|f|fs|mf|fm|xx|n\/?a)\b/i.test(v)) return false
   if (/^(?:date|lieu|adresse|national|carte|numero|numéro|n°)/i.test(v)) return false
-  // Au moins 2 lettres
-  if ((v.match(/\p{L}/gu) || []).length < 2) return false
+  const letters = (v.match(/\p{L}/gu) || []).length
+  if (letters < 2) return false
+  // Fragment OCR trop court pour un nom de famille (ex. « Fs », « Il »)
+  if (letters < 3 && !/\s/.test(v)) return false
   return /^[\p{L}'\-\s.]+$/u.test(v)
+}
+
+/** Nom de famille : un mot (ou composé) suffisamment fiable */
+function isLikelyLastName(value: string): boolean {
+  if (!isLikelyPersonName(value)) return false
+  const v = normalizeSpaces(value)
+  // Un vrai nom de famille a en général ≥ 3 lettres ; rejeter bruit 1–2 car.
+  if ((v.match(/\p{L}/gu) || []).length < 3) return false
+  if (/^(?:sex|sexe|given|surname|apelido)/i.test(v)) return false
+  return true
 }
 
 function stripLabelPrefix(line: string, label: RegExp): string {
@@ -288,6 +302,7 @@ function isSenegalCedeaoCard(text: string): boolean {
 /**
  * Parseur dédié CNI CEDEAO Sénégal :
  * fullName = Prénoms + Nom
+ * (ville et dates d’expiration / délivrance : non préremplies — saisie manuelle)
  */
 function parseSenegalCedeaoFields(text: string): {
   fields: Partial<IdentityScanFields>
@@ -307,15 +322,16 @@ function parseSenegalCedeaoFields(text: string): {
 
   const firstNames =
     rawFirst && isLikelyPersonName(rawFirst) ? rawFirst : null
-  // « Nom » seul : une ligne courte type NDIAYE (éviter de reprendre « Nomes próprios »)
   let lastName: string | null = null
-  if (rawLast && isLikelyPersonName(rawLast)) {
-    // Si OCR a collé « Nom NDIAYE » déjà stripé
+  if (rawLast && isLikelyLastName(rawLast)) {
     lastName = rawLast
   }
 
-  // Si LAST_NAME_LABEL a matché « Nomes » à tort, rawLast peut être les prénoms :
-  // on préfère une ligne majuscules courte après un vrai label « Nom / Surname »
+  // Si le « nom » OCR est un bruit (Fs, Sex…) : chercher une vraie ligne majuscules après le label Nom
+  if (firstNames && !lastName) {
+    lastName = findLastNameAfterLabel(text)
+  }
+
   if (firstNames && lastName && firstNames.toUpperCase() === lastName.toUpperCase()) {
     lastName = null
   }
@@ -332,17 +348,6 @@ function parseSenegalCedeaoFields(text: string): {
     confidence.birthDate = 0.85
   }
 
-  // Expiration : éviter de prendre la date de délivrance
-  const expiry = extractDateNearLabel(text, EXPIRY_LABEL)
-  const issued = extractDateNearLabel(text, ISSUE_LABEL)
-  if (expiry && expiry !== issued) {
-    fields.documentExpiresAt = expiry
-    confidence.documentExpiresAt = 0.8
-  } else if (expiry) {
-    fields.documentExpiresAt = expiry
-    confidence.documentExpiresAt = 0.65
-  }
-
   const cardNo = extractSenegalCardNumber(text)
   if (cardNo) {
     fields.idCardNumber = cardNo
@@ -350,26 +355,36 @@ function parseSenegalCedeaoFields(text: string): {
   }
 
   const place = extractLabeledValue(text, PLACE_BIRTH_LABEL, { allowDigits: false })
-  if (place && isLikelyPersonName(place)) {
+  if (place && isLikelyPersonName(place) && (place.match(/\p{L}/gu) || []).length >= 3) {
     fields.placeOfBirth = titleCaseName(place)
     confidence.placeOfBirth = 0.75
-    fields.city = titleCaseName(place.split(/[/,]/)[0] || place)
-    confidence.city = 0.6
-  }
-
-  const address = extractLabeledValue(text, ADDRESS_LABEL, { allowDigits: true, maxLookahead: 3 })
-  if (address && address.length >= 5 && !fields.city) {
-    const cityGuess = address.split(/[/,]/)[0]?.trim()
-    if (cityGuess && cityGuess.length >= 3) {
-      fields.city = titleCaseName(cityGuess)
-      confidence.city = 0.45
-    }
+    // city volontairement non renseignée
   }
 
   fields.nationality = fields.nationality ?? 'Sénégalaise'
   confidence.nationality = 0.7
 
   return { fields, confidence }
+}
+
+/** Après « Nom / Surname », prendre un mot majuscules type NDIAYE (ignorer Sex, dates, bruit). */
+function findLastNameAfterLabel(text: string): string | null {
+  const lines = text.split(/\r?\n/).map((l) => normalizeSpaces(l)).filter(Boolean)
+  for (let i = 0; i < lines.length; i++) {
+    if (!LAST_NAME_LABEL.test(lines[i])) continue
+    for (let j = 1; j <= 5; j++) {
+      const next = lines[i + j]
+      if (!next) break
+      if (FIRST_NAME_LABEL.test(next) || DATE_LABEL.test(next) || PLACE_BIRTH_LABEL.test(next)) break
+      if (TRANSLATION_ONLY.test(next)) continue
+      if (/^(?:sexe|sex|taille|height|m|f)\b/i.test(next)) continue
+      // Mot unique ou composé en majuscules, ≥ 3 lettres
+      if (/^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{2,}$/.test(next) && isLikelyLastName(next)) {
+        return next
+      }
+    }
+  }
+  return null
 }
 
 function findMrzLines(text: string): string[] {
@@ -434,28 +449,41 @@ function guessFullNameFromText(text: string): string | null {
   const last = extractLabeledValue(text, LAST_NAME_LABEL, { allowDigits: false, maxLookahead: 4 })
   const composed = composeFullName(
     first && isLikelyPersonName(first) ? first : null,
-    last && isLikelyPersonName(last) ? last : null
+    last && isLikelyLastName(last) ? last : findLastNameAfterLabel(text)
   )
-  if (composed) return composed
+  if (composed) return sanitizeFullName(composed)
 
-  // Une seule partie détectée
-  if (first && isLikelyPersonName(first)) return titleCaseName(first)
-  if (last && isLikelyPersonName(last)) return titleCaseName(last)
+  if (first && isLikelyPersonName(first)) return sanitizeFullName(titleCaseName(first))
+  if (last && isLikelyLastName(last)) return sanitizeFullName(titleCaseName(last))
 
   const lines = text
     .split(/\r?\n/)
     .map((l) => normalizeSpaces(l))
     .filter((l) => l.length >= 4 && l.length <= 60)
 
-  // Ligne en majuscules type PRENOMS NOM (hors labels)
   for (const line of lines) {
     if (/^(NOM|PRENOM|DATE|N°|NO |NATIONAL|SEXE|NE |NÉ|LIEU|ADRESSE)/i.test(line)) continue
     if (NOISE_LINE.test(line)) continue
     if (/^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{6,}$/.test(line) && /[A-Z]{2,}\s+[A-Z]{2,}/.test(line)) {
-      return titleCaseName(line)
+      return sanitizeFullName(titleCaseName(line))
     }
   }
   return null
+}
+
+/** Retire un suffixe OCR parasite (ex. « Fs » issu de Sex). */
+function sanitizeFullName(name: string): string {
+  let parts = normalizeSpaces(name).split(/\s+/)
+  while (parts.length > 1) {
+    const last = parts[parts.length - 1]
+    const letters = (last.match(/\p{L}/gu) || []).length
+    if (letters <= 2 || /^(?:sex|sexe|fs|m|f)$/i.test(last)) {
+      parts = parts.slice(0, -1)
+      continue
+    }
+    break
+  }
+  return parts.join(' ')
 }
 
 function isExpired(isoDate: string | null): boolean {
@@ -645,18 +673,8 @@ export default class IdentityScanService {
       }
     }
 
-    const expiry = extractDateNearLabel(text, EXPIRY_LABEL)
-    if (expiry) {
-      if (documentType === 'driving_license') {
-        if (!fields.licenseExpiresAt) {
-          fields.licenseExpiresAt = expiry
-          fieldConfidence.licenseExpiresAt = usedMrz ? 0.7 : 0.6
-        }
-      } else if (!fields.documentExpiresAt) {
-        fields.documentExpiresAt = expiry
-        fieldConfidence.documentExpiresAt = 0.6
-      }
-    }
+    // Expiration : non préremplie (délivrance souvent confondue avec expiration)
+    // Ville : saisie manuelle
 
     if (!fields.idCardNumber && documentType !== 'driving_license') {
       const senegalNo = extractSenegalCardNumber(text)
@@ -685,13 +703,10 @@ export default class IdentityScanService {
 
     if (!fields.placeOfBirth) {
       const place = extractValueNearLabel(text, PLACE_BIRTH_LABEL)
-      if (place) {
+      if (place && isLikelyPersonName(place) && (place.match(/\p{L}/gu) || []).length >= 3) {
         fields.placeOfBirth = place
         fieldConfidence.placeOfBirth = 0.5
-        if (!fields.city) {
-          fields.city = place.split(/[/,]/)[0]?.trim() || place
-          fieldConfidence.city = 0.4
-        }
+        // ville : saisie manuelle
       }
     }
 
@@ -709,10 +724,7 @@ export default class IdentityScanService {
       fieldConfidence.licenseCategories = 0.5
     }
 
-    if (documentType === 'driving_license' && fields.documentExpiresAt && !fields.licenseExpiresAt) {
-      fields.licenseExpiresAt = fields.documentExpiresAt
-      fieldConfidence.licenseExpiresAt = fieldConfidence.documentExpiresAt
-    }
+    // Ne pas reporter documentExpiresAt → licenseExpiresAt (saisie manuelle)
 
     const filledCount = Object.values(fields).filter(Boolean).length
     if (ocrConfidence < 0.35 || (text.trim().length < 20 && !usedMrz)) {

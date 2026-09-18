@@ -63,6 +63,7 @@ router
         router.post('/', [controllers.Agencies, 'store'])
         router.get('/:id', [controllers.Agencies, 'show'])
         router.patch('/:id', [controllers.Agencies, 'update'])
+        router.delete('/:id', [controllers.Agencies, 'destroy'])
         router.get('/:id/logo', [controllers.Agencies, 'logoFile'])
         router.get('/:id/logo/pending', [controllers.Agencies, 'pendingLogoFile'])
         router.post('/:id/logo/approve', [controllers.Agencies, 'approveLogo'])

@@ -17,6 +17,7 @@ export type ScannedRoutes = {
     'agencies.agencies.store': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.approve_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -341,6 +342,7 @@ export type ScannedRoutes = {
     'marketplace.marketplace_favorite.update_notify': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
   }
   DELETE: {
+    'agencies.agencies.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.revoke_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
     'owners.owners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicles.vehicles.destroy_photo': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }

@@ -33,6 +33,7 @@ export interface ApiDefinition {
       store: typeof routes['agencies.agencies.store']
       show: typeof routes['agencies.agencies.show']
       update: typeof routes['agencies.agencies.update']
+      destroy: typeof routes['agencies.agencies.destroy']
       logoFile: typeof routes['agencies.agencies.logo_file']
       pendingLogoFile: typeof routes['agencies.agencies.pending_logo_file']
       approveLogo: typeof routes['agencies.agencies.approve_logo']

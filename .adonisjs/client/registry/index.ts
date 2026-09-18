@@ -84,6 +84,12 @@ const routes = {
     tokens: [{"old":"/api/v1/agencies/:id","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['agencies.agencies.update']['types'],
   },
+  'agencies.agencies.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/agencies/:id',
+    tokens: [{"old":"/api/v1/agencies/:id","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['agencies.agencies.destroy']['types'],
+  },
   'agencies.agencies.logo_file': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/agencies/:id/logo',
