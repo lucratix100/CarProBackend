@@ -1,4 +1,4 @@
-import { createWorker, type Worker } from 'tesseract.js'
+import { createWorker, PSM, type Worker } from 'tesseract.js'
 import { parse as parseMrz } from 'mrz'
 import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
@@ -57,11 +57,24 @@ const NATIONALITY_LABEL = /(?:nationalité|nationality|citoyenneté)/i
 const ADDRESS_LABEL = /(?:adresse(?:\s*du\s*domicile)?|address|residence)/i
 const CATEGORY_LABEL = /(?:cat(?:égorie|egory)?(?:s)?|categories?)\s*[:.]?\s*([A-Z0-9\s,/+-]{1,20})/i
 
-/** Labels « Prénoms » CNI CEDEAO (FR/EN/PT) */
+/** Labels « Prénoms » CNI CEDEAO — tolérant OCR (accents / espaces) */
 const FIRST_NAME_LABEL =
-  /^(?:pr[eé]noms?|given\s*names?|first\s*names?|nomes?\s*pr[oó]prios?)\b/i
-/** Labels « Nom » (éviter « Nomes próprios » portugais) */
-const LAST_NAME_LABEL = /^(?:nom(?!es\b)|noms\b|surname|family\s*name|apelido)\b/i
+  /(?:^|[\s|/])(?:pr[eéèê]?\s*n[o0]ms?|given\s*names?|first\s*names?|nomes?\s*pr[oó]prios?)\b/i
+/**
+ * Labels « Nom » — ne doit PAS matcher dans « Prénoms ».
+ * Exige un séparateur avant « nom » (début de ligne, espace, /).
+ */
+const LAST_NAME_LABEL =
+  /(?:^|[\s|/:(])(?:nom(?![eé]s?\b)|surname|family\s*name|apelido)\b/i
+
+/** Variantes floues pour recherche globale dans le texte OCR */
+const FIRST_NAME_FUZZY =
+  /pr[eéèê]?\s*n[o0]m[s]?/i
+const LAST_NAME_FUZZY =
+  /(?:^|[\n\r|/])\s*nom(?![eé]s?\b)\b/im
+
+const NAME_TOKEN = /[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-]{1,}/
+const NAME_LINE = /^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{2,}$/
 
 const TRANSLATION_ONLY =
   /^(?:given\s*names?|first\s*names?|surname|family\s*name|nomes?\s*pr[oó]prios?|apelidos?|identity\s*card(?:\s*number)?|date\s*of\s*(?:birth|expiry|issue)|place\s*of\s*birth|address|sexo|sex|height|taille)\s*$/i
@@ -140,7 +153,11 @@ function isLikelyLastName(value: string): boolean {
 }
 
 function stripLabelPrefix(line: string, label: RegExp): string {
-  return normalizeSpaces(line.replace(label, '').replace(/^[\s:.\-–—|/]+/, ''))
+  const flags = label.flags.includes('g') ? label.flags : `${label.flags}g`
+  const re = new RegExp(label.source, flags)
+  const m = re.exec(line)
+  if (!m) return normalizeSpaces(line)
+  return normalizeSpaces(line.slice(m.index + m[0].length).replace(/^[\s:.\-–—|/]+/, ''))
 }
 
 /**
@@ -311,41 +328,29 @@ function parseSenegalCedeaoFields(text: string): {
   const fields: Partial<IdentityScanFields> = {}
   const confidence: Partial<Record<keyof IdentityScanFields, number>> = {}
 
-  const rawFirst = extractLabeledValue(text, FIRST_NAME_LABEL, {
-    allowDigits: false,
-    maxLookahead: 4,
-  })
-  const rawLast = extractLabeledValue(text, LAST_NAME_LABEL, {
-    allowDigits: false,
-    maxLookahead: 4,
-  })
-
-  const firstNames =
-    rawFirst && isLikelyPersonName(rawFirst) ? rawFirst : null
-  let lastName: string | null = null
-  if (rawLast && isLikelyLastName(rawLast)) {
-    lastName = rawLast
-  }
-
-  // Si le « nom » OCR est un bruit (Fs, Sex…) : chercher une vraie ligne majuscules après le label Nom
-  if (firstNames && !lastName) {
-    lastName = findLastNameAfterLabel(text)
-  }
-
-  if (firstNames && lastName && firstNames.toUpperCase() === lastName.toUpperCase()) {
-    lastName = null
-  }
-
+  const { firstNames, lastName, score } = extractCedeaoFullNameParts(text)
   const fullName = composeFullName(firstNames, lastName)
   if (fullName) {
     fields.fullName = fullName
-    confidence.fullName = firstNames && lastName ? 0.9 : 0.7
+    confidence.fullName = score
   }
 
   const birth = extractDateNearLabel(text, DATE_LABEL)
   if (birth) {
     fields.birthDate = birth
     confidence.birthDate = 0.85
+  }
+
+  // Fallback date : première date JJ/MM/AAAA plausible (naissance) si label raté
+  if (!fields.birthDate) {
+    const allDates = [...text.matchAll(/\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})\b/g)]
+      .map((m) => parseFlexibleDate(m[1]))
+      .filter((d): d is string => d != null && d < new Date().toISOString().slice(0, 10) && d > '1920-01-01')
+    // Sur CNI : souvent 1re date = naissance, puis délivrance, puis expiration
+    if (allDates[0]) {
+      fields.birthDate = allDates[0]
+      confidence.birthDate = 0.55
+    }
   }
 
   const cardNo = extractSenegalCardNumber(text)
@@ -358,7 +363,6 @@ function parseSenegalCedeaoFields(text: string): {
   if (place && isLikelyPersonName(place) && (place.match(/\p{L}/gu) || []).length >= 3) {
     fields.placeOfBirth = titleCaseName(place)
     confidence.placeOfBirth = 0.75
-    // city volontairement non renseignée
   }
 
   fields.nationality = fields.nationality ?? 'Sénégalaise'
@@ -367,21 +371,216 @@ function parseSenegalCedeaoFields(text: string): {
   return { fields, confidence }
 }
 
+/**
+ * Extraction robuste Prénoms + Nom pour OCR bruité (hologrammes, reflets).
+ */
+function extractCedeaoFullNameParts(text: string): {
+  firstNames: string | null
+  lastName: string | null
+  score: number
+} {
+  let firstNames: string | null = null
+  let lastName: string | null = null
+  let score = 0.5
+
+  const rawFirst = extractLabeledValue(text, FIRST_NAME_LABEL, {
+    allowDigits: false,
+    maxLookahead: 5,
+  })
+  const rawLast = extractLabeledValue(text, LAST_NAME_LABEL, {
+    allowDigits: false,
+    maxLookahead: 5,
+  })
+
+  if (rawFirst && isLikelyPersonName(rawFirst)) {
+    firstNames = cleanNameValue(rawFirst)
+    score = 0.75
+  }
+  if (rawLast && isLikelyLastName(rawLast)) {
+    lastName = cleanNameValue(rawLast)
+    score = firstNames ? 0.9 : 0.7
+  }
+
+  if (!firstNames || !lastName) {
+    const fuzzy = extractNamesByFuzzyLabels(text)
+    if (!firstNames && fuzzy.first) {
+      firstNames = fuzzy.first
+      score = Math.max(score, 0.7)
+    }
+    if (!lastName && fuzzy.last) {
+      lastName = fuzzy.last
+      score = firstNames ? Math.max(score, 0.85) : Math.max(score, 0.65)
+    }
+  }
+
+  if (firstNames && !lastName) {
+    lastName = findLastNameAfterLabel(text)
+    if (lastName) score = Math.max(score, 0.8)
+  }
+
+  if (!firstNames || !lastName) {
+    const block = findNameBlockNearBirthDate(text)
+    if (block) {
+      if (!firstNames && block.first) {
+        firstNames = block.first
+        score = Math.max(score, 0.65)
+      }
+      if (!lastName && block.last) {
+        lastName = block.last
+        score = firstNames ? Math.max(score, 0.8) : Math.max(score, 0.6)
+      }
+    }
+  }
+
+  if (!firstNames) {
+    const caps = findBestUppercaseNameLine(text)
+    if (caps) {
+      firstNames = caps
+      score = Math.max(score, 0.55)
+    }
+  }
+
+  if (firstNames && lastName && firstNames.toUpperCase() === lastName.toUpperCase()) {
+    lastName = null
+  }
+
+  // Si le « nom » est collé dans les prénoms (une seule ligne 4 mots), séparer dernier mot
+  if (firstNames && !lastName) {
+    const parts = firstNames.split(/\s+/).filter(Boolean)
+    if (parts.length >= 3) {
+      const maybeLast = parts[parts.length - 1]
+      if (isLikelyLastName(maybeLast)) {
+        lastName = maybeLast
+        firstNames = parts.slice(0, -1).join(' ')
+        score = Math.max(score, 0.6)
+      }
+    }
+  }
+
+  return { firstNames, lastName, score }
+}
+
+function cleanNameValue(value: string): string {
+  return normalizeSpaces(
+    value
+      .replace(/\b(?:sexe?|sex|m|f|taille|height|cm)\b/gi, ' ')
+      .replace(/[^\p{L}'\-\s]/gu, ' ')
+  )
+}
+
+/** Recherche globale même si les sauts de ligne OCR sont cassés. */
+function extractNamesByFuzzyLabels(text: string): { first: string | null; last: string | null } {
+  const flat = text.replace(/\r/g, '\n')
+  let first: string | null = null
+  let last: string | null = null
+
+  const firstMatch = flat.match(
+    new RegExp(
+      `${FIRST_NAME_FUZZY.source}[^\\nA-ZÀ-Ü]{0,80}([\\n\\r:|/\\s]+|\\s+)(${NAME_TOKEN.source}(?:[\\s-]+${NAME_TOKEN.source}){0,4})`,
+      'i'
+    )
+  )
+  if (firstMatch?.[2]) {
+    const candidate = cleanNameValue(firstMatch[2])
+    if (isLikelyPersonName(candidate)) first = candidate
+  }
+
+  const lastMatch = flat.match(
+    new RegExp(
+      `${LAST_NAME_FUZZY.source}[^\\nA-ZÀ-Ü]{0,60}([\\n\\r:|/\\s]+|\\s+)(${NAME_TOKEN.source})`,
+      'im'
+    )
+  )
+  if (lastMatch?.[2]) {
+    const candidate = cleanNameValue(lastMatch[2])
+    if (isLikelyLastName(candidate)) last = candidate
+  }
+
+  return { first, last }
+}
+
+/**
+ * Sur CNI CEDEAO : juste avant la date de naissance, souvent
+ * SERIGNE SALIOU MBACKE
+ * NDIAYE
+ * 02/02/1997
+ */
+function findNameBlockNearBirthDate(text: string): { first: string | null; last: string | null } | null {
+  const lines = text.split(/\r?\n/).map((l) => normalizeSpaces(l)).filter(Boolean)
+  for (let i = 0; i < lines.length; i++) {
+    if (!/\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}/.test(lines[i])) continue
+    // Ignorer si la ligne est clairement une autre date labelée expiration plus bas — on prend la 1re
+    const caps: string[] = []
+    for (let j = i - 1; j >= Math.max(0, i - 6); j--) {
+      const line = lines[j]
+      if (FIRST_NAME_FUZZY.test(line) || LAST_NAME_FUZZY.test(line)) continue
+      if (DATE_LABEL.test(line) || TRANSLATION_ONLY.test(line) || NOISE_LINE.test(line)) {
+        if (caps.length) break
+        continue
+      }
+      if (/^(?:sexe|sex|taille|height|m|f)\b/i.test(line)) continue
+      if (NAME_LINE.test(line) && isLikelyPersonName(line) && !/\d/.test(line)) {
+        caps.unshift(cleanNameValue(line))
+      } else if (caps.length) {
+        break
+      }
+    }
+    if (caps.length >= 2) {
+      const last = caps[caps.length - 1]
+      const firstParts = caps.slice(0, -1)
+      // Dernière ligne = nom si un seul mot ; sinon tout en prénoms+nom collés
+      if (!last.includes(' ') && isLikelyLastName(last)) {
+        return { first: firstParts.join(' '), last }
+      }
+      return { first: caps.join(' '), last: null }
+    }
+    if (caps.length === 1 && caps[0].split(/\s+/).length >= 2) {
+      return { first: caps[0], last: null }
+    }
+  }
+  return null
+}
+
+function findBestUppercaseNameLine(text: string): string | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => normalizeSpaces(l))
+    .filter((l) => l.length >= 6 && l.length <= 70)
+
+  let best: string | null = null
+  let bestScore = 0
+  for (const line of lines) {
+    if (!NAME_LINE.test(line)) continue
+    if (NOISE_LINE.test(line) || TRANSLATION_ONLY.test(line)) continue
+    if (/CEDEAO|SENEGAL|REPUBLIQUE|IDENTITY|CARTE/i.test(line)) continue
+    const words = line.split(/\s+/).filter((w) => w.length >= 2)
+    if (words.length < 2 || words.length > 5) continue
+    if (!isLikelyPersonName(line)) continue
+    const score = words.length * 10 + line.length
+    if (score > bestScore) {
+      bestScore = score
+      best = cleanNameValue(line)
+    }
+  }
+  return best
+}
+
 /** Après « Nom / Surname », prendre un mot majuscules type NDIAYE (ignorer Sex, dates, bruit). */
 function findLastNameAfterLabel(text: string): string | null {
   const lines = text.split(/\r?\n/).map((l) => normalizeSpaces(l)).filter(Boolean)
   for (let i = 0; i < lines.length; i++) {
-    if (!LAST_NAME_LABEL.test(lines[i])) continue
-    for (let j = 1; j <= 5; j++) {
+    if (!LAST_NAME_LABEL.test(lines[i]) && !LAST_NAME_FUZZY.test(lines[i])) continue
+    for (let j = 1; j <= 6; j++) {
       const next = lines[i + j]
       if (!next) break
-      if (FIRST_NAME_LABEL.test(next) || DATE_LABEL.test(next) || PLACE_BIRTH_LABEL.test(next)) break
+      if (FIRST_NAME_LABEL.test(next) || PLACE_BIRTH_LABEL.test(next)) break
       if (TRANSLATION_ONLY.test(next)) continue
       if (/^(?:sexe|sex|taille|height|m|f)\b/i.test(next)) continue
-      // Mot unique ou composé en majuscules, ≥ 3 lettres
-      if (/^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{2,}$/.test(next) && isLikelyLastName(next)) {
-        return next
+      if (DATE_LABEL.test(next) || /^\d{1,2}[-/.]\d{1,2}/.test(next)) continue
+      if (NAME_LINE.test(next) && isLikelyLastName(next)) {
+        return cleanNameValue(next)
       }
+      // Fragment OCR (Fs) : ignorer et continuer
     }
   }
   return null
@@ -445,29 +644,12 @@ function detectDocumentType(text: string, mrzCode: string | null): IdentityDocum
 
 /** Nom complet = Prénoms + Nom (ordre civil sénégalais / FR) */
 function guessFullNameFromText(text: string): string | null {
-  const first = extractLabeledValue(text, FIRST_NAME_LABEL, { allowDigits: false, maxLookahead: 4 })
-  const last = extractLabeledValue(text, LAST_NAME_LABEL, { allowDigits: false, maxLookahead: 4 })
-  const composed = composeFullName(
-    first && isLikelyPersonName(first) ? first : null,
-    last && isLikelyLastName(last) ? last : findLastNameAfterLabel(text)
-  )
-  if (composed) return sanitizeFullName(composed)
+  const { firstNames, lastName } = extractCedeaoFullNameParts(text)
+  const composed = composeFullName(firstNames, lastName)
+  if (composed) return composed
 
-  if (first && isLikelyPersonName(first)) return sanitizeFullName(titleCaseName(first))
-  if (last && isLikelyLastName(last)) return sanitizeFullName(titleCaseName(last))
-
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => normalizeSpaces(l))
-    .filter((l) => l.length >= 4 && l.length <= 60)
-
-  for (const line of lines) {
-    if (/^(NOM|PRENOM|DATE|N°|NO |NATIONAL|SEXE|NE |NÉ|LIEU|ADRESSE)/i.test(line)) continue
-    if (NOISE_LINE.test(line)) continue
-    if (/^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ'\-\s]{6,}$/.test(line) && /[A-Z]{2,}\s+[A-Z]{2,}/.test(line)) {
-      return sanitizeFullName(titleCaseName(line))
-    }
-  }
+  const caps = findBestUppercaseNameLine(text)
+  if (caps) return sanitizeFullName(titleCaseName(caps))
   return null
 }
 
@@ -516,6 +698,11 @@ export default class IdentityScanService {
     if (!workerPromise) {
       workerPromise = (async () => {
         const worker = await createWorker('fra+eng')
+        await worker.setParameters({
+          // Bloc de texte uniforme — mieux pour une CNI cadrée
+          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+          preserve_interword_spaces: '1',
+        })
         return worker
       })()
     }
@@ -585,9 +772,30 @@ export default class IdentityScanService {
 
     try {
       const worker = await this.#getWorker()
-      const { data } = await worker.recognize(buffer)
-      text = data.text || ''
-      ocrConfidence = typeof data.confidence === 'number' ? data.confidence / 100 : 0.5
+      const primary = await worker.recognize(buffer)
+      text = primary.data.text || ''
+      ocrConfidence =
+        typeof primary.data.confidence === 'number' ? primary.data.confidence / 100 : 0.5
+
+      // 2e passe (PSM 4) si le nom n’apparaît pas clairement
+      const quick = this.parseOcrText(text, ocrConfidence)
+      if (!quick.fields.fullName) {
+        try {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_COLUMN })
+          const secondary = await worker.recognize(buffer)
+          const alt = secondary.data.text || ''
+          if (alt.length > text.length * 0.5) {
+            text = `${text}\n${alt}`
+            const c2 =
+              typeof secondary.data.confidence === 'number'
+                ? secondary.data.confidence / 100
+                : ocrConfidence
+            ocrConfidence = Math.max(ocrConfidence, c2)
+          }
+        } finally {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
+        }
+      }
     } catch {
       return {
         documentType: 'unknown',

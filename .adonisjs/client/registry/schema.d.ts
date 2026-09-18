@@ -167,12 +167,12 @@ export interface Registry {
     methods: ["DELETE"]
     pattern: '/api/v1/agencies/:id'
     types: {
-      body: {}
+      body: ExtractBody<InferInput<(typeof import('#validators/agency').deleteAgencyValidator)>>
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
-      query: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/agency').deleteAgencyValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['destroy']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['destroy']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'agencies.agencies.logo_file': {
