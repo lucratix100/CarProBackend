@@ -184,18 +184,19 @@ function drawHeader(doc: Doc, data: OwnerStatementData) {
 
   let usedCustomLogo = false
   if (data.logoAbsolutePath) {
+    doc.save()
     try {
-      doc.save()
       doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
       doc.image(data.logoAbsolutePath, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
         valign: 'center',
       })
-      doc.restore()
       usedCustomLogo = true
     } catch {
       usedCustomLogo = false
+    } finally {
+      doc.restore()
     }
   }
 

@@ -130,18 +130,19 @@ function drawHeader(
   let usedCustomLogo = false
 
   if (logoAbsolutePath) {
+    doc.save()
     try {
-      doc.save()
       doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
       doc.image(logoAbsolutePath, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
         valign: 'center',
       })
-      doc.restore()
       usedCustomLogo = true
     } catch {
       usedCustomLogo = false
+    } finally {
+      doc.restore()
     }
   }
 
