@@ -379,6 +379,138 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_report_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'partner_applications.partner_applications.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/partner-applications'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/partner_application').listPartnerApplicationsValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'partner_applications.partner_applications.approve': {
+    methods: ["POST"]
+    pattern: '/api/v1/partner-applications/:id/approve'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/partner_application').approveOwnerApplicationValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/partner_application').approveOwnerApplicationValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['approve']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['approve']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'partner_applications.partner_applications.reject': {
+    methods: ["POST"]
+    pattern: '/api/v1/partner-applications/:id/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/partner_application').rejectPartnerApplicationValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/partner_application').rejectPartnerApplicationValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['reject']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['reject']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'homepage_banners.homepage_banners.admin_index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/homepage-banners'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminIndex']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminIndex']>>>
+    }
+  }
+  'homepage_banners.homepage_banners.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/homepage-banners'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/homepage_banner').createHomepageBannerValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/homepage_banner').createHomepageBannerValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'homepage_banners.homepage_banners.admin_image_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/homepage-banners/:id/image'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminImageFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminImageFile']>>>
+    }
+  }
+  'homepage_banners.homepage_banners.upload_image': {
+    methods: ["POST"]
+    pattern: '/api/v1/homepage-banners/:id/image'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['uploadImage']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['uploadImage']>>>
+    }
+  }
+  'homepage_banners.homepage_banners.destroy_image': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/homepage-banners/:id/image'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['destroyImage']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['destroyImage']>>>
+    }
+  }
+  'homepage_banners.homepage_banners.admin_show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/homepage-banners/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminShow']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['adminShow']>>>
+    }
+  }
+  'homepage_banners.homepage_banners.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/homepage-banners/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/homepage_banner').updateHomepageBannerValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/homepage_banner').updateHomepageBannerValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'homepage_banners.homepage_banners.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/homepage-banners/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['destroy']>>>
+    }
+  }
   'owners.owners.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/owners'
@@ -1219,6 +1351,234 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin_notifications_controller').default['markAllRead']>>>
     }
   }
+  'staff.staff_roles.catalog': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/staff/permissions/catalog'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['catalog']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['catalog']>>>
+    }
+  }
+  'staff.staff_roles.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/staff/roles'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['index']>>>
+    }
+  }
+  'staff.staff_roles.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/staff/roles'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/staff').createStaffRoleValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/staff').createStaffRoleValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'staff.staff_roles.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/staff/roles/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/staff').updateStaffRoleValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/staff').updateStaffRoleValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_roles_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'staff.staff_collaborators.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/staff/collaborators'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['index']>>>
+    }
+  }
+  'staff.staff_collaborators.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/staff/collaborators'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/staff').inviteStaffValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/staff').inviteStaffValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'staff.staff_collaborators.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/staff/collaborators/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['show']>>>
+    }
+  }
+  'staff.staff_collaborators.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/staff/collaborators/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/staff').updateStaffValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/staff').updateStaffValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'staff.staff_collaborators.update_status': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/staff/collaborators/:id/status'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/staff').updateStaffStatusValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/staff').updateStaffStatusValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['updateStatus']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['updateStatus']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'staff.staff_collaborators.resend_invitation': {
+    methods: ["POST"]
+    pattern: '/api/v1/staff/collaborators/:id/resend-invitation'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['resendInvitation']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['resendInvitation']>>>
+    }
+  }
+  'staff_collaborators.my_permissions': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/me/permissions'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['myPermissions']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['myPermissions']>>>
+    }
+  }
+  'validations.validations.settings': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/validations/settings'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['settings']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['settings']>>>
+    }
+  }
+  'validations.validations.update_settings': {
+    methods: ["PUT"]
+    pattern: '/api/v1/validations/settings'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['updateSettings']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['updateSettings']>>>
+    }
+  }
+  'validations.validations.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/validations/requests'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['index']>>>
+    }
+  }
+  'validations.validations.pending_count': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/validations/requests/pending-count'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['pendingCount']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['pendingCount']>>>
+    }
+  }
+  'validations.validations.approve': {
+    methods: ["POST"]
+    pattern: '/api/v1/validations/requests/:id/approve'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['approve']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['approve']>>>
+    }
+  }
+  'validations.validations.reject': {
+    methods: ["POST"]
+    pattern: '/api/v1/validations/requests/:id/reject'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['reject']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/validations_controller').default['reject']>>>
+    }
+  }
+  'activity_logs.activity_logs.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/activity-logs'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/activity_log').activityLogsIndexValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/activity_logs_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/activity_logs_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'activity_logs.activity_logs.for_entity': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/activity-logs/entity/:entityType/:entityId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { entityType: ParamValue; entityId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/activity_logs_controller').default['forEntity']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/activity_logs_controller').default['forEntity']>>>
+    }
+  }
   'owner_portal.owner_portal.dashboard': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/owner/dashboard'
@@ -1375,6 +1735,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_catalog_controller').default['cities']>>>
     }
   }
+  'marketplace.homepage_banners.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/banners'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['index']>>>
+    }
+  }
+  'marketplace.homepage_banners.image_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/banners/:id/image'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['imageFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['imageFile']>>>
+    }
+  }
   'marketplace.marketplace_catalog.vehicles': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/marketplace/vehicles'
@@ -1459,6 +1843,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_report_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'marketplace.partner_applications.agencies': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/partner-agencies'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['agencies']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['agencies']>>>
+    }
+  }
   'marketplace.marketplace_auth.sync': {
     methods: ["POST"]
     pattern: '/api/v1/marketplace/auth/sync'
@@ -1505,6 +1901,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_auth_controller').default['logout']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_auth_controller').default['logout']>>>
+    }
+  }
+  'marketplace.partner_applications.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/marketplace/partner-applications'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/partner_application').createPartnerApplicationValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/partner_application').createPartnerApplicationValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'marketplace.partner_applications.mine': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/partner-applications/mine'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['mine']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/partner_applications_controller').default['mine']>>>
     }
   }
   'marketplace.marketplace_bookings.index': {

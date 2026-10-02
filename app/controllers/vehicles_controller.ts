@@ -21,8 +21,11 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import MarketplacePublicationModerationService from '#services/marketplace_publication_moderation_service'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
-import { isExpenseApplied } from '#services/maintenance_expense_service'
+import { isExpenseApplied, isOwnerCharge } from '#services/maintenance_expense_service'
 import { createVehicleValidator, updateVehicleValidator } from '#validators/vehicle'
+import AgencyPlanService from '#services/agency_plan_service'
+import AuditService from '#services/audit_service'
+import ValidationService, { pendingValidationResponse } from '#services/validation_service'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -62,6 +65,9 @@ async function safeNotify(
 export default class VehiclesController {
   #photos = new VehiclePhotoUploadService()
   #moderation = new MarketplacePublicationModerationService()
+  #audit = new AuditService()
+  #validation = new ValidationService()
+  #plan = new AgencyPlanService()
 
   async #requireRereviewIfPublished(vehicle: Vehicle) {
     if (vehicle.marketplacePublicationStatus !== 'published') return false
@@ -98,9 +104,21 @@ export default class VehiclesController {
       serialized && typeof serialized === 'object' && 'data' in serialized
         ? (serialized as { data: Record<string, unknown> }).data
         : (serialized as Record<string, unknown>)
+    try {
+      await vehicle.load('createdBy')
+      await vehicle.load('updatedBy')
+    } catch {
+      // ignore
+    }
     return {
       ...base,
       ...this.#photoPayload(vehicle),
+      createdBy: vehicle.createdBy
+        ? { id: vehicle.createdBy.id, fullName: vehicle.createdBy.fullName }
+        : null,
+      updatedBy: vehicle.updatedBy
+        ? { id: vehicle.updatedBy.id, fullName: vehicle.updatedBy.fullName }
+        : null,
     }
   }
 
@@ -161,6 +179,7 @@ export default class VehiclesController {
   }
 
   async store({ request, response, serialize, auth, agencyId }: HttpContext) {
+    await this.#plan.assertCanCreateVehicle(agencyId!)
     const payload = await request.validateUsing(createVehicleValidator)
     const ownerId = payload.ownerId ?? null
     if (ownerId !== null) {
@@ -211,6 +230,28 @@ export default class VehiclesController {
       marketplaceReviewedAt: null,
       marketplaceReviewedByUserId: null,
       marketplaceRejectionReason: null,
+      createdByUserId: auth.use('api').getUserOrFail().id,
+      updatedByUserId: auth.use('api').getUserOrFail().id,
+    })
+
+    const actor = auth.use('api').getUserOrFail()
+    await this.#audit.log({
+      actor,
+      agencyId: agencyId!,
+      action: 'vehicle.create',
+      module: 'vehicles',
+      entityType: 'vehicle',
+      entityId: vehicle.id,
+      vehicleId: vehicle.id,
+      newValues: {
+        brand: vehicle.brand,
+        model: vehicle.model,
+        plate: vehicle.plate,
+        status: vehicle.status,
+        dailyPrice: vehicle.dailyPrice,
+      },
+      summary: `Création du véhicule ${vehicle.brand} ${vehicle.model} (${vehicle.plate})`,
+      ip: request.ip(),
     })
 
     if (payload.purchasePrice !== undefined && payload.purchasePrice > 0) {
@@ -422,6 +463,7 @@ export default class VehiclesController {
         type: row.type,
         performedOn: row.performedOn,
         cost,
+        chargedTo: isOwnerCharge(vehicle.ownerId, row.chargedTo) ? 'owner' : 'agency',
         mileage: row.mileage,
         provider: row.provider,
         nextDueOn: row.nextDueOn,
@@ -446,15 +488,46 @@ export default class VehiclesController {
     })
   }
 
-  async update({ params, request, serialize, agencyId }: HttpContext) {
+  async update({ params, request, serialize, agencyId, auth }: HttpContext) {
     const vehicle = await Vehicle.query()
       .where('id', params.id)
       .where('agencyId', agencyId!)
       .firstOrFail()
     const payload = await request.validateUsing(updateVehicleValidator)
+    const user = auth.use('api').getUserOrFail()
     const previousOwnerId = vehicle.ownerId
     const previousStatus = vehicle.status
     const previousDailyPrice = vehicle.dailyPrice
+    const beforeSnapshot = {
+      status: vehicle.status,
+      dailyPrice: vehicle.dailyPrice,
+      plate: vehicle.plate,
+      ownerId: vehicle.ownerId,
+      mileage: vehicle.mileage,
+    }
+
+    if (
+      payload.ownerId !== undefined &&
+      payload.ownerId !== vehicle.ownerId
+    ) {
+      const gate = await this.#validation.gate({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'vehicles.change_owner',
+        module: 'vehicles',
+        entityType: 'vehicle',
+        entityId: vehicle.id,
+        vehicleId: vehicle.id,
+        oldValues: { ownerId: vehicle.ownerId },
+        newValues: { ownerId: payload.ownerId },
+        payload: { ownerId: payload.ownerId },
+        summary: `Changement de propriétaire — ${vehicle.brand} ${vehicle.model} (${vehicle.plate})`,
+        ip: request.ip(),
+      })
+      if (gate.outcome === 'pending') {
+        return pendingValidationResponse(gate.request)
+      }
+    }
 
     if (payload.ownerId !== undefined && payload.ownerId !== null) {
       await this.#assertOwnerInAgency(payload.ownerId, agencyId!)
@@ -527,6 +600,31 @@ export default class VehiclesController {
       payload.photoUrl !== undefined
 
     await vehicle.save()
+    vehicle.updatedByUserId = user.id
+    await vehicle.save()
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action:
+        payload.status !== undefined && payload.status !== previousStatus
+          ? 'vehicle.availability'
+          : 'vehicle.update',
+      module: 'vehicles',
+      entityType: 'vehicle',
+      entityId: vehicle.id,
+      vehicleId: vehicle.id,
+      oldValues: beforeSnapshot,
+      newValues: {
+        status: vehicle.status,
+        dailyPrice: vehicle.dailyPrice,
+        plate: vehicle.plate,
+        ownerId: vehicle.ownerId,
+        mileage: vehicle.mileage,
+      },
+      summary: `Modification du véhicule ${vehicle.brand} ${vehicle.model} (${vehicle.plate})`,
+      ip: request.ip(),
+    })
 
     if (sensitiveChanged) {
       await this.#requireRereviewIfPublished(vehicle)
@@ -711,18 +809,63 @@ export default class VehiclesController {
     })
   }
 
-  async destroy({ params, response, agencyId }: HttpContext) {
+  async destroy({ params, response, agencyId, auth, request }: HttpContext) {
     const vehicle = await this.#loadVehicle(params.id, agencyId!)
     const ownerId = vehicle.ownerId
     const label = vehicle.label
     const plate = vehicle.plate
     const vehicleId = vehicle.id
+    const user = auth.use('api').getUserOrFail()
+
+    const gate = await this.#validation.gate({
+      agencyId: agencyId!,
+      actor: user,
+      actionCode: 'vehicles.delete',
+      module: 'vehicles',
+      entityType: 'vehicle',
+      entityId: vehicleId,
+      vehicleId,
+      oldValues: { label, plate },
+      newValues: null,
+      payload: {},
+      summary: `Suppression du véhicule ${label} (${plate})`,
+      ip: request.ip(),
+    })
+    if (gate.outcome === 'pending') {
+      return pendingValidationResponse(gate.request)
+    }
 
     for (const photo of vehicle.photos) {
       await this.#photos.removeIfExists(photo.path)
     }
 
     await vehicle.delete()
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'vehicle.delete',
+      module: 'vehicles',
+      entityType: 'vehicle',
+      entityId: vehicleId,
+      vehicleId,
+      oldValues: { label, plate },
+      summary: `Suppression du véhicule ${label} (${plate})`,
+      ip: request.ip(),
+    })
+
+    if (gate.mode === 'notify') {
+      await this.#validation.notifyAfterProceed({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'vehicles.delete',
+        module: 'vehicles',
+        summary: `Suppression du véhicule ${label} (${plate})`,
+        entityType: 'vehicle',
+        entityId: vehicleId,
+        vehicleId,
+      })
+    }
 
     await safeNotify(ownerId, {
       type: OWNER_NOTIFICATION_TYPES.VEHICLE_REMOVED,

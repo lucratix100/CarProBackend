@@ -8,6 +8,20 @@ import ClientLicenseUploadService from '#services/client_license_upload_service'
 import IdentityScanService from '#services/identity_scan_service'
 import ClientTransformer from '#transformers/client_transformer'
 import { createClientValidator, updateClientValidator } from '#validators/client'
+import AuditService, { diffValues, pickAuditFields } from '#services/audit_service'
+import ValidationService, { pendingValidationResponse } from '#services/validation_service'
+
+const CLIENT_AUDIT_FIELDS = [
+  'fullName',
+  'phone',
+  'email',
+  'licenseNumber',
+  'idCardNumber',
+  'city',
+  'type',
+  'notes',
+  'isActive',
+] as const
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -53,9 +67,26 @@ function withLicenseFlags(client: Client, serialized: unknown) {
 export default class ClientsController {
   #uploads = new ClientLicenseUploadService()
   #identityScan = new IdentityScanService()
+  #audit = new AuditService()
+  #validation = new ValidationService()
 
   async #findScoped(id: number | string, agencyId: number) {
     return Client.query().where('id', id).where('agencyId', agencyId).firstOrFail()
+  }
+
+  async #withActors(client: Client, serialized: unknown) {
+    await client.load('createdBy')
+    await client.load('updatedBy')
+    const base = withLicenseFlags(client, serialized)
+    return {
+      ...base,
+      createdBy: client.createdBy
+        ? { id: client.createdBy.id, fullName: client.createdBy.fullName }
+        : null,
+      updatedBy: client.updatedBy
+        ? { id: client.updatedBy.id, fullName: client.updatedBy.fullName }
+        : null,
+    }
   }
 
   /**
@@ -163,8 +194,9 @@ export default class ClientsController {
     }
   }
 
-  async store({ request, response, serialize, agencyId }: HttpContext) {
+  async store({ request, response, serialize, agencyId, auth }: HttpContext) {
     const payload = await request.validateUsing(createClientValidator)
+    const user = auth.use('api').getUserOrFail()
     const client = await Client.create({
       agencyId: agencyId!,
       source: 'agency',
@@ -179,20 +211,42 @@ export default class ClientsController {
       type: payload.type ?? 'particulier',
       notes: payload.notes ?? null,
       isActive: payload.isActive ?? true,
+      createdByUserId: user.id,
+      updatedByUserId: user.id,
+    })
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'client.create',
+      module: 'clients',
+      entityType: 'client',
+      entityId: client.id,
+      clientId: client.id,
+      newValues: pickAuditFields(
+        client as unknown as Record<string, unknown>,
+        [...CLIENT_AUDIT_FIELDS]
+      ),
+      summary: `Création du client ${client.fullName}`,
+      ip: request.ip(),
     })
     const serialized = await serialize(ClientTransformer.transform(client))
-    return response.created(withLicenseFlags(client, serialized))
+    return response.created(await this.#withActors(client, serialized))
   }
 
   async show({ params, serialize, agencyId }: HttpContext) {
     const client = await this.#findScoped(params.id, agencyId!)
     const serialized = await serialize(ClientTransformer.transform(client))
-    return withLicenseFlags(client, serialized)
+    return this.#withActors(client, serialized)
   }
 
-  async update({ params, request, serialize, agencyId }: HttpContext) {
+  async update({ params, request, serialize, agencyId, auth }: HttpContext) {
     const client = await this.#findScoped(params.id, agencyId!)
     const payload = await request.validateUsing(updateClientValidator)
+    const user = auth.use('api').getUserOrFail()
+    const before = pickAuditFields(
+      client as unknown as Record<string, unknown>,
+      [...CLIENT_AUDIT_FIELDS]
+    )
 
     client.merge({
       fullName: payload.fullName ?? client.fullName,
@@ -204,6 +258,7 @@ export default class ClientsController {
       type: payload.type ?? client.type,
       notes: payload.notes === undefined ? client.notes : payload.notes,
       isActive: payload.isActive === undefined ? client.isActive : payload.isActive,
+      updatedByUserId: user.id,
     })
 
     if (payload.birthDate !== undefined) {
@@ -215,11 +270,33 @@ export default class ClientsController {
     }
 
     await client.save()
+
+    const after = pickAuditFields(
+      client as unknown as Record<string, unknown>,
+      [...CLIENT_AUDIT_FIELDS]
+    )
+    const diff = diffValues(before, after)
+    if (diff) {
+      await this.#audit.log({
+        actor: user,
+        agencyId: agencyId!,
+        action: 'client.update',
+        module: 'clients',
+        entityType: 'client',
+        entityId: client.id,
+        clientId: client.id,
+        oldValues: diff.oldValues,
+        newValues: diff.newValues,
+        summary: `Modification du client ${client.fullName}`,
+        ip: request.ip(),
+      })
+    }
+
     const serialized = await serialize(ClientTransformer.transform(client))
-    return withLicenseFlags(client, serialized)
+    return this.#withActors(client, serialized)
   }
 
-  async uploadLicense({ params, request, response, serialize, agencyId }: HttpContext) {
+  async uploadLicense({ params, request, response, serialize, agencyId, auth }: HttpContext) {
     const client = await this.#findScoped(params.id, agencyId!)
     const recto = this.#uploads.validateFile(request.file('recto'), 'Permis recto')
     const verso = this.#uploads.validateFile(request.file('verso'), 'Permis verso')
@@ -243,9 +320,28 @@ export default class ClientsController {
       await this.#uploads.removeIfExists(previous)
     }
 
+    const user = auth.use('api').getUserOrFail()
+    client.updatedByUserId = user.id
     await client.save()
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'client.identity_upload',
+      module: 'clients',
+      entityType: 'client',
+      entityId: client.id,
+      clientId: client.id,
+      newValues: {
+        recto: Boolean(recto),
+        verso: Boolean(verso),
+      },
+      summary: `Pièce d’identité mise à jour — ${client.fullName}`,
+      ip: request.ip(),
+    })
+
     const serialized = await serialize(ClientTransformer.transform(client))
-    return response.ok(withLicenseFlags(client, serialized))
+    return response.ok(await this.#withActors(client, serialized))
   }
 
   async licenseFile({ params, response, agencyId }: HttpContext) {
@@ -285,11 +381,63 @@ export default class ClientsController {
     return response.stream(createReadStream(absolutePath))
   }
 
-  async destroy({ params, response, agencyId }: HttpContext) {
+  async destroy({ params, response, agencyId, auth, request }: HttpContext) {
     const client = await this.#findScoped(params.id, agencyId!)
+    const user = auth.use('api').getUserOrFail()
+    const snapshot = {
+      fullName: client.fullName,
+      phone: client.phone,
+      email: client.email,
+    }
+    const clientId = client.id
+
+    const gate = await this.#validation.gate({
+      agencyId: agencyId!,
+      actor: user,
+      actionCode: 'clients.delete',
+      module: 'clients',
+      entityType: 'client',
+      entityId: clientId,
+      clientId,
+      oldValues: snapshot,
+      newValues: null,
+      payload: {},
+      summary: `Suppression du client ${snapshot.fullName}`,
+      ip: request.ip(),
+    })
+    if (gate.outcome === 'pending') {
+      return pendingValidationResponse(gate.request)
+    }
+
     await this.#uploads.removeIfExists(client.licenseRectoPath)
     await this.#uploads.removeIfExists(client.licenseVersoPath)
     await client.delete()
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'client.delete',
+      module: 'clients',
+      entityType: 'client',
+      entityId: clientId,
+      clientId,
+      oldValues: snapshot,
+      summary: `Suppression du client ${snapshot.fullName}`,
+      ip: request.ip(),
+    })
+
+    if (gate.mode === 'notify') {
+      await this.#validation.notifyAfterProceed({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'clients.delete',
+        module: 'clients',
+        summary: `Suppression du client ${snapshot.fullName}`,
+        entityType: 'client',
+        entityId: clientId,
+        clientId,
+      })
+    }
+
     return response.ok({ message: 'Client supprimé.' })
   }
 }

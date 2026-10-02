@@ -14,10 +14,27 @@ import {
   rejectRentalValidator,
   updateRentalValidator,
 } from '#validators/rental'
+import PermissionService from '#services/permission_service'
+import AuditService, { diffValues, pickAuditFields } from '#services/audit_service'
+import ValidationService, { pendingValidationResponse } from '#services/validation_service'
+
+const RENTAL_AUDIT_FIELDS = [
+  'vehicleId',
+  'clientId',
+  'startDate',
+  'endDate',
+  'dailyPrice',
+  'amountPaid',
+  'status',
+  'notes',
+] as const
 
 export default class RentalsController {
   #service = new RentalService()
   #contractService = new RentalContractService()
+  #permissions = new PermissionService()
+  #audit = new AuditService()
+  #validation = new ValidationService()
 
   async #findScoped(id: number | string, agencyId: number) {
     return Rental.query().where('id', id).where('agencyId', agencyId).firstOrFail()
@@ -75,6 +92,26 @@ export default class RentalsController {
       : await serialize(RentalTransformer.transform(rental))
     const base = (serialized as { data?: Record<string, unknown> }).data ?? serialized
 
+    if (!asOwner) {
+      try {
+        await rental.load('createdBy')
+        await rental.load('updatedBy')
+      } catch {
+        // relations optionnelles
+      }
+    }
+
+    const actors = asOwner
+      ? {}
+      : {
+          createdBy: rental.createdBy
+            ? { id: rental.createdBy.id, fullName: rental.createdBy.fullName }
+            : null,
+          updatedBy: rental.updatedBy
+            ? { id: rental.updatedBy.id, fullName: rental.updatedBy.fullName }
+            : null,
+        }
+
     if (asOwner) {
       return {
         ...base,
@@ -90,6 +127,7 @@ export default class RentalsController {
     const paid = rental.amountPaid ?? 0
     return {
       ...base,
+      ...actors,
       finance: {
         ...finance,
         balanceDue: Math.max(0, finance.ttc - paid),
@@ -140,15 +178,40 @@ export default class RentalsController {
     }
   }
 
-  async store({ request, response, serialize, agencyId }: HttpContext) {
+  async store({ request, response, serialize, agencyId, auth }: HttpContext) {
     const payload = await request.validateUsing(createRentalValidator)
+    const user = auth.use('api').getUserOrFail()
     await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
     await this.#assertClientInAgency(payload.clientId, agencyId!)
 
-    const rental = await this.#service.create({ ...payload, agencyId: agencyId! })
+    const rental = await this.#service.create({
+      ...payload,
+      agencyId: agencyId!,
+      createdByUserId: user.id,
+    })
     await rental.load('vehicle')
     await rental.load('client')
     await rental.load('extensions', (q) => q.orderBy('id', 'asc').preload('createdBy'))
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'rental.create',
+      module: 'rentals',
+      entityType: 'rental',
+      entityId: rental.id,
+      rentalId: rental.id,
+      clientId: rental.clientId,
+      vehicleId: rental.vehicleId,
+      newValues: {
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        dailyPrice: payload.dailyPrice,
+        status: rental.status,
+      },
+      summary: `Création de la location #${rental.id}`,
+      ip: request.ip(),
+    })
 
     return response.created(await this.#withFinance(rental, serialize))
   }
@@ -174,17 +237,130 @@ export default class RentalsController {
     return response.send(pdf)
   }
 
-  async update({ params, request, serialize, agencyId }: HttpContext) {
+  async update({ params, request, serialize, agencyId, auth }: HttpContext) {
     const rental = await this.#findScoped(params.id, agencyId!)
     const payload = await request.validateUsing(updateRentalValidator)
+    const user = auth.use('api').getUserOrFail()
+
+    if (payload.dailyPrice !== undefined) {
+      await this.#permissions.assertPermission(user, 'rentals.update_price')
+    }
+    if (payload.startDate !== undefined || payload.endDate !== undefined) {
+      await this.#permissions.assertPermission(user, 'rentals.update_dates')
+    }
+    if (payload.vehicleId !== undefined) {
+      await this.#permissions.assertPermission(user, 'rentals.update_vehicle')
+    }
+    if (payload.amountPaid !== undefined) {
+      await this.#permissions.assertPermission(user, 'rentals.record_payment')
+    }
+    if (payload.status === 'Annulée') {
+      await this.#permissions.assertPermission(user, 'rentals.cancel')
+    }
 
     if (payload.vehicleId) await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
     if (payload.clientId) await this.#assertClientInAgency(payload.clientId, agencyId!)
 
+    const before = pickAuditFields(
+      {
+        vehicleId: rental.vehicleId,
+        clientId: rental.clientId,
+        startDate: rental.startDate?.toISODate?.() ?? rental.startDate,
+        endDate: rental.endDate?.toISODate?.() ?? rental.endDate,
+        dailyPrice: rental.dailyPrice,
+        amountPaid: rental.amountPaid,
+        status: rental.status,
+        notes: rental.notes,
+      },
+      [...RENTAL_AUDIT_FIELDS]
+    )
+
+    let priceGateMode: 'free' | 'notify' | 'require_approval' | undefined
+
+    // Gate tarif
+    if (payload.dailyPrice !== undefined && payload.dailyPrice !== rental.dailyPrice) {
+      const gate = await this.#validation.gate({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'rentals.update_price',
+        module: 'rentals',
+        entityType: 'rental',
+        entityId: rental.id,
+        rentalId: rental.id,
+        clientId: rental.clientId,
+        vehicleId: rental.vehicleId,
+        oldValues: { dailyPrice: rental.dailyPrice },
+        newValues: { dailyPrice: payload.dailyPrice },
+        payload: { dailyPrice: payload.dailyPrice },
+        summary: `Modification du tarif de la location #${rental.id} (${rental.dailyPrice} → ${payload.dailyPrice})`,
+        ip: request.ip(),
+      })
+      if (gate.outcome === 'pending') {
+        return pendingValidationResponse(gate.request)
+      }
+      priceGateMode = gate.mode
+    }
+
     await this.#service.update(rental, payload)
+    rental.updatedByUserId = user.id
+    await rental.save()
+
     await rental.load('vehicle')
     await rental.load('client')
     await rental.load('extensions', (q) => q.orderBy('id', 'asc').preload('createdBy'))
+
+    const after = pickAuditFields(
+      {
+        vehicleId: rental.vehicleId,
+        clientId: rental.clientId,
+        startDate: rental.startDate?.toISODate?.() ?? rental.startDate,
+        endDate: rental.endDate?.toISODate?.() ?? rental.endDate,
+        dailyPrice: rental.dailyPrice,
+        amountPaid: rental.amountPaid,
+        status: rental.status,
+        notes: rental.notes,
+      },
+      [...RENTAL_AUDIT_FIELDS]
+    )
+    const diff = diffValues(before, after)
+    if (diff) {
+      const action =
+        payload.dailyPrice !== undefined && diff.newValues.dailyPrice !== undefined
+          ? 'rental.update_price'
+          : 'rental.update'
+      await this.#audit.log({
+        actor: user,
+        agencyId: agencyId!,
+        action,
+        module: 'rentals',
+        entityType: 'rental',
+        entityId: rental.id,
+        rentalId: rental.id,
+        clientId: rental.clientId,
+        vehicleId: rental.vehicleId,
+        oldValues: diff.oldValues,
+        newValues: diff.newValues,
+        summary:
+          action === 'rental.update_price'
+            ? `Tarif location #${rental.id} : ${diff.oldValues.dailyPrice} → ${diff.newValues.dailyPrice}`
+            : `Modification de la location #${rental.id}`,
+        ip: request.ip(),
+      })
+    }
+
+    if (priceGateMode === 'notify') {
+      await this.#validation.notifyAfterProceed({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'rentals.update_price',
+        module: 'rentals',
+        summary: `Tarif location #${rental.id} modifié`,
+        entityType: 'rental',
+        entityId: rental.id,
+        rentalId: rental.id,
+      })
+    }
+
     return this.#withFinance(rental, serialize)
   }
 
@@ -192,15 +368,36 @@ export default class RentalsController {
     const rental = await this.#findScoped(params.id, agencyId!)
     const payload = await request.validateUsing(extendRentalValidator)
     const user = auth.use('api').getUserOrFail()
+    const previousEnd = rental.endDate?.toISODate?.() ?? String(rental.endDate)
 
     await this.#service.extend(rental, {
       ...payload,
       createdByUserId: user.id,
     })
 
+    rental.updatedByUserId = user.id
+    await rental.save()
+
     await rental.load('vehicle')
     await rental.load('client')
     await rental.load('extensions', (q) => q.orderBy('id', 'asc').preload('createdBy'))
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'rental.extend',
+      module: 'rentals',
+      entityType: 'rental',
+      entityId: rental.id,
+      rentalId: rental.id,
+      clientId: rental.clientId,
+      vehicleId: rental.vehicleId,
+      oldValues: { endDate: previousEnd },
+      newValues: { endDate: payload.newEndDate, dailyPrice: payload.dailyPrice ?? null },
+      summary: `Prolongation location #${rental.id} jusqu’au ${payload.newEndDate}`,
+      ip: request.ip(),
+    })
+
     return this.#withFinance(rental, serialize)
   }
 
@@ -223,13 +420,67 @@ export default class RentalsController {
     return this.#withFinance(rental, serialize)
   }
 
-  async destroy({ params, request, response, agencyId }: HttpContext) {
+  async destroy({ params, request, response, agencyId, auth }: HttpContext) {
     const rental = await this.#findScoped(params.id, agencyId!)
     const payload = await request.validateUsing(cancelRentalValidator)
+    const user = auth.use('api').getUserOrFail()
+
+    const gate = await this.#validation.gate({
+      agencyId: agencyId!,
+      actor: user,
+      actionCode: 'rentals.cancel',
+      module: 'rentals',
+      entityType: 'rental',
+      entityId: rental.id,
+      rentalId: rental.id,
+      clientId: rental.clientId,
+      vehicleId: rental.vehicleId,
+      oldValues: { status: rental.status },
+      newValues: { status: 'Annulée', reason: payload.reason ?? null },
+      payload: { reason: payload.reason ?? null },
+      summary: `Annulation de la location #${rental.id}`,
+      ip: request.ip(),
+    })
+    if (gate.outcome === 'pending') {
+      return pendingValidationResponse(gate.request)
+    }
+
     await this.#service.cancel(rental, {
       reason: payload.reason,
       cancelledBy: 'agency',
     })
+    rental.updatedByUserId = user.id
+    await rental.save()
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'rental.cancel',
+      module: 'rentals',
+      entityType: 'rental',
+      entityId: rental.id,
+      rentalId: rental.id,
+      clientId: rental.clientId,
+      vehicleId: rental.vehicleId,
+      oldValues: { status: 'active' },
+      newValues: { status: 'Annulée', reason: payload.reason ?? null },
+      summary: `Annulation de la location #${rental.id}`,
+      ip: request.ip(),
+    })
+
+    if (gate.mode === 'notify') {
+      await this.#validation.notifyAfterProceed({
+        agencyId: agencyId!,
+        actor: user,
+        actionCode: 'rentals.cancel',
+        module: 'rentals',
+        summary: `Annulation de la location #${rental.id}`,
+        entityType: 'rental',
+        entityId: rental.id,
+        rentalId: rental.id,
+      })
+    }
+
     return response.ok({ message: 'Location annulée.' })
   }
 }

@@ -8,7 +8,12 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import Client from '#models/client'
 
 export default class ClientAccount extends compose(ClientAccountSchema, withAuthFinder(hash)) {
-  static accessTokens = DbAccessTokensProvider.forModel(ClientAccount)
+  /** Tokens marketplace : table séparée (auth_access_tokens FK → users). */
+  static accessTokens = DbAccessTokensProvider.forModel(ClientAccount, {
+    table: 'client_auth_access_tokens',
+    type: 'client_auth_token',
+    prefix: 'oat_cli_',
+  })
   declare currentAccessToken?: AccessToken
 
   @belongsTo(() => Client)

@@ -52,6 +52,7 @@ export const validationFields: ValidationFields = {
   birthDate: 'Date de naissance',
   performedOn: 'Date d’intervention',
   cost: 'Coût',
+  chargedTo: 'À la charge de',
   provider: 'Prestataire',
   nextDueOn: 'Prochaine échéance',
   alertDays: 'Alerte (jours)',
@@ -59,6 +60,13 @@ export const validationFields: ValidationFields = {
   companyName: 'Nom de l’entreprise',
   commissionPerDay: 'Commission / jour',
   tvaRate: 'Taux TVA',
+  title: 'Titre',
+  body: 'Texte',
+  linkUrl: 'Lien',
+  linkLabel: 'Libellé du bouton',
+  startsAt: 'Date de début',
+  endsAt: 'Date de fin',
+  sortOrder: 'Ordre',
 }
 
 export const validationMessages: ValidationMessages = {

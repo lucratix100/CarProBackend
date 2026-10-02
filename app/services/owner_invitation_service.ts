@@ -27,6 +27,14 @@ export default class OwnerInvitationService {
    */
   async create(payload: CreateOwnerPayload) {
     const sendInvitation = payload.sendInvitation === true
+    const email = payload.email.toLowerCase().trim()
+    const existing = await User.query().where('email', email).first()
+    if (existing) {
+      throw new Error(
+        `L’email ${email} est déjà utilisé par un compte existant. Utilisez un autre email ou réactivez ce compte.`
+      )
+    }
+
     const invitationToken = sendInvitation ? randomBytes(32).toString('hex') : null
     const temporaryPassword = randomBytes(24).toString('hex')
 
@@ -34,7 +42,7 @@ export default class OwnerInvitationService {
       const createdUser = await User.create(
         {
           fullName: payload.fullName,
-          email: payload.email.toLowerCase(),
+          email,
           password: temporaryPassword,
           role: 'owner',
           status: 'invited',

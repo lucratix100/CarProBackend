@@ -7,6 +7,7 @@ import Invoice from '#models/invoice'
 import RentalExtension from '#models/rental_extension'
 import Agency from '#models/agency'
 import MarketplaceReview from '#models/marketplace_review'
+import User from '#models/user'
 
 export default class Rental extends RentalSchema {
   @belongsTo(() => Agency)
@@ -17,6 +18,12 @@ export default class Rental extends RentalSchema {
 
   @belongsTo(() => Client)
   declare client: BelongsTo<typeof Client>
+
+  @belongsTo(() => User, { foreignKey: 'createdByUserId' })
+  declare createdBy: BelongsTo<typeof User>
+
+  @belongsTo(() => User, { foreignKey: 'updatedByUserId' })
+  declare updatedBy: BelongsTo<typeof User>
 
   @hasOne(() => Invoice)
   declare invoice: HasOne<typeof Invoice>

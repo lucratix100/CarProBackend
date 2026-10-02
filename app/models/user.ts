@@ -7,9 +7,10 @@ import { belongsTo, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasOne } from '@adonisjs/lucid/types/relations'
 import Owner from '#models/owner'
 import Agency from '#models/agency'
+import StaffRole from '#models/staff_role'
 
-export type UserRole = 'super_admin' | 'admin' | 'owner'
-export type UserStatus = 'invited' | 'active' | 'revoked'
+export type UserRole = 'super_admin' | 'admin' | 'owner' | 'staff'
+export type UserStatus = 'invited' | 'active' | 'suspended' | 'blocked' | 'revoked'
 
 export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static accessTokens = DbAccessTokensProvider.forModel(User)
@@ -17,6 +18,9 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
 
   @belongsTo(() => Agency)
   declare agency: BelongsTo<typeof Agency>
+
+  @belongsTo(() => StaffRole)
+  declare staffRole: BelongsTo<typeof StaffRole>
 
   @hasOne(() => Owner)
   declare owner: HasOne<typeof Owner>
@@ -41,8 +45,21 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
     return this.role === 'owner'
   }
 
+  get isStaff() {
+    return this.role === 'staff'
+  }
+
+  /** Accès console agence (gérant ou collaborateur). */
+  get isAgencyOperator() {
+    return this.role === 'admin' || this.role === 'staff'
+  }
+
   get isActive() {
     return this.status === 'active'
+  }
+
+  get isBlockedOrSuspended() {
+    return this.status === 'blocked' || this.status === 'suspended'
   }
 
   get canLogin() {

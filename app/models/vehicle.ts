@@ -8,6 +8,7 @@ import Marque from '#models/marque'
 import Modele from '#models/modele'
 import Agency from '#models/agency'
 import VehiclePhoto from '#models/vehicle_photo'
+import User from '#models/user'
 
 export default class Vehicle extends VehicleSchema {
   @belongsTo(() => Agency)
@@ -21,6 +22,12 @@ export default class Vehicle extends VehicleSchema {
 
   @belongsTo(() => Modele)
   declare modele: BelongsTo<typeof Modele>
+
+  @belongsTo(() => User, { foreignKey: 'createdByUserId' })
+  declare createdBy: BelongsTo<typeof User>
+
+  @belongsTo(() => User, { foreignKey: 'updatedByUserId' })
+  declare updatedBy: BelongsTo<typeof User>
 
   @hasMany(() => Rental)
   declare rentals: HasMany<typeof Rental>

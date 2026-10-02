@@ -47,6 +47,8 @@ router.use([
 export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),
   admin: () => import('#middleware/admin_middleware'),
+  agencyAdmin: () => import('#middleware/agency_admin_middleware'),
+  permission: () => import('#middleware/permission_middleware'),
   superAdmin: () => import('#middleware/super_admin_middleware'),
   owner: () => import('#middleware/owner_middleware'),
   marketplaceAuth: () => import('#middleware/marketplace_auth_middleware'),

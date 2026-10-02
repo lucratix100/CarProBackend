@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
 import OwnerInvitationService from '#services/owner_invitation_service'
 import AdminInvitationService from '#services/admin_invitation_service'
+import StaffInvitationService from '#services/staff_invitation_service'
 import { acceptInvitationValidator } from '#validators/user'
 import { MANDATE_TERMS } from '#constants/mandate_terms'
 import { PLATFORM_TERMS } from '#constants/platform_terms'
@@ -10,7 +11,7 @@ import User from '#models/user'
 
 export default class InvitationsController {
   /**
-   * Public: preview invitation (owner mandate terms or admin platform terms).
+   * Public: preview invitation (owner / admin / staff).
    */
   async show({ params, serialize }: HttpContext) {
     const ownerInvitation = new OwnerInvitationService()
@@ -24,6 +25,24 @@ export default class InvitationsController {
         expiresAt: ownerUser.invitationExpiresAt,
         terms: MANDATE_TERMS,
         message: null,
+      })
+    }
+
+    const staffInvitation = new StaffInvitationService()
+    const staffUser = await staffInvitation.findValidInvitation(params.token)
+
+    if (staffUser) {
+      const paused = Boolean(staffUser.agency?.staffPaused)
+      return serialize({
+        role: 'staff',
+        email: staffUser.email,
+        fullName: staffUser.fullName,
+        expiresAt: staffUser.invitationExpiresAt,
+        terms: PLATFORM_TERMS,
+        activationBlocked: paused,
+        message: paused
+          ? 'L’équipe de cette agence est en pause. Vous pourrez activer votre compte lorsque l’accès sera rétabli.'
+          : 'Définissez un mot de passe personnel et acceptez les conditions pour activer votre compte collaborateur.',
       })
     }
 
@@ -50,7 +69,6 @@ export default class InvitationsController {
 
   /**
    * Public: accept invitation + set password → activate account.
-   * Owners: mandat véhicule. Admins: CGU + politique de confidentialité.
    */
   async accept({ params, request, serialize, response }: HttpContext) {
     const payload = await request.validateUsing(acceptInvitationValidator)
@@ -81,6 +99,35 @@ export default class InvitationsController {
         return response.ok(
           await serialize({
             message: 'Compte activé. Vous pouvez accéder à votre espace propriétaire.',
+            user: UserTransformer.transform(user),
+            token: token.value!.release(),
+          })
+        )
+      } catch (error) {
+        throw new Exception((error as Error).message, {
+          status: 422,
+          code: 'E_INVITATION_ACCEPT',
+        })
+      }
+    }
+
+    const staffInvitation = new StaffInvitationService()
+    const staffUser = await staffInvitation.findValidInvitation(params.token)
+
+    if (staffUser) {
+      try {
+        const { user } = await staffInvitation.acceptInvitation(
+          params.token,
+          password,
+          request.ip()
+        )
+        const token = await User.accessTokens.create(user)
+        if (user.agencyId) await user.load('agency')
+        if (user.staffRoleId) await user.load('staffRole')
+
+        return response.ok(
+          await serialize({
+            message: 'Compte collaborateur activé. Vous pouvez vous connecter.',
             user: UserTransformer.transform(user),
             token: token.value!.release(),
           })

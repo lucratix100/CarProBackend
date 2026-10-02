@@ -7,6 +7,7 @@ import MaintenanceTransformer from '#transformers/maintenance_transformer'
 import OwnerNotificationService from '#services/owner_notification_service'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { createMaintenanceValidator, updateMaintenanceValidator } from '#validators/maintenance'
+import { resolveMaintenanceCharge } from '#services/maintenance_expense_service'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -117,13 +118,15 @@ export default class MaintenancesController {
 
   async store({ request, response, serialize, agencyId }: HttpContext) {
     const payload = await request.validateUsing(createMaintenanceValidator)
-    await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
+    const vehicle = await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
+    const chargedTo = resolveMaintenanceCharge(vehicle.ownerId, payload.chargedTo)
 
     const row = await Maintenance.create({
       vehicleId: payload.vehicleId,
       type: payload.type,
       performedOn: DateTime.fromISO(payload.performedOn),
       cost: payload.cost,
+      chargedTo,
       mileage: payload.mileage ?? null,
       provider: payload.provider ?? null,
       nextDueOn: toDate(payload.nextDueOn) ?? null,
@@ -134,7 +137,7 @@ export default class MaintenancesController {
       cancelledByUserId: null,
     })
     await row.load('vehicle')
-    if (row.vehicle) {
+    if (row.vehicle && chargedTo === 'owner') {
       await notifyExpense(row.vehicle, row, 'created')
     }
     return response.created(await serialize(MaintenanceTransformer.transform(row)))
@@ -160,6 +163,7 @@ export default class MaintenancesController {
     const previousType = row.type
     const previousDue = row.nextDueOn?.toISODate() ?? null
     const previousCost = Number(row.cost || 0)
+    const previousChargedTo = row.chargedTo
     const previousSnapshot = {
       id: row.id,
       type: row.type,
@@ -169,12 +173,19 @@ export default class MaintenancesController {
       description: row.description,
     }
 
-    if (payload.vehicleId) await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
+    const targetVehicle = payload.vehicleId
+      ? await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
+      : await Vehicle.query().where('id', row.vehicleId).where('agencyId', agencyId!).firstOrFail()
+    const chargedTo = resolveMaintenanceCharge(
+      targetVehicle.ownerId,
+      payload.chargedTo === undefined ? row.chargedTo : payload.chargedTo
+    )
 
     row.merge({
       vehicleId: payload.vehicleId ?? row.vehicleId,
       type: payload.type ?? row.type,
       cost: payload.cost ?? row.cost,
+      chargedTo,
       mileage: payload.mileage === undefined ? row.mileage : payload.mileage,
       provider: payload.provider === undefined ? row.provider : payload.provider,
       alertDays: payload.alertDays ?? row.alertDays,
@@ -194,11 +205,13 @@ export default class MaintenancesController {
     const nextDue = row.nextDueOn?.toISODate() ?? null
     const nextCost = Number(row.cost || 0)
     const vehicleChanged = row.vehicleId !== previousVehicleId
+    const chargeChanged = row.chargedTo !== previousChargedTo
     const meaningful =
       row.type !== previousType ||
       nextDue !== previousDue ||
       nextCost !== previousCost ||
-      vehicleChanged
+      vehicleChanged ||
+      chargeChanged
 
     if (meaningful) {
       if (vehicleChanged) {
@@ -206,13 +219,17 @@ export default class MaintenancesController {
           .where('id', previousVehicleId)
           .where('agencyId', agencyId!)
           .first()
-        if (previousVehicle) {
+        if (previousVehicle && previousChargedTo === 'owner') {
           await notifyExpense(previousVehicle, previousSnapshot, 'removed')
         }
-        if (row.vehicle) {
+        if (row.vehicle && row.chargedTo === 'owner') {
           await notifyExpense(row.vehicle, row, 'created')
         }
-      } else if (row.vehicle) {
+      } else if (row.vehicle && previousChargedTo === 'owner' && row.chargedTo === 'agency') {
+        await notifyExpense(row.vehicle, row, 'removed')
+      } else if (row.vehicle && previousChargedTo === 'agency' && row.chargedTo === 'owner') {
+        await notifyExpense(row.vehicle, row, 'created')
+      } else if (row.vehicle && row.chargedTo === 'owner') {
         await notifyExpense(row.vehicle, row, 'updated')
       }
     }
@@ -244,7 +261,7 @@ export default class MaintenancesController {
     row.cancelledByUserId = user?.id ?? null
     await row.save()
 
-    if (row.vehicle) {
+    if (row.vehicle && row.chargedTo === 'owner') {
       await notifyExpense(row.vehicle, row, 'removed')
     }
 

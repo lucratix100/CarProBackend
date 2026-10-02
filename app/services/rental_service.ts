@@ -253,6 +253,7 @@ export default class RentalService {
     status: string
     notes?: string | null
     source?: string
+    createdByUserId?: number | null
   }) {
     await this.assertNoConflict(payload.vehicleId, payload.startDate, payload.endDate)
 
@@ -272,6 +273,8 @@ export default class RentalService {
       status,
       notes: payload.notes ?? null,
       source: payload.source ?? 'agency',
+      createdByUserId: payload.createdByUserId ?? null,
+      updatedByUserId: payload.createdByUserId ?? null,
     })
 
     await this.syncVehicleStatus(rental.vehicleId)

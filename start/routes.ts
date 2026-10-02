@@ -107,17 +107,62 @@ router
       .use([middleware.auth(), middleware.superAdmin()])
 
     /**
-     * Admin-only resources
+     * Partner applications (super-admin: agency + owner; admin: own agency owners)
      */
     router
       .group(() => {
-        router.get('/', [controllers.Owners, 'index'])
-        router.post('/', [controllers.Owners, 'store'])
-        router.get('/:id/statement', [controllers.Owners, 'statement'])
-        router.get('/:id', [controllers.Owners, 'show'])
-        router.patch('/:id', [controllers.Owners, 'update'])
-        router.delete('/:id', [controllers.Owners, 'destroy'])
-        router.post('/:id/resend-invitation', [controllers.Owners, 'resendInvitation'])
+        router.get('/', [controllers.PartnerApplications, 'index'])
+        router.post('/:id/approve', [controllers.PartnerApplications, 'approve'])
+        router.post('/:id/reject', [controllers.PartnerApplications, 'reject'])
+      })
+      .prefix('partner-applications')
+      .as('partner_applications')
+      .use([middleware.auth()])
+
+    /**
+     * Super-admin: homepage advertising banners
+     */
+    router
+      .group(() => {
+        router.get('/', [controllers.HomepageBanners, 'adminIndex'])
+        router.post('/', [controllers.HomepageBanners, 'store'])
+        router.get('/:id/image', [controllers.HomepageBanners, 'adminImageFile'])
+        router.post('/:id/image', [controllers.HomepageBanners, 'uploadImage'])
+        router.delete('/:id/image', [controllers.HomepageBanners, 'destroyImage'])
+        router.get('/:id', [controllers.HomepageBanners, 'adminShow'])
+        router.patch('/:id', [controllers.HomepageBanners, 'update'])
+        router.delete('/:id', [controllers.HomepageBanners, 'destroy'])
+      })
+      .prefix('homepage-banners')
+      .as('homepage_banners')
+      .use([middleware.auth(), middleware.superAdmin()])
+
+    /**
+     * Admin-only resources (gérant + collaborateurs avec permissions)
+     */
+    router
+      .group(() => {
+        router
+          .get('/', [controllers.Owners, 'index'])
+          .use(middleware.permission({ permission: 'owners.view' }))
+        router
+          .post('/', [controllers.Owners, 'store'])
+          .use(middleware.permission({ permission: 'owners.manage' }))
+        router
+          .get('/:id/statement', [controllers.Owners, 'statement'])
+          .use(middleware.permission({ permission: 'owners.view' }))
+        router
+          .get('/:id', [controllers.Owners, 'show'])
+          .use(middleware.permission({ permission: 'owners.view' }))
+        router
+          .patch('/:id', [controllers.Owners, 'update'])
+          .use(middleware.permission({ permission: 'owners.manage' }))
+        router
+          .delete('/:id', [controllers.Owners, 'destroy'])
+          .use(middleware.permission({ permission: 'owners.manage' }))
+        router
+          .post('/:id/resend-invitation', [controllers.Owners, 'resendInvitation'])
+          .use(middleware.permission({ permission: 'owners.manage' }))
       })
       .prefix('owners')
       .as('owners')
@@ -125,9 +170,15 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Marques, 'index'])
-        router.post('/', [controllers.Marques, 'store'])
-        router.get('/:id', [controllers.Marques, 'show'])
+        router.get('/', [controllers.Marques, 'index']).use(
+          middleware.permission({ permission: 'vehicles.view' })
+        )
+        router.post('/', [controllers.Marques, 'store']).use(
+          middleware.permission({ permission: 'vehicles.create' })
+        )
+        router.get('/:id', [controllers.Marques, 'show']).use(
+          middleware.permission({ permission: 'vehicles.view' })
+        )
       })
       .prefix('marques')
       .as('marques')
@@ -135,8 +186,12 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Modeles, 'index'])
-        router.post('/', [controllers.Modeles, 'store'])
+        router.get('/', [controllers.Modeles, 'index']).use(
+          middleware.permission({ permission: 'vehicles.view' })
+        )
+        router.post('/', [controllers.Modeles, 'store']).use(
+          middleware.permission({ permission: 'vehicles.create' })
+        )
       })
       .prefix('modeles')
       .as('modeles')
@@ -144,18 +199,42 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Vehicles, 'index'])
-        router.post('/', [controllers.Vehicles, 'store'])
-        router.get('/:id/expenses', [controllers.Vehicles, 'expenses'])
-        router.get('/:id/summary', [controllers.Vehicles, 'summary'])
-        router.post('/:id/photos', [controllers.Vehicles, 'uploadPhotos'])
-        router.get('/:id/photos/:photoId', [controllers.Vehicles, 'photoFile'])
-        router.delete('/:id/photos/:photoId', [controllers.Vehicles, 'destroyPhoto'])
-        router.post('/:id/marketplace/submit', [controllers.Vehicles, 'submitMarketplace'])
-        router.post('/:id/marketplace/unpublish', [controllers.Vehicles, 'unpublishMarketplace'])
-        router.get('/:id', [controllers.Vehicles, 'show'])
-        router.patch('/:id', [controllers.Vehicles, 'update'])
-        router.delete('/:id', [controllers.Vehicles, 'destroy'])
+        router
+          .get('/', [controllers.Vehicles, 'index'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .post('/', [controllers.Vehicles, 'store'])
+          .use(middleware.permission({ permission: 'vehicles.create' }))
+        router
+          .get('/:id/expenses', [controllers.Vehicles, 'expenses'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
+        router
+          .get('/:id/summary', [controllers.Vehicles, 'summary'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .post('/:id/photos', [controllers.Vehicles, 'uploadPhotos'])
+          .use(middleware.permission({ permission: 'vehicles.manage_documents' }))
+        router
+          .get('/:id/photos/:photoId', [controllers.Vehicles, 'photoFile'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .delete('/:id/photos/:photoId', [controllers.Vehicles, 'destroyPhoto'])
+          .use(middleware.permission({ permission: 'vehicles.manage_documents' }))
+        router
+          .post('/:id/marketplace/submit', [controllers.Vehicles, 'submitMarketplace'])
+          .use(middleware.permission({ permission: 'vehicles.update' }))
+        router
+          .post('/:id/marketplace/unpublish', [controllers.Vehicles, 'unpublishMarketplace'])
+          .use(middleware.permission({ permission: 'vehicles.update' }))
+        router
+          .get('/:id', [controllers.Vehicles, 'show'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .patch('/:id', [controllers.Vehicles, 'update'])
+          .use(middleware.permission({ permission: 'vehicles.update' }))
+        router
+          .delete('/:id', [controllers.Vehicles, 'destroy'])
+          .use(middleware.permission({ permission: 'vehicles.delete' }))
       })
       .prefix('vehicles')
       .as('vehicles')
@@ -163,11 +242,21 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.VehicleExpenses, 'index'])
-        router.post('/', [controllers.VehicleExpenses, 'store'])
-        router.get('/:id', [controllers.VehicleExpenses, 'show'])
-        router.patch('/:id', [controllers.VehicleExpenses, 'update'])
-        router.delete('/:id', [controllers.VehicleExpenses, 'destroy'])
+        router
+          .get('/', [controllers.VehicleExpenses, 'index'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
+        router
+          .post('/', [controllers.VehicleExpenses, 'store'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
+        router
+          .get('/:id', [controllers.VehicleExpenses, 'show'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
+        router
+          .patch('/:id', [controllers.VehicleExpenses, 'update'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
+        router
+          .delete('/:id', [controllers.VehicleExpenses, 'destroy'])
+          .use(middleware.permission({ permission: 'reports.expenses' }))
       })
       .prefix('vehicle-expenses')
       .as('vehicle_expenses')
@@ -175,15 +264,33 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Clients, 'index'])
-        router.post('/', [controllers.Clients, 'store'])
-        router.post('/scan-identity', [controllers.Clients, 'scanIdentity'])
-        router.get('/lookup', [controllers.Clients, 'lookup'])
-        router.post('/:id/license', [controllers.Clients, 'uploadLicense'])
-        router.get('/:id/license/:side', [controllers.Clients, 'licenseFile'])
-        router.get('/:id', [controllers.Clients, 'show'])
-        router.patch('/:id', [controllers.Clients, 'update'])
-        router.delete('/:id', [controllers.Clients, 'destroy'])
+        router
+          .get('/', [controllers.Clients, 'index'])
+          .use(middleware.permission({ permission: 'clients.view' }))
+        router
+          .post('/', [controllers.Clients, 'store'])
+          .use(middleware.permission({ permission: 'clients.create' }))
+        router
+          .post('/scan-identity', [controllers.Clients, 'scanIdentity'])
+          .use(middleware.permission({ permission: 'clients.manage_identity' }))
+        router
+          .get('/lookup', [controllers.Clients, 'lookup'])
+          .use(middleware.permission({ permission: 'clients.view' }))
+        router
+          .post('/:id/license', [controllers.Clients, 'uploadLicense'])
+          .use(middleware.permission({ permission: 'clients.manage_identity' }))
+        router
+          .get('/:id/license/:side', [controllers.Clients, 'licenseFile'])
+          .use(middleware.permission({ permission: 'clients.view_documents' }))
+        router
+          .get('/:id', [controllers.Clients, 'show'])
+          .use(middleware.permission({ permission: 'clients.view' }))
+        router
+          .patch('/:id', [controllers.Clients, 'update'])
+          .use(middleware.permission({ permission: 'clients.update' }))
+        router
+          .delete('/:id', [controllers.Clients, 'destroy'])
+          .use(middleware.permission({ permission: 'clients.delete' }))
       })
       .prefix('clients')
       .as('clients')
@@ -191,15 +298,33 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Rentals, 'index'])
-        router.post('/', [controllers.Rentals, 'store'])
-        router.get('/:id/contract', [controllers.Rentals, 'contract'])
-        router.post('/:id/extend', [controllers.Rentals, 'extend'])
-        router.post('/:id/approve', [controllers.Rentals, 'approve'])
-        router.post('/:id/reject', [controllers.Rentals, 'reject'])
-        router.get('/:id', [controllers.Rentals, 'show'])
-        router.patch('/:id', [controllers.Rentals, 'update'])
-        router.delete('/:id', [controllers.Rentals, 'destroy'])
+        router
+          .get('/', [controllers.Rentals, 'index'])
+          .use(middleware.permission({ permission: 'rentals.view' }))
+        router
+          .post('/', [controllers.Rentals, 'store'])
+          .use(middleware.permission({ permission: 'rentals.create' }))
+        router
+          .get('/:id/contract', [controllers.Rentals, 'contract'])
+          .use(middleware.permission({ permission: 'rentals.view' }))
+        router
+          .post('/:id/extend', [controllers.Rentals, 'extend'])
+          .use(middleware.permission({ permission: 'rentals.update_dates' }))
+        router
+          .post('/:id/approve', [controllers.Rentals, 'approve'])
+          .use(middleware.permission({ permission: 'rentals.update' }))
+        router
+          .post('/:id/reject', [controllers.Rentals, 'reject'])
+          .use(middleware.permission({ permission: 'rentals.cancel' }))
+        router
+          .get('/:id', [controllers.Rentals, 'show'])
+          .use(middleware.permission({ permission: 'rentals.view' }))
+        router
+          .patch('/:id', [controllers.Rentals, 'update'])
+          .use(middleware.permission({ permission: 'rentals.update' }))
+        router
+          .delete('/:id', [controllers.Rentals, 'destroy'])
+          .use(middleware.permission({ permission: 'rentals.cancel' }))
       })
       .prefix('rentals')
       .as('rentals')
@@ -207,14 +332,30 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Invoices, 'index'])
-        router.post('/', [controllers.Invoices, 'store'])
-        router.get('/:invoiceId/payments', [controllers.InvoicePayments, 'index'])
-        router.post('/:invoiceId/payments', [controllers.InvoicePayments, 'store'])
-        router.delete('/:invoiceId/payments/:paymentId', [controllers.InvoicePayments, 'destroy'])
-        router.get('/:id', [controllers.Invoices, 'show'])
-        router.patch('/:id', [controllers.Invoices, 'update'])
-        router.delete('/:id', [controllers.Invoices, 'destroy'])
+        router
+          .get('/', [controllers.Invoices, 'index'])
+          .use(middleware.permission({ permission: 'invoices.view' }))
+        router
+          .post('/', [controllers.Invoices, 'store'])
+          .use(middleware.permission({ permission: 'invoices.create' }))
+        router
+          .get('/:invoiceId/payments', [controllers.InvoicePayments, 'index'])
+          .use(middleware.permission({ permission: 'payments.view' }))
+        router
+          .post('/:invoiceId/payments', [controllers.InvoicePayments, 'store'])
+          .use(middleware.permission({ permission: 'payments.create' }))
+        router
+          .delete('/:invoiceId/payments/:paymentId', [controllers.InvoicePayments, 'destroy'])
+          .use(middleware.permission({ permission: 'payments.cancel' }))
+        router
+          .get('/:id', [controllers.Invoices, 'show'])
+          .use(middleware.permission({ permission: 'invoices.view' }))
+        router
+          .patch('/:id', [controllers.Invoices, 'update'])
+          .use(middleware.permission({ permission: 'invoices.update' }))
+        router
+          .delete('/:id', [controllers.Invoices, 'destroy'])
+          .use(middleware.permission({ permission: 'invoices.cancel' }))
       })
       .prefix('invoices')
       .as('invoices')
@@ -222,11 +363,21 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Maintenances, 'index'])
-        router.post('/', [controllers.Maintenances, 'store'])
-        router.get('/:id', [controllers.Maintenances, 'show'])
-        router.patch('/:id', [controllers.Maintenances, 'update'])
-        router.delete('/:id', [controllers.Maintenances, 'destroy'])
+        router
+          .get('/', [controllers.Maintenances, 'index'])
+          .use(middleware.permission({ permission: 'maintenances.view' }))
+        router
+          .post('/', [controllers.Maintenances, 'store'])
+          .use(middleware.permission({ permission: 'maintenances.create' }))
+        router
+          .get('/:id', [controllers.Maintenances, 'show'])
+          .use(middleware.permission({ permission: 'maintenances.view' }))
+        router
+          .patch('/:id', [controllers.Maintenances, 'update'])
+          .use(middleware.permission({ permission: 'maintenances.update' }))
+        router
+          .delete('/:id', [controllers.Maintenances, 'destroy'])
+          .use(middleware.permission({ permission: 'maintenances.delete' }))
       })
       .prefix('maintenances')
       .as('maintenances')
@@ -234,12 +385,24 @@ router
 
     router
       .group(() => {
-        router.get('/', [controllers.Settings, 'show'])
-        router.patch('/', [controllers.Settings, 'update'])
-        router.post('/logo', [controllers.Settings, 'uploadLogo'])
-        router.delete('/logo', [controllers.Settings, 'destroyLogo'])
-        router.get('/logo', [controllers.Settings, 'logoFile'])
-        router.get('/logo/pending', [controllers.Settings, 'pendingLogoFile'])
+        router
+          .get('/', [controllers.Settings, 'show'])
+          .use(middleware.permission({ permission: 'settings.view' }))
+        router
+          .patch('/', [controllers.Settings, 'update'])
+          .use(middleware.permission({ permission: 'settings.update' }))
+        router
+          .post('/logo', [controllers.Settings, 'uploadLogo'])
+          .use(middleware.permission({ permission: 'settings.update' }))
+        router
+          .delete('/logo', [controllers.Settings, 'destroyLogo'])
+          .use(middleware.permission({ permission: 'settings.update' }))
+        router
+          .get('/logo', [controllers.Settings, 'logoFile'])
+          .use(middleware.permission({ permission: 'settings.view' }))
+        router
+          .get('/logo/pending', [controllers.Settings, 'pendingLogoFile'])
+          .use(middleware.permission({ permission: 'settings.view' }))
       })
       .prefix('settings')
       .as('settings')
@@ -255,6 +418,64 @@ router
       .prefix('admin-notifications')
       .as('admin_notifications')
       .use([middleware.auth(), middleware.admin()])
+
+    /**
+     * Collaborateurs, rôles, permissions — gérant d’agence uniquement
+     */
+    router
+      .group(() => {
+        router.get('/permissions/catalog', [controllers.StaffRoles, 'catalog'])
+        router.get('/roles', [controllers.StaffRoles, 'index'])
+        router.post('/roles', [controllers.StaffRoles, 'store'])
+        router.patch('/roles/:id', [controllers.StaffRoles, 'update'])
+        router.get('/collaborators', [controllers.StaffCollaborators, 'index'])
+        router.post('/collaborators', [controllers.StaffCollaborators, 'store'])
+        router.get('/collaborators/:id', [controllers.StaffCollaborators, 'show'])
+        router.patch('/collaborators/:id', [controllers.StaffCollaborators, 'update'])
+        router.patch('/collaborators/:id/status', [
+          controllers.StaffCollaborators,
+          'updateStatus',
+        ])
+        router.post('/collaborators/:id/resend-invitation', [
+          controllers.StaffCollaborators,
+          'resendInvitation',
+        ])
+      })
+      .prefix('staff')
+      .as('staff')
+      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
+
+    router
+      .get('/me/permissions', [controllers.StaffCollaborators, 'myPermissions'])
+      .use([middleware.auth(), middleware.admin()])
+
+    /**
+     * Validations & paramètres de sécurité — gérant d’agence
+     */
+    router
+      .group(() => {
+        router.get('/settings', [controllers.Validations, 'settings'])
+        router.put('/settings', [controllers.Validations, 'updateSettings'])
+        router.get('/requests', [controllers.Validations, 'index'])
+        router.get('/requests/pending-count', [controllers.Validations, 'pendingCount'])
+        router.post('/requests/:id/approve', [controllers.Validations, 'approve'])
+        router.post('/requests/:id/reject', [controllers.Validations, 'reject'])
+      })
+      .prefix('validations')
+      .as('validations')
+      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
+
+    /**
+     * Journal d’activités — lecture seule, gérant d’agence
+     */
+    router
+      .group(() => {
+        router.get('/', [controllers.ActivityLogs, 'index'])
+        router.get('/entity/:entityType/:entityId', [controllers.ActivityLogs, 'forEntity'])
+      })
+      .prefix('activity-logs')
+      .as('activity_logs')
+      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
 
     /**
      * Owner read-only portal
@@ -293,6 +514,8 @@ router
     router
       .group(() => {
         router.get('cities', [controllers.MarketplaceCatalog, 'cities'])
+        router.get('banners', [controllers.HomepageBanners, 'index'])
+        router.get('banners/:id/image', [controllers.HomepageBanners, 'imageFile'])
         router.get('vehicles', [controllers.MarketplaceCatalog, 'vehicles'])
         router.get('vehicles/:id', [controllers.MarketplaceCatalog, 'show'])
         router.get('vehicles/:id/availability', [controllers.MarketplaceCatalog, 'availability'])
@@ -300,12 +523,15 @@ router
         router.get('agencies/:id/logo', [controllers.MarketplaceCatalog, 'agencyLogo'])
         router.get('vehicles/:id/reviews', [controllers.MarketplaceReview, 'forVehicle'])
         router.post('reports', [controllers.MarketplaceReport, 'store'])
+        router.get('partner-agencies', [controllers.PartnerApplications, 'agencies'])
         router.post('auth/sync', [controllers.MarketplaceAuth, 'sync'])
         router
           .group(() => {
             router.get('me', [controllers.MarketplaceAuth, 'me'])
             router.patch('me', [controllers.MarketplaceAuth, 'updateProfile'])
             router.post('logout', [controllers.MarketplaceAuth, 'logout'])
+            router.post('partner-applications', [controllers.PartnerApplications, 'store'])
+            router.get('partner-applications/mine', [controllers.PartnerApplications, 'mine'])
             router.get('bookings', [controllers.MarketplaceBookings, 'index'])
             router.post('bookings', [controllers.MarketplaceBookings, 'store'])
             router.get('bookings/:id', [controllers.MarketplaceBookings, 'show'])

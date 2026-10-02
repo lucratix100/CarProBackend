@@ -6,7 +6,7 @@ import Maintenance from '#models/maintenance'
 import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
-import { scopeAppliedExpenses } from '#services/maintenance_expense_service'
+import { scopeAppliedOwnerExpenses } from '#services/maintenance_expense_service'
 import VehicleSummaryService from '#services/vehicle_summary_service'
 import OwnerNotificationService from '#services/owner_notification_service'
 import AgencyLogoUploadService, {
@@ -76,7 +76,7 @@ export default class OwnerPortalController {
     const maintenances: Maintenance[] =
       vehicleIds.length === 0
         ? []
-        : ((await scopeAppliedExpenses(
+        : ((await scopeAppliedOwnerExpenses(
             Maintenance.query().whereIn('vehicleId', vehicleIds)
           )) as Maintenance[])
 
@@ -170,7 +170,7 @@ export default class OwnerPortalController {
       .where('ownerId', ownerId)
       .firstOrFail()
 
-    const rows = (await scopeAppliedExpenses(
+    const rows = (await scopeAppliedOwnerExpenses(
       Maintenance.query().where('vehicleId', vehicle.id)
     )
       .orderBy('performedOn', 'desc')
@@ -307,7 +307,7 @@ export default class OwnerPortalController {
     const maintenances: Maintenance[] =
       vehicleIds.length === 0
         ? []
-        : ((await scopeAppliedExpenses(
+        : ((await scopeAppliedOwnerExpenses(
             Maintenance.query().whereIn('vehicleId', vehicleIds).preload('vehicle')
           ).orderBy('performedOn', 'desc')) as Maintenance[])
 

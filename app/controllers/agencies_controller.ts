@@ -13,12 +13,17 @@ import Invoice from '#models/invoice'
 import VehicleExpense from '#models/vehicle_expense'
 import Setting from '#models/setting'
 import AdminInvitationService from '#services/admin_invitation_service'
-import { slugifyAgencyName } from '#services/agency_context'
+import {
+  assertAgencyNameAvailable,
+  assertAgencySlugAvailable,
+  slugifyAgencyName,
+} from '#services/agency_context'
 import AgencyTransformer from '#transformers/agency_transformer'
 import UserTransformer from '#transformers/user_transformer'
 import AgencyLogoUploadService, {
   agencyLogoStatus,
 } from '#services/agency_logo_upload_service'
+import AgencyPlanService from '#services/agency_plan_service'
 import {
   createAgencyValidator,
   deleteAgencyValidator,
@@ -35,6 +40,7 @@ type AgencyUsageCounts = {
   rentals: number
   invoices: number
   expenses: number
+  staffSeats: number
 }
 
 async function countTotal(query: { count: Function }) {
@@ -44,6 +50,7 @@ async function countTotal(query: { count: Function }) {
 
 export default class AgenciesController {
   #logos = new AgencyLogoUploadService()
+  #plan = new AgencyPlanService()
 
   #brandingPayload(agency: Agency, settings: Setting) {
     return {
@@ -58,16 +65,18 @@ export default class AgenciesController {
   }
 
   async #usageCounts(agencyId: number): Promise<AgencyUsageCounts> {
-    const [admins, owners, vehicles, clients, rentals, invoices, expenses] = await Promise.all([
-      countTotal(User.query().where('agencyId', agencyId).where('role', 'admin')),
-      countTotal(Owner.query().where('agencyId', agencyId)),
-      countTotal(Vehicle.query().where('agencyId', agencyId)),
-      countTotal(Client.query().where('agencyId', agencyId)),
-      countTotal(Rental.query().where('agencyId', agencyId)),
-      countTotal(Invoice.query().where('agencyId', agencyId)),
-      countTotal(VehicleExpense.query().where('agencyId', agencyId)),
-    ])
-    return { admins, owners, vehicles, clients, rentals, invoices, expenses }
+    const [admins, owners, vehicles, clients, rentals, invoices, expenses, staffSeats] =
+      await Promise.all([
+        countTotal(User.query().where('agencyId', agencyId).where('role', 'admin')),
+        countTotal(Owner.query().where('agencyId', agencyId)),
+        countTotal(Vehicle.query().where('agencyId', agencyId)),
+        countTotal(Client.query().where('agencyId', agencyId)),
+        countTotal(Rental.query().where('agencyId', agencyId)),
+        countTotal(Invoice.query().where('agencyId', agencyId)),
+        countTotal(VehicleExpense.query().where('agencyId', agencyId)),
+        this.#plan.countStaffSeats(agencyId),
+      ])
+    return { admins, owners, vehicles, clients, rentals, invoices, expenses, staffSeats }
   }
 
   #hasBusinessData(counts: AgencyUsageCounts) {
@@ -106,6 +115,7 @@ export default class AgenciesController {
             owners: counts.owners,
             vehicles: counts.vehicles,
             clients: counts.clients,
+            staffSeats: counts.staffSeats,
           },
         }
       })
@@ -119,12 +129,9 @@ export default class AgenciesController {
    */
   async store({ request, response, serialize }: HttpContext) {
     const payload = await request.validateUsing(createAgencyValidator)
-    const baseSlug = payload.slug || slugifyAgencyName(payload.name) || 'agence'
-    let slug = baseSlug
-    let n = 1
-    while (await Agency.findBy('slug', slug)) {
-      slug = `${baseSlug}-${n++}`
-    }
+    const nameKey = await assertAgencyNameAvailable(payload.name)
+    const slug = (payload.slug || slugifyAgencyName(payload.name) || 'agence').slice(0, 80)
+    await assertAgencySlugAvailable(slug)
 
     const city = await City.findOrFail(payload.cityId)
     const invitation = new AdminInvitationService()
@@ -138,12 +145,17 @@ export default class AgenciesController {
         const created = await Agency.create(
           {
             name: payload.name,
+            nameKey,
             slug,
             isActive: true,
             isVerified: false,
             notes: payload.notes ?? null,
             cityId: city.id,
             publishOnMarketplace: false,
+            vehicleLimit: Math.trunc(payload.vehicleLimit),
+            staffLimit: Math.trunc(payload.staffLimit),
+            staffPaused: false,
+            acceptOwnerApplications: false,
           },
           { client: trx }
         )
@@ -175,11 +187,16 @@ export default class AgenciesController {
         }
       }))
     } catch (error) {
+      if (error instanceof Exception) throw error
+      const message = error instanceof Error ? error.message : ''
+      if (/déjà utilisé/i.test(message)) {
+        throw new Exception(message, { status: 409, code: 'E_AGENCY_EMAIL_TAKEN' })
+      }
       logger.error({ err: error }, '[agencies] Échec création agence + gérant')
-      throw new Exception(
-        'Impossible de créer l’agence. Vérifiez les informations ou réessayez plus tard.',
-        { status: 422, code: 'E_AGENCY_CREATE' }
-      )
+      throw new Exception('Impossible de créer l’agence.', {
+        status: 422,
+        code: 'E_AGENCY_CREATE',
+      })
     }
 
     await invitation.dispatchInvitationEmail(user, agency, activationUrl)
@@ -214,6 +231,7 @@ export default class AgenciesController {
         rentals: counts.rentals,
         invoices: counts.invoices,
         expenses: counts.expenses,
+        staffSeats: counts.staffSeats,
       },
     })
   }
@@ -262,8 +280,18 @@ export default class AgenciesController {
     const agency = await Agency.findOrFail(params.id)
     const payload = await request.validateUsing(updateAgencyValidator)
 
+    let nameKey = agency.nameKey
+    if (payload.name !== undefined && payload.name !== agency.name) {
+      nameKey = await assertAgencyNameAvailable(payload.name, { exceptAgencyId: agency.id })
+    }
+
+    const pauseChanged =
+      payload.staffPaused !== undefined && payload.staffPaused !== agency.staffPaused
+    const nextPaused = payload.staffPaused === undefined ? agency.staffPaused : payload.staffPaused
+
     agency.merge({
       name: payload.name ?? agency.name,
+      nameKey,
       notes: payload.notes === undefined ? agency.notes : payload.notes,
       isActive: payload.isActive === undefined ? agency.isActive : payload.isActive,
       isVerified: payload.isVerified === undefined ? agency.isVerified : payload.isVerified,
@@ -276,6 +304,23 @@ export default class AgenciesController {
         payload.publishOnMarketplace === undefined
           ? agency.publishOnMarketplace
           : payload.publishOnMarketplace,
+      vehicleLimit:
+        payload.vehicleLimit === undefined
+          ? agency.vehicleLimit
+          : payload.vehicleLimit === null
+            ? null
+            : Math.trunc(payload.vehicleLimit),
+      staffLimit:
+        payload.staffLimit === undefined
+          ? agency.staffLimit
+          : payload.staffLimit === null
+            ? null
+            : Math.trunc(payload.staffLimit),
+      staffPaused: nextPaused,
+      acceptOwnerApplications:
+        payload.acceptOwnerApplications === undefined
+          ? agency.acceptOwnerApplications
+          : payload.acceptOwnerApplications,
     })
 
     if (payload.clearMarketplacePublishBan) {
@@ -285,6 +330,13 @@ export default class AgenciesController {
 
     await agency.save()
     await agency.load('city')
+
+    if (pauseChanged) {
+      await this.#plan.extendInvitedExpirations(agency.id)
+      if (agency.staffPaused) {
+        await this.#plan.revokeStaffSessions(agency.id)
+      }
+    }
 
     return serialize(AgencyTransformer.transform(agency))
   }

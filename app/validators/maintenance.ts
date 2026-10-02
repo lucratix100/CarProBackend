@@ -1,6 +1,8 @@
 import vine from '@vinejs/vine'
 
 const isoDate = () => vine.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const maintenanceCharges = ['owner', 'agency'] as const
+
 const maintenanceTypes = [
   'Vidange',
   'Réparation',
@@ -16,6 +18,7 @@ export const createMaintenanceValidator = vine.create({
   type: vine.enum(maintenanceTypes),
   performedOn: isoDate(),
   cost: vine.number().min(0),
+  chargedTo: vine.enum(maintenanceCharges).optional(),
   mileage: vine.number().min(0).optional(),
   provider: vine.string().trim().maxLength(160).optional(),
   nextDueOn: isoDate().optional(),
@@ -28,6 +31,7 @@ export const updateMaintenanceValidator = vine.create({
   type: vine.enum(maintenanceTypes).optional(),
   performedOn: isoDate().optional(),
   cost: vine.number().min(0).optional(),
+  chargedTo: vine.enum(maintenanceCharges).optional(),
   mileage: vine.number().min(0).nullable().optional(),
   provider: vine.string().trim().maxLength(160).nullable().optional(),
   nextDueOn: isoDate().nullable().optional(),

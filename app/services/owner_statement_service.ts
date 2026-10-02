@@ -1,13 +1,19 @@
 import PDFDocument from 'pdfkit'
 import { DateTime } from 'luxon'
+import app from '@adonisjs/core/services/app'
 import { Exception } from '@adonisjs/core/exceptions'
 import Owner from '#models/owner'
+import Agency from '#models/agency'
 import Maintenance from '#models/maintenance'
 import Rental from '#models/rental'
 import Vehicle from '#models/vehicle'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
-import { scopeAppliedExpenses } from '#services/maintenance_expense_service'
+import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
+import {
+  isOwnerCharge,
+  scopeAppliedOwnerExpenses,
+} from '#services/maintenance_expense_service'
 
 const C = {
   brand: '#0f4a42',
@@ -76,6 +82,7 @@ export type OwnerStatementData = {
   ownerEmail: string | null
   ownerPhone: string | null
   companyName: string
+  logoAbsolutePath: string | null
   from: string | null
   to: string | null
   issuedOn: DateTime
@@ -167,16 +174,38 @@ function sectionTitle(doc: Doc, title: string, y: number) {
 function drawHeader(doc: Doc, data: OwnerStatementData) {
   const y = M.top
   const h = 62
+  const logoX = M.left
+  const logoY = y + 12
+  const logoSize = 36
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(C.brand)
   doc.restore()
 
-  doc.save()
-  doc.roundedRect(M.left, y + 12, 36, 36, 6).fill('#1a6b5f')
-  doc.restore()
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
-  text(doc, 'PCS', M.left + 7, y + 24)
+  let usedCustomLogo = false
+  if (data.logoAbsolutePath) {
+    try {
+      doc.save()
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
+      doc.image(data.logoAbsolutePath, logoX, logoY, {
+        fit: [logoSize, logoSize],
+        align: 'center',
+        valign: 'center',
+      })
+      doc.restore()
+      usedCustomLogo = true
+    } catch {
+      usedCustomLogo = false
+    }
+  }
+
+  if (!usedCustomLogo) {
+    doc.save()
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill('#1a6b5f')
+    doc.restore()
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+    text(doc, 'PCS', logoX + 7, logoY + 12)
+  }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
   text(doc, data.companyName, M.left + 48, y + 14)
@@ -313,12 +342,12 @@ function drawRentals(doc: Doc, data: OwnerStatementData, y: number) {
 }
 
 function drawExpenses(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '04 — Entretiens (débits)', y)
+  let cy = sectionTitle(doc, '04 — Dépenses à la charge du propriétaire', y)
 
   if (data.expenses.length === 0) {
     cy = ensureSpace(doc, cy, 16)
     doc.font('Helvetica').fontSize(8).fillColor(C.muted)
-    text(doc, 'Aucune dépense d’entretien sur la période.', M.left, cy)
+    text(doc, 'Aucune dépense à la charge du propriétaire sur la période.', M.left, cy)
     return cy + 18
   }
 
@@ -403,7 +432,7 @@ function drawFooterNote(doc: Doc, data: OwnerStatementData, y: number) {
   doc.font('Helvetica').fontSize(7.5).fillColor(C.body)
   text(
     doc,
-    'Montants nets après commission PCS. Les locataires, factures et paiements clients ne figurent pas sur ce relevé. Les dépenses listées correspondent aux entretiens appliqués au solde propriétaire.',
+    'Montants nets après commission PCS. Les locataires, factures et paiements clients ne figurent pas sur ce relevé. Les dépenses listées sont les entretiens à la charge du propriétaire.',
     M.left,
     cy,
     { width: CONTENT_W, lineGap: 1.5, align: 'justify' }
@@ -443,6 +472,9 @@ export default class OwnerStatementService {
       .firstOrFail()
 
     const settings = await Setting.current(agencyId)
+    const agency = await Agency.find(agencyId)
+    const publicLogoPath =
+      agency && settings ? resolvePublicLogoPath(agency, settings) : null
     const vehicles = await Vehicle.query().where('ownerId', owner.id).orderBy('id', 'asc')
     const vehicleIds = vehicles.map((v) => v.id)
 
@@ -473,7 +505,7 @@ export default class OwnerStatementService {
     const maintenances =
       vehicleIds.length === 0
         ? ([] as Maintenance[])
-        : ((await scopeAppliedExpenses(
+        : ((await scopeAppliedOwnerExpenses(
             Maintenance.query().whereIn('vehicleId', vehicleIds).preload('vehicle')
           ).orderBy('performedOn', 'desc')) as Maintenance[])
 
@@ -512,6 +544,7 @@ export default class OwnerStatementService {
     const expenses: OwnerStatementExpense[] = []
 
     for (const row of maintenances) {
+      if (!isOwnerCharge(row.vehicle?.ownerId ?? owner.id, row.chargedTo)) continue
       const performed = isoDay(row.performedOn)
       if (from && performed < from) continue
       if (to && performed > to) continue
@@ -546,6 +579,7 @@ export default class OwnerStatementService {
       ownerEmail: owner.user?.email ?? null,
       ownerPhone: owner.phone ?? null,
       companyName: settings.companyName,
+      logoAbsolutePath: publicLogoPath ? app.makePath(publicLogoPath) : null,
       from,
       to,
       issuedOn: DateTime.now(),

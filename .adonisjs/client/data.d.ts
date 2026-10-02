@@ -9,6 +9,7 @@ import type AdminNotificationTransformer from '#transformers/admin_notification_
 import type AgencyTransformer from '#transformers/agency_transformer'
 import type CityTransformer from '#transformers/city_transformer'
 import type ClientTransformer from '#transformers/client_transformer'
+import type HomepageBannerTransformer from '#transformers/homepage_banner_transformer'
 import type InvoiceTransformer from '#transformers/invoice_transformer'
 import type MaintenanceTransformer from '#transformers/maintenance_transformer'
 import type MarqueTransformer from '#transformers/marque_transformer'
@@ -38,6 +39,10 @@ export namespace Data {
   export type Client = InferData<ClientTransformer>
   export namespace Client {
     export type Variants = InferVariants<ClientTransformer>
+  }
+  export type HomepageBanner = InferData<HomepageBannerTransformer>
+  export namespace HomepageBanner {
+    export type Variants = InferVariants<HomepageBannerTransformer>
   }
   export type Invoice = InferData<InvoiceTransformer>
   export namespace Invoice {

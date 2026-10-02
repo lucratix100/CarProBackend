@@ -16,6 +16,8 @@ export const createAgencyValidator = vine.create({
   adminFullName: vine.string().trim().minLength(2).maxLength(120),
   adminEmail: email().unique({ table: 'users', column: 'email' }),
   adminPhone: vine.string().trim().minLength(5).maxLength(40),
+  vehicleLimit: vine.number().min(0).max(100000),
+  staffLimit: vine.number().min(0).max(100000),
 })
 
 export const updateAgencyValidator = vine.create({
@@ -27,6 +29,10 @@ export const updateAgencyValidator = vine.create({
   cityId: vine.number().positive().nullable().optional(),
   publishOnMarketplace: vine.boolean().optional(),
   clearMarketplacePublishBan: vine.boolean().optional(),
+  vehicleLimit: vine.number().min(0).max(100000).nullable().optional(),
+  staffLimit: vine.number().min(0).max(100000).nullable().optional(),
+  staffPaused: vine.boolean().optional(),
+  acceptOwnerApplications: vine.boolean().optional(),
 })
 
 export const rejectAgencyLogoValidator = vine.create({

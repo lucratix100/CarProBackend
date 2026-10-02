@@ -4,7 +4,11 @@ import Maintenance from '#models/maintenance'
 import VehicleExpense from '#models/vehicle_expense'
 import Setting from '#models/setting'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
-import { isExpenseApplied, scopeAppliedExpenses } from '#services/maintenance_expense_service'
+import {
+  isExpenseApplied,
+  isOwnerCharge,
+  scopeAppliedExpenses,
+} from '#services/maintenance_expense_service'
 
 export type VehicleSummaryOptions = {
   /** Masquer commission / CA brut pour le portail owner */
@@ -76,23 +80,32 @@ export default class VehicleSummaryService {
       })
     }
 
-    let maintenanceExpenses = 0
-    const maintenanceLines = appliedMaintenances.map((row) => {
+    let ownerMaintenance = 0
+    let agencyMaintenance = 0
+    const maintenanceLines = appliedMaintenances.flatMap((row) => {
       const cost = Number(row.cost || 0)
-      maintenanceExpenses += cost
-      return {
-        source: 'maintenance' as const,
-        id: row.id,
-        maintenanceId: row.id,
-        type: row.type,
-        spentOn: row.performedOn,
-        performedOn: row.performedOn,
-        cost,
-        amount: cost,
-        provider: row.provider,
-        description: row.description,
-        isApplied: true,
-      }
+      const chargedTo = isOwnerCharge(vehicle.ownerId, row.chargedTo)
+        ? ('owner' as const)
+        : ('agency' as const)
+      if (chargedTo === 'owner') ownerMaintenance += cost
+      else agencyMaintenance += cost
+      if (options.ownerView && chargedTo === 'agency') return []
+      return [
+        {
+          source: 'maintenance' as const,
+          id: row.id,
+          maintenanceId: row.id,
+          type: row.type,
+          spentOn: row.performedOn,
+          performedOn: row.performedOn,
+          cost,
+          amount: cost,
+          provider: row.provider,
+          description: row.description,
+          isApplied: true,
+          chargedTo,
+        },
+      ]
     })
 
     let purchaseCost = 0
@@ -132,12 +145,19 @@ export default class VehicleSummaryService {
       return db.localeCompare(da)
     })
 
-    const totalExpenses = purchaseCost + otherOperatingExpenses + maintenanceExpenses
+    const maintenanceForBalance = isAgencyOwned ? agencyMaintenance : ownerMaintenance
+    const totalExpenses = purchaseCost + otherOperatingExpenses + maintenanceForBalance
     /** Voiture agence : CA brut (tout revient à l’agence). Voiture owner : net après commission. */
     const revenueForBalance = isAgencyOwned ? grossRevenue : netRevenue
     const balance = revenueForBalance - totalExpenses
 
-    const pendingExpenses = allMaintenances.filter((row) => !isExpenseApplied(row))
+    const pendingExpenses = allMaintenances.filter((row) => {
+      if (isExpenseApplied(row)) return false
+      const onOwner = isOwnerCharge(vehicle.ownerId, row.chargedTo)
+      if (options.ownerView) return onOwner
+      if (!isAgencyOwned) return onOwner
+      return true
+    })
     const pendingExpenseTotal = pendingExpenses.reduce(
       (sum, row) => sum + Number(row.cost || 0),
       0
@@ -194,7 +214,8 @@ export default class VehicleSummaryService {
         expenseCount: expenseLines.length,
         totalExpenses,
         purchaseCost: isAgencyOwned ? purchaseCost : 0,
-        maintenanceExpenses,
+        maintenanceExpenses: maintenanceForBalance,
+        agencyMaintenanceExpenses: isAgencyOwned ? 0 : agencyMaintenance,
         otherExpenses: otherOperatingExpenses,
         revenueForBalance,
         pendingExpenseCount: pendingExpenses.length + pendingVehicleExpenses.length,

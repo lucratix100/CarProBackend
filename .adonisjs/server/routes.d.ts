@@ -35,6 +35,17 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.unpublish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
+    'partner_applications.partner_applications.index': { paramsTuple?: []; params?: {} }
+    'partner_applications.partner_applications.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'partner_applications.partner_applications.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.admin_index': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.store': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.admin_image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.upload_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.destroy_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.store': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -105,6 +116,25 @@ export type ScannedRoutes = {
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin_notifications.admin_notifications.mark_all_read': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.catalog': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.store': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.store': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.update_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff_collaborators.my_permissions': { paramsTuple?: []; params?: {} }
+    'validations.validations.settings': { paramsTuple?: []; params?: {} }
+    'validations.validations.update_settings': { paramsTuple?: []; params?: {} }
+    'validations.validations.index': { paramsTuple?: []; params?: {} }
+    'validations.validations.pending_count': { paramsTuple?: []; params?: {} }
+    'validations.validations.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'validations.validations.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'activity_logs.activity_logs.index': { paramsTuple?: []; params?: {} }
+    'activity_logs.activity_logs.for_entity': { paramsTuple: [ParamValue,ParamValue]; params: {'entityType': ParamValue,'entityId': ParamValue} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
@@ -118,6 +148,8 @@ export type ScannedRoutes = {
     'owner_portal.owner_portal.mark_notification_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.mark_all_notifications_read': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.cities': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.index': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.vehicles': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -125,10 +157,13 @@ export type ScannedRoutes = {
     'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_report.store': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.agencies': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.sync': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.me': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.update_profile': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.logout': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.store': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.mine': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.index': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -156,6 +191,10 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.history': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
+    'partner_applications.partner_applications.index': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.admin_index': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.admin_image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -186,6 +225,16 @@ export type ScannedRoutes = {
     'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.catalog': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff_collaborators.my_permissions': { paramsTuple?: []; params?: {} }
+    'validations.validations.settings': { paramsTuple?: []; params?: {} }
+    'validations.validations.index': { paramsTuple?: []; params?: {} }
+    'validations.validations.pending_count': { paramsTuple?: []; params?: {} }
+    'activity_logs.activity_logs.index': { paramsTuple?: []; params?: {} }
+    'activity_logs.activity_logs.for_entity': { paramsTuple: [ParamValue,ParamValue]; params: {'entityType': ParamValue,'entityId': ParamValue} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
@@ -197,13 +246,17 @@ export type ScannedRoutes = {
     'owner_portal.owner_portal.notifications': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.notifications_unread_count': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.cities': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.index': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.vehicles': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
     'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace.partner_applications.agencies': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.me': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.mine': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.index': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.index': { paramsTuple?: []; params?: {} }
@@ -225,6 +278,10 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.history': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_reports.marketplace_report.index': { paramsTuple?: []; params?: {} }
+    'partner_applications.partner_applications.index': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.admin_index': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.admin_image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -255,6 +312,16 @@ export type ScannedRoutes = {
     'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.catalog': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.index': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff_collaborators.my_permissions': { paramsTuple?: []; params?: {} }
+    'validations.validations.settings': { paramsTuple?: []; params?: {} }
+    'validations.validations.index': { paramsTuple?: []; params?: {} }
+    'validations.validations.pending_count': { paramsTuple?: []; params?: {} }
+    'activity_logs.activity_logs.index': { paramsTuple?: []; params?: {} }
+    'activity_logs.activity_logs.for_entity': { paramsTuple: [ParamValue,ParamValue]; params: {'entityType': ParamValue,'entityId': ParamValue} }
     'owner_portal.owner_portal.dashboard': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.logo_file': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.vehicles': { paramsTuple?: []; params?: {} }
@@ -266,13 +333,17 @@ export type ScannedRoutes = {
     'owner_portal.owner_portal.notifications': { paramsTuple?: []; params?: {} }
     'owner_portal.owner_portal.notifications_unread_count': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.cities': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.index': { paramsTuple?: []; params?: {} }
+    'marketplace.homepage_banners.image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.vehicles': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.availability': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_catalog.photo_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
     'marketplace.marketplace_catalog.agency_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.for_vehicle': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace.partner_applications.agencies': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.me': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.mine': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.index': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.index': { paramsTuple?: []; params?: {} }
@@ -296,6 +367,10 @@ export type ScannedRoutes = {
     'marketplace_publications.marketplace_publications.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.unpublish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'partner_applications.partner_applications.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'partner_applications.partner_applications.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.store': { paramsTuple?: []; params?: {} }
+    'homepage_banners.homepage_banners.upload_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.store': { paramsTuple?: []; params?: {} }
     'owners.owners.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marques.marques.store': { paramsTuple?: []; params?: {} }
@@ -317,10 +392,16 @@ export type ScannedRoutes = {
     'maintenances.maintenances.store': { paramsTuple?: []; params?: {} }
     'settings.settings.upload_logo': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_all_read': { paramsTuple?: []; params?: {} }
+    'staff.staff_roles.store': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.store': { paramsTuple?: []; params?: {} }
+    'staff.staff_collaborators.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'validations.validations.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'validations.validations.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.mark_all_notifications_read': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_report.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.sync': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_auth.logout': { paramsTuple?: []; params?: {} }
+    'marketplace.partner_applications.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_bookings.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_review.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -328,6 +409,7 @@ export type ScannedRoutes = {
   }
   PATCH: {
     'agencies.agencies.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicles.vehicles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicle_expenses.vehicle_expenses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -337,6 +419,9 @@ export type ScannedRoutes = {
     'maintenances.maintenances.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'settings.settings.update': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_roles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.update_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.mark_notification_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_auth.update_profile': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.update_notify': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
@@ -344,6 +429,8 @@ export type ScannedRoutes = {
   DELETE: {
     'agencies.agencies.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.revoke_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
+    'homepage_banners.homepage_banners.destroy_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicles.vehicles.destroy_photo': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
     'vehicles.vehicles.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -355,6 +442,9 @@ export type ScannedRoutes = {
     'maintenances.maintenances.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.destroy': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
+  }
+  PUT: {
+    'validations.validations.update_settings': { paramsTuple?: []; params?: {} }
   }
 }
 declare module '@adonisjs/core/types/http' {

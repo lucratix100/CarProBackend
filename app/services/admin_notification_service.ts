@@ -11,6 +11,18 @@ export type AdminNotifyPayload = {
 }
 
 export default class AdminNotificationService {
+  async notifyUser(userId: number, payload: AdminNotifyPayload) {
+    return AdminNotification.create({
+      userId,
+      type: payload.type,
+      title: payload.title,
+      body: payload.body,
+      href: payload.href ?? null,
+      meta: payload.meta ?? null,
+      readAt: null,
+    })
+  }
+
   async notifyAgencyAdmins(agencyId: number, payload: AdminNotifyPayload) {
     const admins = await User.query()
       .where('role', 'admin')

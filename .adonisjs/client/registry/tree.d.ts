@@ -61,6 +61,25 @@ export interface ApiDefinition {
       index: typeof routes['marketplace_reports.marketplace_report.index']
     }
   }
+  partnerApplications: {
+    partnerApplications: {
+      index: typeof routes['partner_applications.partner_applications.index']
+      approve: typeof routes['partner_applications.partner_applications.approve']
+      reject: typeof routes['partner_applications.partner_applications.reject']
+    }
+  }
+  homepageBanners: {
+    homepageBanners: {
+      adminIndex: typeof routes['homepage_banners.homepage_banners.admin_index']
+      store: typeof routes['homepage_banners.homepage_banners.store']
+      adminImageFile: typeof routes['homepage_banners.homepage_banners.admin_image_file']
+      uploadImage: typeof routes['homepage_banners.homepage_banners.upload_image']
+      destroyImage: typeof routes['homepage_banners.homepage_banners.destroy_image']
+      adminShow: typeof routes['homepage_banners.homepage_banners.admin_show']
+      update: typeof routes['homepage_banners.homepage_banners.update']
+      destroy: typeof routes['homepage_banners.homepage_banners.destroy']
+    }
+  }
   owners: {
     owners: {
       index: typeof routes['owners.owners.index']
@@ -177,6 +196,41 @@ export interface ApiDefinition {
       markAllRead: typeof routes['admin_notifications.admin_notifications.mark_all_read']
     }
   }
+  staff: {
+    staffRoles: {
+      catalog: typeof routes['staff.staff_roles.catalog']
+      index: typeof routes['staff.staff_roles.index']
+      store: typeof routes['staff.staff_roles.store']
+      update: typeof routes['staff.staff_roles.update']
+    }
+    staffCollaborators: {
+      index: typeof routes['staff.staff_collaborators.index']
+      store: typeof routes['staff.staff_collaborators.store']
+      show: typeof routes['staff.staff_collaborators.show']
+      update: typeof routes['staff.staff_collaborators.update']
+      updateStatus: typeof routes['staff.staff_collaborators.update_status']
+      resendInvitation: typeof routes['staff.staff_collaborators.resend_invitation']
+    }
+  }
+  staffCollaborators: {
+    myPermissions: typeof routes['staff_collaborators.my_permissions']
+  }
+  validations: {
+    validations: {
+      settings: typeof routes['validations.validations.settings']
+      updateSettings: typeof routes['validations.validations.update_settings']
+      index: typeof routes['validations.validations.index']
+      pendingCount: typeof routes['validations.validations.pending_count']
+      approve: typeof routes['validations.validations.approve']
+      reject: typeof routes['validations.validations.reject']
+    }
+  }
+  activityLogs: {
+    activityLogs: {
+      index: typeof routes['activity_logs.activity_logs.index']
+      forEntity: typeof routes['activity_logs.activity_logs.for_entity']
+    }
+  }
   ownerPortal: {
     ownerPortal: {
       dashboard: typeof routes['owner_portal.owner_portal.dashboard']
@@ -202,12 +256,21 @@ export interface ApiDefinition {
       photoFile: typeof routes['marketplace.marketplace_catalog.photo_file']
       agencyLogo: typeof routes['marketplace.marketplace_catalog.agency_logo']
     }
+    homepageBanners: {
+      index: typeof routes['marketplace.homepage_banners.index']
+      imageFile: typeof routes['marketplace.homepage_banners.image_file']
+    }
     marketplaceReview: {
       forVehicle: typeof routes['marketplace.marketplace_review.for_vehicle']
       store: typeof routes['marketplace.marketplace_review.store']
     }
     marketplaceReport: {
       store: typeof routes['marketplace.marketplace_report.store']
+    }
+    partnerApplications: {
+      agencies: typeof routes['marketplace.partner_applications.agencies']
+      store: typeof routes['marketplace.partner_applications.store']
+      mine: typeof routes['marketplace.partner_applications.mine']
     }
     marketplaceAuth: {
       sync: typeof routes['marketplace.marketplace_auth.sync']
