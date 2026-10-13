@@ -7,7 +7,11 @@ import MaintenanceTransformer from '#transformers/maintenance_transformer'
 import OwnerNotificationService from '#services/owner_notification_service'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { createMaintenanceValidator, updateMaintenanceValidator } from '#validators/maintenance'
-import { resolveMaintenanceCharge } from '#services/maintenance_expense_service'
+import {
+  resolveMaintenanceCharge,
+  scopeAppliedExpenses,
+} from '#services/maintenance_expense_service'
+import { isPaginatedRequest, paginationMeta, readPage, unwrapSerializedList } from '#services/pagination'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -101,19 +105,63 @@ export default class MaintenancesController {
       .preload('vehicle')
   }
 
+  #filteredQuery(
+    agencyId: number,
+    filters: { vehicleId?: string | number; type?: string; includeCancelled?: boolean }
+  ) {
+    const query = this.#scopedQuery(agencyId)
+    if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
+    if (filters.type) query.where('type', filters.type)
+    if (!filters.includeCancelled) query.whereNull('cancelledAt')
+    return query
+  }
+
+  async #totals(agencyId: number, filters: { vehicleId?: string | number; type?: string }) {
+    const base = () => {
+      const query = Maintenance.query().whereHas('vehicle', (q) => q.where('agencyId', agencyId))
+      if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
+      if (filters.type) query.where('type', filters.type)
+      return query
+    }
+    const sumCharged = async (chargedTo: 'owner' | 'agency') => {
+      const rows = await scopeAppliedExpenses(base()).where('chargedTo', chargedTo).sum('cost as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+    const cancelledRows = await base().whereNotNull('cancelledAt').count('* as total')
+    const [owner, agency] = await Promise.all([sumCharged('owner'), sumCharged('agency')])
+    return {
+      owner,
+      agency,
+      cancelled: Number(cancelledRows[0]?.$extras?.total ?? 0),
+    }
+  }
+
   async index({ request, serialize, agencyId }: HttpContext) {
     const vehicleId = request.input('vehicleId')
     const type = request.input('type')
     const includeCancelled =
       request.input('includeCancelled') === 'true' || request.input('includeCancelled') === true
+    const filters = { vehicleId, type, includeCancelled }
 
-    const query = this.#scopedQuery(agencyId!)
-    if (vehicleId) query.where('vehicleId', vehicleId)
-    if (type) query.where('type', type)
-    if (!includeCancelled) query.whereNull('cancelledAt')
+    if (!isPaginatedRequest(request)) {
+      const rows = await this.#filteredQuery(agencyId!, filters)
+        .orderBy('performedOn', 'desc')
+        .orderBy('id', 'desc')
+      return serialize(MaintenanceTransformer.transform(rows))
+    }
 
-    const rows = await query.orderBy('performedOn', 'desc').orderBy('id', 'desc')
-    return serialize(MaintenanceTransformer.transform(rows))
+    const { page, perPage } = readPage(request)
+    const paginator = await this.#filteredQuery(agencyId!, filters)
+      .orderBy('performedOn', 'desc')
+      .orderBy('id', 'desc')
+      .paginate(page, perPage)
+    const serialized = await serialize(MaintenanceTransformer.transform(paginator.all()))
+
+    return {
+      data: unwrapSerializedList(serialized),
+      meta: paginationMeta(paginator, page, perPage),
+      totals: await this.#totals(agencyId!, { vehicleId, type }),
+    }
   }
 
   async store({ request, response, serialize, agencyId }: HttpContext) {

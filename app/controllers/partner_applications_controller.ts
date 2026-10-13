@@ -20,6 +20,8 @@ type ProAccess = {
   role: 'admin' | 'owner' | null
   /** URL de connexion back-office / portail */
   loginUrl: string | null
+  /** Tableau de bord une fois le compte actif */
+  dashboardUrl: string | null
   homePath: string | null
   message: string | null
 }
@@ -35,6 +37,7 @@ function buildProAccess(user: User | null, roleHint: 'admin' | 'owner' | null): 
       status: null,
       role: roleHint,
       loginUrl: `${base}/login`,
+      dashboardUrl: null,
       homePath: null,
       message: null,
     }
@@ -42,12 +45,14 @@ function buildProAccess(user: User | null, roleHint: 'admin' | 'owner' | null): 
 
   const homePath = roleHint === 'admin' ? '/admin' : '/portal'
   const loginUrl = `${base}/login`
+  const dashboardUrl = `${base}${homePath}`
 
   if (user.status === 'revoked') {
     return {
       status: 'revoked',
       role: roleHint,
       loginUrl,
+      dashboardUrl,
       homePath,
       message: 'Ce compte pro a été désactivé. Contactez le support carPro.',
     }
@@ -58,6 +63,7 @@ function buildProAccess(user: User | null, roleHint: 'admin' | 'owner' | null): 
       status: 'ready',
       role: roleHint,
       loginUrl,
+      dashboardUrl,
       homePath,
       message: 'Votre espace pro est actif. Connectez-vous avec le même email.',
     }
@@ -67,9 +73,47 @@ function buildProAccess(user: User | null, roleHint: 'admin' | 'owner' | null): 
     status: 'invited',
     role: roleHint,
     loginUrl,
+    dashboardUrl,
     homePath,
     message:
       'Votre espace pro s’active par email. Ouvrez le lien d’invitation reçu (vérifiez aussi les indésirables).',
+  }
+}
+
+/**
+ * Compte pro créé hors candidature (super admin) : même email que le compte marketplace.
+ */
+async function resolveDirectProSpace(email: string) {
+  const user = await User.query()
+    .where('email', email)
+    .whereIn('role', ['admin', 'staff', 'owner'])
+    .preload('agency', (query) => query.preload('city'))
+    .first()
+
+  if (!user) return null
+
+  const roleHint = user.role === 'owner' ? 'owner' : 'admin'
+  const access = buildProAccess(user, roleHint)
+
+  return {
+    ...access,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    agency: user.agency
+      ? {
+          id: user.agency.id,
+          name: user.agency.name,
+          slug: user.agency.slug,
+          city: user.agency.city
+            ? {
+                id: user.agency.city.id,
+                name: user.agency.city.name,
+                region: user.agency.city.region,
+              }
+            : null,
+        }
+      : null,
   }
 }
 
@@ -232,10 +276,12 @@ export default class PartnerApplicationsController {
     })
 
     const blockReason = await this.#service.proAccountBlockReason(email, account.id)
+    const proSpace = await resolveDirectProSpace(email)
 
     return response.ok({
       data: await Promise.all(unique.map((row) => serializeApplication(row))),
       block: { agency: blockReason, owner: blockReason },
+      proSpace,
     })
   }
 
@@ -270,6 +316,19 @@ export default class PartnerApplicationsController {
     if (filters.status) query.where('status', filters.status)
     if (filters.agencyId && user.role === 'super_admin') {
       query.where('requestedAgencyId', filters.agencyId)
+    }
+    if (filters.q?.trim()) {
+      const like = `%${filters.q.trim()}%`
+      query.where((builder) => {
+        builder
+          .whereILike('fullName', like)
+          .orWhereILike('email', like)
+          .orWhereILike('phone', like)
+          .orWhereILike('agencyName', like)
+          .orWhereHas('requestedAgency', (agencyQuery) => {
+            agencyQuery.whereILike('name', like)
+          })
+      })
     }
 
     const paginated = await query.paginate(page, perPage)

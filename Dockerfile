@@ -37,10 +37,19 @@ ENV PORT=3333
 
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+  && mkdir -p \
+    storage/uploads/vehicles \
+    storage/uploads/logos \
+    storage/uploads/banners \
+    storage/uploads/licenses \
+    tmp
 
-# Dossier uploads (à monter en volume persistant sur Dokploy)
-RUN mkdir -p storage/uploads tmp
+# Monter ce chemin en volume persistant (Dokploy / compose).
+VOLUME ["/app/storage/uploads"]
 
 EXPOSE 3333
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "bin/server.js"]

@@ -26,6 +26,7 @@ import { createVehicleValidator, updateVehicleValidator } from '#validators/vehi
 import AgencyPlanService from '#services/agency_plan_service'
 import AuditService from '#services/audit_service'
 import ValidationService, { pendingValidationResponse } from '#services/validation_service'
+import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -151,31 +152,89 @@ export default class VehiclesController {
     return owner
   }
 
-  async index({ request, serialize, agencyId }: HttpContext) {
-    const status = request.input('status')
-    const ownerId = request.input('ownerId')
-    const q = request.input('q')
+  #vehicleFilterQuery(
+    agencyId: number,
+    filters: { status?: string; ownerId?: string | number; q?: string }
+  ) {
+    const query = Vehicle.query().where('agencyId', agencyId)
+    if (filters.status) query.where('status', filters.status)
+    if (filters.ownerId) query.where('ownerId', filters.ownerId)
+    if (filters.q) {
+      const like = `%${filters.q}%`
+      query.where((builder) => {
+        builder
+          .whereILike('brand', like)
+          .orWhereILike('model', like)
+          .orWhereILike('plate', like)
+      })
+    }
+    return query
+  }
 
-    const query = Vehicle.query()
-      .where('agencyId', agencyId!)
+  #vehicleListQuery(
+    agencyId: number,
+    filters: { status?: string; ownerId?: string | number; q?: string }
+  ) {
+    return this.#vehicleFilterQuery(agencyId, filters)
       .preload('owner', (ownerQuery) => ownerQuery.preload('user'))
       .preload('marque')
       .preload('modele')
       .preload('photos', (photoQuery) => photoQuery.orderBy('position', 'asc').orderBy('id', 'asc'))
+  }
 
-    if (status) query.where('status', status)
-    if (ownerId) query.where('ownerId', ownerId)
-    if (q) {
-      query.where((builder) => {
-        builder
-          .whereILike('brand', `%${q}%`)
-          .orWhereILike('model', `%${q}%`)
-          .orWhereILike('plate', `%${q}%`)
-      })
+  async #catalogSummary(
+    agencyId: number,
+    filters: { status?: string; ownerId?: string | number; q?: string }
+  ) {
+    const countOf = async (publication?: string | string[]) => {
+      const query = this.#vehicleFilterQuery(agencyId, filters)
+      if (typeof publication === 'string') {
+        query.where('marketplacePublicationStatus', publication)
+      } else if (publication) {
+        query.where((builder) => {
+          builder
+            .whereIn('marketplacePublicationStatus', publication)
+            .orWhereNull('marketplacePublicationStatus')
+        })
+      }
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
     }
 
-    const vehicles = await query.orderBy('id', 'desc')
-    return Promise.all(vehicles.map((vehicle) => this.#withPhotos(vehicle, serialize)))
+    const [total, published, pending, draft] = await Promise.all([
+      countOf(),
+      countOf('published'),
+      countOf('pending_review'),
+      countOf(['draft', 'rejected']),
+    ])
+    return { total, published, pending, draft }
+  }
+
+  async index({ request, serialize, agencyId }: HttpContext) {
+    const status = request.input('status')
+    const ownerId = request.input('ownerId')
+    const q = String(request.input('q', '') || '').trim()
+    const publication = String(request.input('publication', '') || '').trim()
+    const filters = { status, ownerId, q: q || undefined }
+
+    if (!isPaginatedRequest(request)) {
+      const vehicles = await this.#vehicleListQuery(agencyId!, filters).orderBy('id', 'desc')
+      return Promise.all(vehicles.map((vehicle) => this.#withPhotos(vehicle, serialize)))
+    }
+
+    const { page, perPage } = readPage(request)
+    const query = this.#vehicleListQuery(agencyId!, filters)
+    if (publication) query.where('marketplacePublicationStatus', publication)
+    const paginator = await query.orderBy('id', 'desc').paginate(page, perPage)
+    const data = await Promise.all(
+      paginator.all().map((vehicle) => this.#withPhotos(vehicle, serialize))
+    )
+
+    return {
+      data,
+      meta: paginationMeta(paginator, page, perPage),
+      summary: await this.#catalogSummary(agencyId!, filters),
+    }
   }
 
   async store({ request, response, serialize, auth, agencyId }: HttpContext) {

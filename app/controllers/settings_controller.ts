@@ -39,6 +39,9 @@ export default class SettingsController {
           : payload.depositAmount === null
             ? null
             : String(payload.depositAmount),
+      documentHeaderColor: payload.documentHeaderColor
+        ? payload.documentHeaderColor.toLowerCase()
+        : settings.documentHeaderColor,
     })
     await settings.save()
     await settings.load('agency')

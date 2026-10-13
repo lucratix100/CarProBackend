@@ -699,7 +699,7 @@ export class RentalSchema extends BaseModel {
 }
 
 export class SettingSchema extends BaseModel {
-  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'id', 'logoPath', 'logoPendingPath', 'logoRejectionReason', 'rentalConditions', 'tvaRate', 'updatedAt'] as const
+  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'documentHeaderColor', 'id', 'logoPath', 'logoPendingPath', 'logoRejectionReason', 'rentalConditions', 'tvaRate', 'updatedAt'] as const
   $columns = SettingSchema.$columns
   @column()
   declare agencyId: number
@@ -711,6 +711,8 @@ export class SettingSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare depositAmount: string | null
+  @column()
+  declare documentHeaderColor: string
   @column({ isPrimary: true })
   declare id: number
   @column()

@@ -570,6 +570,12 @@ const routes = {
     tokens: [{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":0,"val":"api","end":""},{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":0,"val":"v1","end":""},{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":0,"val":"invoices","end":""},{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":1,"val":"invoiceId","end":""},{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":0,"val":"payments","end":""},{"old":"/api/v1/invoices/:invoiceId/payments/:paymentId","type":1,"val":"paymentId","end":""}],
     types: placeholder as Registry['invoices.invoice_payments.destroy']['types'],
   },
+  'invoices.invoices.pdf': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/invoices/:id/pdf',
+    tokens: [{"old":"/api/v1/invoices/:id/pdf","type":0,"val":"api","end":""},{"old":"/api/v1/invoices/:id/pdf","type":0,"val":"v1","end":""},{"old":"/api/v1/invoices/:id/pdf","type":0,"val":"invoices","end":""},{"old":"/api/v1/invoices/:id/pdf","type":1,"val":"id","end":""},{"old":"/api/v1/invoices/:id/pdf","type":0,"val":"pdf","end":""}],
+    types: placeholder as Registry['invoices.invoices.pdf']['types'],
+  },
   'invoices.invoices.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/invoices/:id',

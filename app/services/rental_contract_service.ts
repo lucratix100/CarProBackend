@@ -6,6 +6,7 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
+import { headerTheme } from '#services/document_header_color'
 
 const C = {
   brand: '#0f4a42',
@@ -119,8 +120,10 @@ function drawHeader(
   const y = M.top
   const h = 62
 
+  const theme = headerTheme(settings.documentHeaderColor)
+
   doc.save()
-  doc.rect(0, 0, PAGE_W, y + h).fill(C.brand)
+  doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
   doc.restore()
 
   // Logo mark (custom agency logo or carPro fallback)
@@ -148,23 +151,23 @@ function drawHeader(
 
   if (!usedCustomLogo) {
     doc.save()
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill('#1a6b5f')
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
     doc.restore()
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
     text(doc, 'PCS', logoX + 7, logoY + 12)
   }
 
-  doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
+  doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
   text(doc, settings.companyName, M.left + 48, y + 14)
-  doc.font('Helvetica').fontSize(8).fillColor('#c5e0db')
+  doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
   text(doc, 'Location de véhicules · Dakar, Sénégal', M.left + 48, y + 34)
 
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(C.white)
+  doc.font('Helvetica-Bold').fontSize(12).fillColor(theme.ink)
   text(doc, 'CONTRAT DE LOCATION', M.left, y + 14, {
     width: CONTENT_W,
     align: 'right',
   })
-  doc.font('Helvetica').fontSize(8).fillColor('#c5e0db')
+  doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
   text(doc, contractRef, M.left, y + 32, { width: CONTENT_W, align: 'right' })
   text(doc, formatDateFr(issuedOn), M.left, y + 44, { width: CONTENT_W, align: 'right' })
 
@@ -384,9 +387,7 @@ export default class RentalContractService {
     }
     return query
       .preload('client')
-      .preload('vehicle', (vehicleQuery) => {
-        vehicleQuery.preload('owner', (ownerQuery) => ownerQuery.preload('user'))
-      })
+      .preload('vehicle')
       .firstOrFail()
   }
 
@@ -399,8 +400,6 @@ export default class RentalContractService {
     const finance = await rentalFinancials(rental)
     const vehicle = rental.vehicle
     const client = rental.client
-    const ownerName = displayValue(vehicle.owner?.user?.fullName)
-    const ownerPhone = displayValue(vehicle.owner?.phone)
     const paid = rental.amountPaid
     const balance = Math.max(0, finance.ttc - paid)
     const overpaid = Math.max(0, paid - finance.ttc)
@@ -423,9 +422,6 @@ export default class RentalContractService {
       { label: 'Année', value: vehicle.year ? String(vehicle.year) : '—' },
       { label: 'Type', value: displayValue(vehicle.vehicleType) },
       { label: 'Carburant', value: displayValue(vehicle.fuel) },
-      { label: 'Kilométrage', value: `${formatNumber(vehicle.mileage)} km` },
-      { label: 'Propriétaire', value: ownerName },
-      { label: 'Contact', value: ownerPhone },
     ]
 
     const tvaPct = Math.round(finance.tvaRate * 100)

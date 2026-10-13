@@ -18,6 +18,7 @@ export const listPartnerApplicationsValidator = vine.create({
   type: vine.enum(['agency', 'owner'] as const).optional(),
   status: vine.enum(['pending', 'approved', 'rejected', 'cancelled'] as const).optional(),
   agencyId: vine.number().positive().optional(),
+  q: vine.string().trim().maxLength(120).optional(),
   page: vine.number().min(1).optional(),
   perPage: vine.number().min(1).max(100).optional(),
 })

@@ -1135,6 +1135,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/invoice_payments_controller').default['destroy']>>>
     }
   }
+  'invoices.invoices.pdf': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/invoices/:id/pdf'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/invoices_controller').default['pdf']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/invoices_controller').default['pdf']>>>
+    }
+  }
   'invoices.invoices.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/invoices/:id'

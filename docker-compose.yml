@@ -1,0 +1,23 @@
+# Déploiement Dokploy (type Docker Compose) ou `docker compose up`.
+# Monte un volume nommé : les photos/logos/bannières survivent aux redéploiements.
+#
+# Dokploy (type Dockerfile, sans ce fichier) :
+#   Advanced → Volumes
+#   Mount path : /app/storage/uploads
+#   Volume name : carpro_uploads
+
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3333"
+      NODE_ENV: production
+    volumes:
+      - carpro_uploads:/app/storage/uploads
+
+volumes:
+  carpro_uploads:

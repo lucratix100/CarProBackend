@@ -31,6 +31,7 @@ import {
   rejectAgencyLogoValidator,
   updateAgencyValidator,
 } from '#validators/agency'
+import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
 
 type AgencyUsageCounts = {
   admins: number
@@ -98,12 +99,34 @@ export default class AgenciesController {
     )
   }
 
-  /**
-   * List all agencies (super admin).
-   */
-  async index({ serialize }: HttpContext) {
-    const agencies = await Agency.query().preload('city').orderBy('id', 'desc')
-    const withCounts = await Promise.all(
+  #listQuery(request: HttpContext['request']) {
+    const q = String(request.input('q', '') || '').trim()
+    const status = String(request.input('status', '') || '').trim()
+    const query = Agency.query().preload('city')
+
+    if (status === 'active') query.where('isActive', true)
+    else if (status === 'inactive') query.where('isActive', false)
+    else if (status === 'marketplace') query.where('publishOnMarketplace', true)
+    else if (status === 'verified') query.where('isVerified', true)
+
+    if (q) {
+      const like = `%${q}%`
+      query.where((builder) => {
+        builder
+          .whereILike('name', like)
+          .orWhereILike('slug', like)
+          .orWhereILike('notes', like)
+          .orWhereHas('city', (cityQuery) => {
+            cityQuery.whereILike('name', like).orWhereILike('region', like)
+          })
+      })
+    }
+
+    return query
+  }
+
+  async #withCounts(agencies: Agency[], serialize: HttpContext['serialize']) {
+    return Promise.all(
       agencies.map(async (agency) => {
         const counts = await this.#usageCounts(agency.id)
         const base = await serialize(AgencyTransformer.transform(agency))
@@ -120,7 +143,27 @@ export default class AgenciesController {
         }
       })
     )
-    return withCounts
+  }
+
+  /**
+   * List all agencies (super admin).
+   * Sans `page`, la liste complète sert aux sélecteurs. Avec `page`, réponse paginée.
+   */
+  async index({ request, serialize }: HttpContext) {
+    const query = this.#listQuery(request).orderBy('id', 'desc')
+
+    if (!isPaginatedRequest(request)) {
+      return this.#withCounts(await query, serialize)
+    }
+
+    const { page, perPage } = readPage(request)
+    const paginator = await query.paginate(page, perPage)
+    const totalRows = await Agency.query().count('* as total')
+    return {
+      data: await this.#withCounts(paginator.all(), serialize),
+      meta: paginationMeta(paginator, page, perPage),
+      summary: { total: Number(totalRows[0]?.$extras?.total ?? 0) },
+    }
   }
 
   /**
@@ -166,6 +209,7 @@ export default class AgenciesController {
             companyName: payload.name,
             commissionPerDay: 10000,
             tvaRate: '0.18',
+            documentHeaderColor: '#0f4a42',
           },
           { client: trx }
         )

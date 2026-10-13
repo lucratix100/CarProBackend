@@ -10,6 +10,7 @@ import {
 } from '#validators/staff'
 import UserTransformer from '#transformers/user_transformer'
 import AuditService from '#services/audit_service'
+import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
 
 /**
  * Gestion des collaborateurs d’agence — réservée au gérant (admin).
@@ -48,18 +49,29 @@ export default class StaffCollaboratorsController {
     }
   }
 
-  async index({ serialize, agencyId }: HttpContext) {
-    const users = await User.query()
+  async index({ request, serialize, agencyId }: HttpContext) {
+    const query = User.query()
       .where('agencyId', agencyId!)
       .where('role', 'staff')
       .preload('staffRole')
       .orderBy('fullName', 'asc')
 
+    const users = isPaginatedRequest(request) ? null : await query
+    if (users) {
+      const items = []
+      for (const user of users) {
+        items.push(await this.#serializeStaff(user, serialize))
+      }
+      return { data: items }
+    }
+
+    const { page, perPage } = readPage(request)
+    const paginator = await query.paginate(page, perPage)
     const items = []
-    for (const user of users) {
+    for (const user of paginator.all()) {
       items.push(await this.#serializeStaff(user, serialize))
     }
-    return { data: items }
+    return { data: items, meta: paginationMeta(paginator, page, perPage) }
   }
 
   async store({ request, response, serialize, agencyId }: HttpContext) {

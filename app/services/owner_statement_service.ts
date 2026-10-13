@@ -10,6 +10,7 @@ import Vehicle from '#models/vehicle'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
+import { headerTheme } from '#services/document_header_color'
 import {
   isOwnerCharge,
   scopeAppliedOwnerExpenses,
@@ -82,6 +83,7 @@ export type OwnerStatementData = {
   ownerEmail: string | null
   ownerPhone: string | null
   companyName: string
+  headerColor: string | null
   logoAbsolutePath: string | null
   from: string | null
   to: string | null
@@ -178,8 +180,10 @@ function drawHeader(doc: Doc, data: OwnerStatementData) {
   const logoY = y + 12
   const logoSize = 36
 
+  const theme = headerTheme(data.headerColor)
+
   doc.save()
-  doc.rect(0, 0, PAGE_W, y + h).fill(C.brand)
+  doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
   doc.restore()
 
   let usedCustomLogo = false
@@ -202,20 +206,20 @@ function drawHeader(doc: Doc, data: OwnerStatementData) {
 
   if (!usedCustomLogo) {
     doc.save()
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill('#1a6b5f')
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
     doc.restore()
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
     text(doc, 'PCS', logoX + 7, logoY + 12)
   }
 
-  doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
+  doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
   text(doc, data.companyName, M.left + 48, y + 14)
-  doc.font('Helvetica').fontSize(8).fillColor('#c5e0db')
+  doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
   text(doc, 'Mandat de gestion · Relevé de compte propriétaire', M.left + 48, y + 34)
 
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+  doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.ink)
   text(doc, 'RELEVÉ DE COMPTE', M.left, y + 14, { width: CONTENT_W, align: 'right' })
-  doc.font('Helvetica').fontSize(8).fillColor('#c5e0db')
+  doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
   text(doc, `PCS-REL-${String(data.ownerId).padStart(5, '0')}`, M.left, y + 32, {
     width: CONTENT_W,
     align: 'right',
@@ -580,6 +584,7 @@ export default class OwnerStatementService {
       ownerEmail: owner.user?.email ?? null,
       ownerPhone: owner.phone ?? null,
       companyName: settings.companyName,
+      headerColor: settings.documentHeaderColor,
       logoAbsolutePath: publicLogoPath ? app.makePath(publicLogoPath) : null,
       from,
       to,

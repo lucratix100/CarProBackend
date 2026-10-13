@@ -6,4 +6,9 @@ export const updateSettingsValidator = vine.create({
   tvaRate: vine.number().min(0).max(1).optional(),
   rentalConditions: vine.string().trim().maxLength(10000).nullable().optional(),
   depositAmount: vine.number().min(0).nullable().optional(),
+  documentHeaderColor: vine
+    .string()
+    .trim()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 })

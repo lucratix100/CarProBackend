@@ -7,6 +7,7 @@ import OwnerStatementService from '#services/owner_statement_service'
 import OwnerTransformer from '#transformers/owner_transformer'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { createOwnerValidator, updateOwnerValidator } from '#validators/owner'
+import { isPaginatedRequest, paginationMeta, readPage, unwrapSerializedList } from '#services/pagination'
 
 async function safeNotify(ownerId: number, payload: Parameters<OwnerNotificationService['notify']>[1]) {
   try {
@@ -26,12 +27,23 @@ export default class OwnersController {
   /**
    * List all vehicle owners (admin).
    */
-  async index({ serialize, agencyId }: HttpContext) {
-    const owners = await Owner.query()
-      .where('agencyId', agencyId!)
-      .preload('user')
-      .orderBy('id', 'desc')
-    return serialize(OwnerTransformer.transform(owners).useVariant('withUser'))
+  async index({ request, serialize, agencyId }: HttpContext) {
+    const query = Owner.query().where('agencyId', agencyId!).preload('user').orderBy('id', 'desc')
+
+    if (!isPaginatedRequest(request)) {
+      const owners = await query
+      return serialize(OwnerTransformer.transform(owners).useVariant('withUser'))
+    }
+
+    const { page, perPage } = readPage(request)
+    const paginator = await query.paginate(page, perPage)
+    const serialized = await serialize(
+      OwnerTransformer.transform(paginator.all()).useVariant('withUser')
+    )
+    return {
+      data: unwrapSerializedList(serialized),
+      meta: paginationMeta(paginator, page, perPage),
+    }
   }
 
   /**
@@ -96,11 +108,17 @@ export default class OwnersController {
    */
   async update({ params, request, serialize, agencyId }: HttpContext) {
     const owner = await this.#findScoped(params.id, agencyId!)
-    const payload = await request.validateUsing(updateOwnerValidator)
+    const payload = await request.validateUsing(updateOwnerValidator, {
+      meta: { userId: owner.user.id },
+    })
     const wasActive = owner.isActive
 
     if (payload.fullName !== undefined) {
       owner.user.fullName = payload.fullName
+    }
+
+    if (payload.email !== undefined) {
+      owner.user.email = payload.email
     }
 
     if (payload.isActive !== undefined && payload.isActive !== owner.isActive) {

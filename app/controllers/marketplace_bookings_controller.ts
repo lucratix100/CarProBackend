@@ -88,27 +88,6 @@ export default class MarketplaceBookingsController {
       })
     }
 
-    if (!account.client.licenseNumber?.trim()) {
-      throw new Exception('Le numéro de permis est requis pour réserver.', {
-        status: 422,
-        code: 'E_LICENSE_REQUIRED',
-      })
-    }
-
-    if (!account.client.idCardNumber?.trim()) {
-      throw new Exception('Le numéro de CIN est requis pour réserver.', {
-        status: 422,
-        code: 'E_CIN_REQUIRED',
-      })
-    }
-
-    if (!account.client.licenseExpiresAt) {
-      throw new Exception('La date d’expiration du permis est requise pour réserver.', {
-        status: 422,
-        code: 'E_LICENSE_EXPIRES_REQUIRED',
-      })
-    }
-
     const scheduleParts = [
       payload.pickupTime ? `départ ${payload.pickupTime}` : null,
       payload.returnTime ? `retour ${payload.returnTime}` : null,

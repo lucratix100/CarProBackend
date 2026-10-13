@@ -15,6 +15,7 @@ export default class SettingTransformer extends BaseTransformer<Setting> {
         'tvaRate',
         'rentalConditions',
         'depositAmount',
+        'documentHeaderColor',
         'logoRejectionReason',
         'createdAt',
         'updatedAt',

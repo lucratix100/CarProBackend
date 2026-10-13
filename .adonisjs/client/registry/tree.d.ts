@@ -159,6 +159,7 @@ export interface ApiDefinition {
     invoices: {
       index: typeof routes['invoices.invoices.index']
       store: typeof routes['invoices.invoices.store']
+      pdf: typeof routes['invoices.invoices.pdf']
       show: typeof routes['invoices.invoices.show']
       update: typeof routes['invoices.invoices.update']
       destroy: typeof routes['invoices.invoices.destroy']

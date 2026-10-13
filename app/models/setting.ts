@@ -15,6 +15,7 @@ export default class Setting extends SettingSchema {
         companyName: 'Profil Car Service',
         commissionPerDay: 10000,
         tvaRate: '0.18',
+        documentHeaderColor: '#0f4a42',
       })
     }
     return settings

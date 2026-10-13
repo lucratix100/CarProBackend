@@ -13,6 +13,15 @@ export const createOwnerValidator = vine.create({
 
 export const updateOwnerValidator = vine.create({
   fullName: vine.string().trim().minLength(2).maxLength(120).optional(),
+  email: email()
+    .unique({
+      table: 'users',
+      column: 'email',
+      filter: (db, _value, field) => {
+        db.whereNot('id', field.meta.userId)
+      },
+    })
+    .optional(),
   phone: vine.string().trim().maxLength(40).nullable().optional(),
   city: vine.string().trim().maxLength(120).nullable().optional(),
   notes: vine.string().trim().maxLength(2000).nullable().optional(),

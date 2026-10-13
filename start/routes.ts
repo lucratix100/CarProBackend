@@ -348,6 +348,9 @@ router
           .delete('/:invoiceId/payments/:paymentId', [controllers.InvoicePayments, 'destroy'])
           .use(middleware.permission({ permission: 'payments.cancel' }))
         router
+          .get('/:id/pdf', [controllers.Invoices, 'pdf'])
+          .use(middleware.permission({ permission: 'invoices.view' }))
+        router
           .get('/:id', [controllers.Invoices, 'show'])
           .use(middleware.permission({ permission: 'invoices.view' }))
         router

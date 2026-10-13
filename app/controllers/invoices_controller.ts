@@ -8,9 +8,11 @@ import Payment from '#models/payment'
 import Setting from '#models/setting'
 import { invoiceAmounts } from '#services/finance_service'
 import InvoicePaymentService from '#services/invoice_payment_service'
+import InvoicePdfService from '#services/invoice_pdf_service'
 import InvoiceTransformer from '#transformers/invoice_transformer'
 import PaymentTransformer from '#transformers/payment_transformer'
 import { createInvoiceValidator, updateInvoiceValidator } from '#validators/invoice'
+import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
 
 function unwrapSerialized<T>(payload: unknown): T {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -21,6 +23,7 @@ function unwrapSerialized<T>(payload: unknown): T {
 
 export default class InvoicesController {
   #payments = new InvoicePaymentService()
+  #pdf = new InvoicePdfService()
 
   async #findScoped(id: number | string, agencyId: number) {
     return Invoice.query().where('id', id).where('agencyId', agencyId).firstOrFail()
@@ -73,8 +76,18 @@ export default class InvoicesController {
     const query = Invoice.query().where('agencyId', agencyId!).preload('client')
     if (status) query.where('status', status)
     if (clientId) query.where('clientId', clientId)
-    const invoices = await query.orderBy('issuedOn', 'desc')
-    return Promise.all(invoices.map((invoice) => this.#withAmounts(invoice, serialize)))
+
+    if (!isPaginatedRequest(request)) {
+      const invoices = await query.orderBy('issuedOn', 'desc')
+      return Promise.all(invoices.map((invoice) => this.#withAmounts(invoice, serialize)))
+    }
+
+    const { page, perPage } = readPage(request)
+    const paginator = await query.orderBy('issuedOn', 'desc').paginate(page, perPage)
+    const data = await Promise.all(
+      paginator.all().map((invoice) => this.#withAmounts(invoice, serialize))
+    )
+    return { data, meta: paginationMeta(paginator, page, perPage) }
   }
 
   async store({ request, response, serialize, agencyId }: HttpContext) {
@@ -93,6 +106,24 @@ export default class InvoicesController {
     })
     await invoice.load('client')
     return response.created(await this.#withAmounts(invoice, serialize))
+  }
+
+  async pdf({ params, response, agencyId }: HttpContext) {
+    const invoice = await Invoice.query()
+      .where('id', params.id)
+      .where('agencyId', agencyId!)
+      .preload('client')
+      .preload('payments', (query) => query.orderBy('paidOn', 'asc').orderBy('id', 'asc'))
+      .preload('rental', (query) => query.preload('vehicle'))
+      .firstOrFail()
+
+    await this.#payments.syncInvoice(invoice)
+    const pdf = await this.#pdf.generate(invoice)
+    const filename = `facture-${invoice.id}.pdf`
+
+    response.header('Content-Type', 'application/pdf')
+    response.header('Content-Disposition', `inline; filename="${filename}"`)
+    return response.send(pdf)
   }
 
   async show({ params, serialize, agencyId }: HttpContext) {

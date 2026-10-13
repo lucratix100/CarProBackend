@@ -25,4 +25,5 @@ yarn-error.log
 # Platform specific
 .DS_Store
 
-storage/uploads/
+storage/uploads/*
+!storage/uploads/.gitkeep

@@ -182,6 +182,7 @@ export default class PartnerApplicationService {
             companyName: agencyName,
             commissionPerDay: 10000,
             tvaRate: '0.18',
+            documentHeaderColor: '#0f4a42',
           },
           { client: trx }
         )

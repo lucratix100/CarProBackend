@@ -98,6 +98,7 @@ export type ScannedRoutes = {
     'invoices.invoice_payments.index': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
     'invoices.invoice_payments.store': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
     'invoices.invoice_payments.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'invoiceId': ParamValue,'paymentId': ParamValue} }
+    'invoices.invoices.pdf': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -217,6 +218,7 @@ export type ScannedRoutes = {
     'rentals.rentals.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.index': { paramsTuple?: []; params?: {} }
     'invoices.invoice_payments.index': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
+    'invoices.invoices.pdf': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'maintenances.maintenances.index': { paramsTuple?: []; params?: {} }
     'maintenances.maintenances.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -304,6 +306,7 @@ export type ScannedRoutes = {
     'rentals.rentals.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.index': { paramsTuple?: []; params?: {} }
     'invoices.invoice_payments.index': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
+    'invoices.invoices.pdf': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'maintenances.maintenances.index': { paramsTuple?: []; params?: {} }
     'maintenances.maintenances.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
