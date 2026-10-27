@@ -62,6 +62,12 @@ export default class AccessTokensController {
           code: 'E_AGENCY_INACTIVE',
         })
       }
+      if (user.role === 'staff' && !user.agency.staffModuleEnabled) {
+        throw new Exception(
+          'L’accès collaborateurs n’est pas autorisé pour cette agence.',
+          { status: 403, code: 'E_STAFF_MODULE_DISABLED' }
+        )
+      }
       if (user.role === 'staff' && user.agency.staffPaused) {
         throw new Exception(
           'L’accès des collaborateurs est en pause. Contactez le gérant de votre agence.',

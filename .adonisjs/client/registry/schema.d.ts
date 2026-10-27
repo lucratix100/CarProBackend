@@ -1483,6 +1483,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['resendInvitation']>>>
     }
   }
+  'staff.staff_collaborators.resend_password_email': {
+    methods: ["POST"]
+    pattern: '/api/v1/staff/collaborators/:id/resend-password-email'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['resendPasswordEmail']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff_collaborators_controller').default['resendPasswordEmail']>>>
+    }
+  }
   'staff_collaborators.my_permissions': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/me/permissions'

@@ -35,6 +35,75 @@ function isFilled(value: string | null | undefined) {
   return normalized.length > 0 && normalized !== 'à compléter' && normalized !== 'a completer'
 }
 
+const PLACEHOLDER_VALUES = ['à compléter', 'a completer']
+
+function applyClientSearch(query: ReturnType<typeof Client.query>, q?: string | null) {
+  const term = String(q || '').trim()
+  if (!term) return query
+  query.where((builder) => {
+    builder
+      .whereILike('fullName', `%${term}%`)
+      .orWhereILike('phone', `%${term}%`)
+      .orWhereILike('email', `%${term}%`)
+      .orWhereILike('idCardNumber', `%${term}%`)
+      .orWhereILike('licenseNumber', `%${term}%`)
+  })
+  return query
+}
+
+function applyIdentityComplete(query: ReturnType<typeof Client.query>) {
+  const today = DateTime.now().toISODate()!
+  query
+    .whereNotNull('licenseExpiresAt')
+    .where('licenseExpiresAt', '>=', today)
+    .whereRaw(`char_length(trim(coalesce(full_name, ''))) >= 2`)
+    .whereRaw(`char_length(trim(coalesce(phone, ''))) >= 5`)
+    .whereRaw(
+      `license_number IS NOT NULL AND char_length(trim(license_number)) > 0 AND lower(trim(license_number)) NOT IN (?, ?)`,
+      PLACEHOLDER_VALUES
+    )
+    .whereRaw(
+      `id_card_number IS NOT NULL AND char_length(trim(id_card_number)) > 0 AND lower(trim(id_card_number)) NOT IN (?, ?)`,
+      PLACEHOLDER_VALUES
+    )
+}
+
+function applyDossierFilter(query: ReturnType<typeof Client.query>, dossier?: string | null) {
+  const today = DateTime.now().toISODate()!
+  if (dossier === 'verified') {
+    query.where('isActive', true)
+    applyIdentityComplete(query)
+    return
+  }
+  if (dossier === 'expired') {
+    query
+      .where('isActive', true)
+      .whereNotNull('licenseExpiresAt')
+      .where('licenseExpiresAt', '<', today)
+    return
+  }
+  if (dossier === 'incomplete') {
+    query.where('isActive', true)
+    query.where((builder) => {
+      builder.whereNull('licenseExpiresAt').orWhere('licenseExpiresAt', '>=', today)
+    })
+    query.where((builder) => {
+      builder
+        .whereNull('licenseExpiresAt')
+        .orWhereRaw(`char_length(trim(coalesce(full_name, ''))) < 2`)
+        .orWhereRaw(`char_length(trim(coalesce(phone, ''))) < 5`)
+        .orWhereRaw(
+          `license_number IS NULL OR char_length(trim(license_number)) = 0 OR lower(trim(license_number)) IN (?, ?)`,
+          PLACEHOLDER_VALUES
+        )
+        .orWhereRaw(
+          `id_card_number IS NULL OR char_length(trim(id_card_number)) = 0 OR lower(trim(id_card_number)) IN (?, ?)`,
+          PLACEHOLDER_VALUES
+        )
+    })
+  }
+}
+
 function withLicenseFlags(client: Client, serialized: unknown) {
   const base =
     serialized && typeof serialized === 'object' && 'data' in serialized
@@ -148,10 +217,47 @@ export default class ClientsController {
     }
   }
 
+  async #summary(agencyId: number, q?: string | null) {
+    const count = async (scope?: (query: ReturnType<typeof Client.query>) => void) => {
+      const query = Client.query().where('agencyId', agencyId)
+      applyClientSearch(query, q)
+      scope?.(query)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+
+    const today = DateTime.now().toISODate()!
+    const [total, active, inactive, verified, expired] = await Promise.all([
+      count(),
+      count((query) => query.where('isActive', true)),
+      count((query) => query.where('isActive', false)),
+      count((query) => {
+        query.where('isActive', true)
+        applyIdentityComplete(query)
+      }),
+      count((query) =>
+        query
+          .where('isActive', true)
+          .whereNotNull('licenseExpiresAt')
+          .where('licenseExpiresAt', '<', today)
+      ),
+    ])
+
+    return {
+      total,
+      active,
+      inactive,
+      verified,
+      expired,
+      incomplete: Math.max(0, active - verified - expired),
+    }
+  }
+
   async index({ request, serialize, agencyId }: HttpContext) {
     const q = request.input('q')
     const includeInactive = ['1', 'true', true].includes(request.input('includeInactive'))
     const isActive = request.input('isActive')
+    const dossier = String(request.input('dossier', '') || '').trim()
     const page = Math.max(1, Number(request.input('page', 1)) || 1)
     const perPageRaw = Number(request.input('perPage', 10)) || 10
     const perPage = Math.min(100, Math.max(1, perPageRaw))
@@ -166,16 +272,8 @@ export default class ClientsController {
       query.where('isActive', true)
     }
 
-    if (q) {
-      query.where((builder) => {
-        builder
-          .whereILike('fullName', `%${q}%`)
-          .orWhereILike('phone', `%${q}%`)
-          .orWhereILike('email', `%${q}%`)
-          .orWhereILike('idCardNumber', `%${q}%`)
-          .orWhereILike('licenseNumber', `%${q}%`)
-      })
-    }
+    applyClientSearch(query, q)
+    applyDossierFilter(query, dossier)
 
     const paginator = await query.orderBy('id', 'desc').paginate(page, perPage)
     paginator.baseUrl('/clients')
@@ -191,6 +289,7 @@ export default class ClientsController {
     return {
       meta: paginator.getMeta(),
       data,
+      summary: await this.#summary(agencyId!, q),
     }
   }
 

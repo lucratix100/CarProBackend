@@ -6,7 +6,6 @@ import env from '#start/env'
 import Rental from '#models/rental'
 import Vehicle from '#models/vehicle'
 import Invoice from '#models/invoice'
-import Setting from '#models/setting'
 import ClientAccount from '#models/client_account'
 import {
   daysBetween,
@@ -121,6 +120,25 @@ export default class RentalService {
     return query.first()
   }
 
+  /** Véhicules dont une location (hors annulée) chevauche la période demandée. */
+  async conflictingVehicleIds(vehicleIds: number[], startDate: string, endDate: string) {
+    const unique = [...new Set(vehicleIds.filter((id) => Number.isFinite(id)))]
+    if (unique.length === 0) return new Set<number>()
+
+    const requestOccEnd = occupancyEndExclusive(startDate, endDate)
+    const rows = await Rental.query()
+      .whereIn('vehicleId', unique)
+      .whereNot('status', 'Annulée')
+      .where('startDate', '<', requestOccEnd)
+      .whereRaw(
+        `(CASE WHEN end_date = start_date THEN end_date + INTERVAL '1 day' ELSE end_date END) > ?::date`,
+        [startDate]
+      )
+      .select('vehicleId')
+
+    return new Set(rows.map((row) => row.vehicleId))
+  }
+
   async assertNoConflict(
     vehicleId: number,
     startDate: string,
@@ -197,8 +215,7 @@ export default class RentalService {
       })
     }
 
-    const settings = await Setting.current(rental.agencyId)
-    const finance = await rentalFinancials(rental, settings.commissionPerDay)
+    const finance = await rentalFinancials(rental)
     await rental.load('vehicle')
 
     const description = `Location ${rental.vehicle.label} — ${finance.days} jour(s).`
@@ -262,6 +279,8 @@ export default class RentalService {
         ? payload.status
         : resolveRentalStatus(payload.startDate, payload.endDate)
 
+    const vehicle = await Vehicle.findOrFail(payload.vehicleId)
+
     const rental = await Rental.create({
       agencyId: payload.agencyId,
       vehicleId: payload.vehicleId,
@@ -269,6 +288,7 @@ export default class RentalService {
       startDate: DateTime.fromISO(payload.startDate),
       endDate: DateTime.fromISO(payload.endDate),
       dailyPrice: payload.dailyPrice,
+      commissionPerDay: Number(vehicle.commissionPerDay),
       amountPaid: payload.amountPaid ?? 0,
       status,
       notes: payload.notes ?? null,

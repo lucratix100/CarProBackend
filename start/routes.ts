@@ -443,10 +443,19 @@ router
           controllers.StaffCollaborators,
           'resendInvitation',
         ])
+        router.post('/collaborators/:id/resend-password-email', [
+          controllers.StaffCollaborators,
+          'resendPasswordEmail',
+        ])
       })
       .prefix('staff')
       .as('staff')
-      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
+      .use([
+        middleware.auth(),
+        middleware.admin(),
+        middleware.agencyAdmin(),
+        middleware.staffModule(),
+      ])
 
     router
       .get('/me/permissions', [controllers.StaffCollaborators, 'myPermissions'])
@@ -466,7 +475,12 @@ router
       })
       .prefix('validations')
       .as('validations')
-      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
+      .use([
+        middleware.auth(),
+        middleware.admin(),
+        middleware.agencyAdmin(),
+        middleware.staffModule(),
+      ])
 
     /**
      * Journal d’activités — lecture seule, gérant d’agence
@@ -478,7 +492,12 @@ router
       })
       .prefix('activity-logs')
       .as('activity_logs')
-      .use([middleware.auth(), middleware.admin(), middleware.agencyAdmin()])
+      .use([
+        middleware.auth(),
+        middleware.admin(),
+        middleware.agencyAdmin(),
+        middleware.staffModule(),
+      ])
 
     /**
      * Owner read-only portal

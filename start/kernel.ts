@@ -48,6 +48,7 @@ export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),
   admin: () => import('#middleware/admin_middleware'),
   agencyAdmin: () => import('#middleware/agency_admin_middleware'),
+  staffModule: () => import('#middleware/staff_module_middleware'),
   permission: () => import('#middleware/permission_middleware'),
   superAdmin: () => import('#middleware/super_admin_middleware'),
   owner: () => import('#middleware/owner_middleware'),

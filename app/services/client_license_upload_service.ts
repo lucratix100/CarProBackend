@@ -1,7 +1,13 @@
 import { mkdir, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
 import app from '@adonisjs/core/services/app'
 import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
+import {
+  INCOMING_IMAGE_BYTES,
+  INCOMING_IMAGE_LABEL,
+  writeCompressedImage,
+} from '#services/image_compress_service'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf']
 /** Taille max par fichier image / PDF : 800 Ko */
@@ -31,7 +37,7 @@ export default class ClientLicenseUploadService {
 
   #tooLarge(label: string) {
     return new Exception(
-      `${label} : le fichier dépasse ${MAX_IMAGE_LABEL}. Compressez-le ou choisissez un fichier plus léger (max ${MAX_IMAGE_LABEL}).`,
+      `${label} : le fichier dépasse la taille autorisée. Une image est réduite automatiquement (max ${INCOMING_IMAGE_LABEL} à l’envoi, ${MAX_IMAGE_LABEL} enregistrés). Un PDF reste limité à ${MAX_IMAGE_LABEL}.`,
       {
         status: 422,
         code: 'E_LICENSE_FILE_TOO_LARGE',
@@ -42,16 +48,19 @@ export default class ClientLicenseUploadService {
   validateFile(file: MultipartFile | null, label: string) {
     if (!file) return null
 
-    if (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES) {
+    const isPdf = (file.extname || '').toLowerCase() === 'pdf'
+    const limit = isPdf ? MAX_IMAGE_BYTES : INCOMING_IMAGE_BYTES
+
+    if (typeof file.size === 'number' && file.size > limit) {
       throw this.#tooLarge(label)
     }
 
-    file.sizeLimit = MAX_IMAGE_BYTES
+    file.sizeLimit = limit
     file.allowedExtensions = ALLOWED_EXTENSIONS
     file.validate()
 
     if (!file.isValid) {
-      if (isSizeError(file) || (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES)) {
+      if (isSizeError(file) || (typeof file.size === 'number' && file.size > limit)) {
         throw this.#tooLarge(label)
       }
       const detail = file.errors.map((e) => e.message).join(' ')
@@ -61,7 +70,7 @@ export default class ClientLicenseUploadService {
       })
     }
 
-    if (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES) {
+    if (typeof file.size === 'number' && file.size > (isPdf ? MAX_IMAGE_BYTES : INCOMING_IMAGE_BYTES)) {
       throw this.#tooLarge(label)
     }
 
@@ -78,11 +87,39 @@ export default class ClientLicenseUploadService {
 
   async store(file: MultipartFile, clientId: number, side: 'recto' | 'verso') {
     await this.ensureStorage()
-    const ext = (file.extname || 'bin').toLowerCase()
-    const fileName = `client-${clientId}-${side}-${Date.now()}.${ext}`
-    await file.move(this.storageDir(), { name: fileName, overwrite: true })
+    if (!file.isValid || !file.tmpPath) {
+      throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
+        status: 500,
+        code: 'E_LICENSE_UPLOAD_FAILED',
+      })
+    }
 
-    if (!file.isValid || file.errors.length) {
+    const ext = (file.extname || 'bin').toLowerCase()
+    if (ext === 'pdf') {
+      const fileName = `client-${clientId}-${side}-${Date.now()}.pdf`
+      await file.move(this.storageDir(), { name: fileName, overwrite: true })
+      if (!file.isValid || file.errors.length) {
+        throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
+          status: 500,
+          code: 'E_LICENSE_UPLOAD_FAILED',
+        })
+      }
+      return `storage/uploads/licenses/${fileName}`
+    }
+
+    const fileName = `client-${clientId}-${side}-${Date.now()}.jpg`
+    const destination = join(this.storageDir(), fileName)
+    try {
+      await writeCompressedImage(file.tmpPath, destination, {
+        maxWidth: 1600,
+        maxBytes: MAX_IMAGE_BYTES,
+        format: 'jpeg',
+      })
+    } catch (error) {
+      await unlink(destination).catch(() => {})
+      if (error instanceof Error && error.message === 'IMAGE_STILL_TOO_LARGE') {
+        throw this.#tooLarge(side === 'recto' ? 'Recto' : 'Verso')
+      }
       throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
         status: 500,
         code: 'E_LICENSE_UPLOAD_FAILED',

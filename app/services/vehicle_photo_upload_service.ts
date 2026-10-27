@@ -1,7 +1,13 @@
 import { mkdir, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
 import app from '@adonisjs/core/services/app'
 import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
+import {
+  INCOMING_IMAGE_BYTES,
+  INCOMING_IMAGE_LABEL,
+  writeCompressedImage,
+} from '#services/image_compress_service'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
 /** Taille max par image : 800 Ko */
@@ -33,7 +39,7 @@ export default class VehiclePhotoUploadService {
 
   #tooLarge(label: string) {
     return new Exception(
-      `${label} : l’image dépasse ${MAX_IMAGE_LABEL}. Compressez-la ou choisissez une photo plus légère (max ${MAX_IMAGE_LABEL} par fichier).`,
+      `${label} : l’image dépasse ${INCOMING_IMAGE_LABEL}. Choisissez une photo plus légère (max ${INCOMING_IMAGE_LABEL} par fichier, réduite automatiquement à ${MAX_IMAGE_LABEL}).`,
       {
         status: 422,
         code: 'E_VEHICLE_PHOTO_TOO_LARGE',
@@ -44,16 +50,16 @@ export default class VehiclePhotoUploadService {
   validateFile(file: MultipartFile | null, label = 'Photo') {
     if (!file) return null
 
-    if (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES) {
+    if (typeof file.size === 'number' && file.size > INCOMING_IMAGE_BYTES) {
       throw this.#tooLarge(label)
     }
 
-    file.sizeLimit = MAX_IMAGE_BYTES
+    file.sizeLimit = INCOMING_IMAGE_BYTES
     file.allowedExtensions = ALLOWED_EXTENSIONS
     file.validate()
 
     if (!file.isValid) {
-      if (isSizeError(file) || (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES)) {
+      if (isSizeError(file) || (typeof file.size === 'number' && file.size > INCOMING_IMAGE_BYTES)) {
         throw this.#tooLarge(label)
       }
       const detail = file.errors.map((e) => e.message).join(' ')
@@ -63,7 +69,7 @@ export default class VehiclePhotoUploadService {
       })
     }
 
-    if (typeof file.size === 'number' && file.size > MAX_IMAGE_BYTES) {
+    if (typeof file.size === 'number' && file.size > INCOMING_IMAGE_BYTES) {
       throw this.#tooLarge(label)
     }
 
@@ -80,11 +86,26 @@ export default class VehiclePhotoUploadService {
 
   async store(file: MultipartFile, vehicleId: number, position: number) {
     await this.ensureStorage()
-    const ext = (file.extname || 'jpg').toLowerCase()
-    const fileName = `vehicle-${vehicleId}-${position}-${Date.now()}.${ext}`
-    await file.move(this.storageDir(), { name: fileName, overwrite: true })
+    if (!file.isValid || !file.tmpPath) {
+      throw new Exception('Impossible d’enregistrer la photo du véhicule.', {
+        status: 500,
+        code: 'E_VEHICLE_PHOTO_UPLOAD_FAILED',
+      })
+    }
 
-    if (!file.isValid || file.errors.length) {
+    const fileName = `vehicle-${vehicleId}-${position}-${Date.now()}.jpg`
+    const destination = join(this.storageDir(), fileName)
+    try {
+      await writeCompressedImage(file.tmpPath, destination, {
+        maxWidth: 1600,
+        maxBytes: MAX_IMAGE_BYTES,
+        format: 'jpeg',
+      })
+    } catch (error) {
+      await unlink(destination).catch(() => {})
+      if (error instanceof Error && error.message === 'IMAGE_STILL_TOO_LARGE') {
+        throw this.#tooLarge('Photo')
+      }
       throw new Exception('Impossible d’enregistrer la photo du véhicule.', {
         status: 500,
         code: 'E_VEHICLE_PHOTO_UPLOAD_FAILED',

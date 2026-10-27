@@ -6,7 +6,7 @@ import OwnerTransformer from '#transformers/owner_transformer'
 export default class UserTransformer extends BaseTransformer<User> {
   toObject() {
     const owner = OwnerTransformer.transform(this.whenLoaded(this.resource.owner))
-    const agencyRel = this.whenLoaded(this.resource.agency) as unknown as Agency | null | undefined
+    const agencyRel = (this.resource.$preloaded.agency ?? null) as Agency | null
 
     return {
       ...this.pick(this.resource, [
@@ -35,6 +35,7 @@ export default class UserTransformer extends BaseTransformer<User> {
             slug: agencyRel.slug,
             vehicleLimit: agencyRel.vehicleLimit,
             staffLimit: agencyRel.staffLimit,
+            staffModuleEnabled: Boolean(agencyRel.staffModuleEnabled),
             staffPaused: Boolean(agencyRel.staffPaused),
             acceptOwnerApplications: Boolean(agencyRel.acceptOwnerApplications),
           }

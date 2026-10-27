@@ -34,11 +34,15 @@ const CATALOGUE: Record<string, string[]> = {
 export default class extends BaseSeeder {
   async run() {
     for (const [marqueName, modeles] of Object.entries(CATALOGUE)) {
-      let marque = await Marque.findBy('name', marqueName)
+      let marque = await Marque.query()
+        .where('name', marqueName)
+        .whereNull('agencyId')
+        .first()
       if (!marque) {
         marque = await Marque.create({
           name: marqueName,
           isActive: true,
+          agencyId: null,
         })
       }
 
@@ -46,12 +50,14 @@ export default class extends BaseSeeder {
         const existing = await Modele.query()
           .where('marqueId', marque.id)
           .where('name', modeleName)
+          .whereNull('agencyId')
           .first()
         if (!existing) {
           await Modele.create({
             marqueId: marque.id,
             name: modeleName,
             isActive: true,
+            agencyId: null,
           })
         }
       }

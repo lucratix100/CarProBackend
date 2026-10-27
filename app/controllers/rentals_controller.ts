@@ -175,7 +175,28 @@ export default class RentalsController {
         firstPage: Number(rawMeta.firstPage ?? rawMeta.first_page ?? 1),
       },
       data,
+      summary: await this.#summary(agencyId!),
     }
+  }
+
+  async #summary(agencyId: number) {
+    const count = async (status?: string) => {
+      const query = Rental.query().where('agencyId', agencyId)
+      if (status) query.where('status', status)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+
+    const [total, pending, reserved, active, done, cancelled] = await Promise.all([
+      count(),
+      count('En attente'),
+      count('Réservée'),
+      count('En cours'),
+      count('Terminée'),
+      count('Annulée'),
+    ])
+
+    return { total, pending, reserved, active, done, cancelled }
   }
 
   async store({ request, response, serialize, agencyId, auth }: HttpContext) {

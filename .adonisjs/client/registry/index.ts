@@ -744,6 +744,12 @@ const routes = {
     tokens: [{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":0,"val":"api","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":0,"val":"v1","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":0,"val":"staff","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":0,"val":"collaborators","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":1,"val":"id","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-invitation","type":0,"val":"resend-invitation","end":""}],
     types: placeholder as Registry['staff.staff_collaborators.resend_invitation']['types'],
   },
+  'staff.staff_collaborators.resend_password_email': {
+    methods: ["POST"],
+    pattern: '/api/v1/staff/collaborators/:id/resend-password-email',
+    tokens: [{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":0,"val":"api","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":0,"val":"v1","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":0,"val":"staff","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":0,"val":"collaborators","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":1,"val":"id","end":""},{"old":"/api/v1/staff/collaborators/:id/resend-password-email","type":0,"val":"resend-password-email","end":""}],
+    types: placeholder as Registry['staff.staff_collaborators.resend_password_email']['types'],
+  },
   'staff_collaborators.my_permissions': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/me/permissions',

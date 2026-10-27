@@ -6,17 +6,15 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
-import { headerTheme } from '#services/document_header_color'
+import { headerTheme, type DocumentTheme } from '#services/document_header_color'
+import { preparePdfLogo } from '#services/image_compress_service'
 
 const C = {
-  brand: '#0f4a42',
-  brandSoft: '#e7f2f0',
   ink: '#0f172a',
   body: '#334155',
   muted: '#64748b',
   line: '#cbd5e1',
   lineSoft: '#e2e8f0',
-  white: '#ffffff',
   danger: '#b91c1c',
   dangerBg: '#fef2f2',
   warning: '#b45309',
@@ -59,10 +57,10 @@ function displayValue(value: string | null | undefined) {
   return trimmed
 }
 
-function statusColors(status: string) {
+function statusColors(status: string, theme: DocumentTheme) {
   switch (status) {
     case 'En cours':
-      return { bg: C.brandSoft, fg: C.brand }
+      return { bg: theme.accentSoft, fg: theme.accent }
     case 'Terminée':
       return { bg: C.successBg, fg: C.success }
     case 'Annulée':
@@ -86,10 +84,17 @@ function hline(doc: Doc, x: number, y: number, w: number, color: string = C.line
   doc.restore()
 }
 
-function sectionTitle(doc: Doc, title: string, x: number, y: number, w: number) {
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.brand)
+function sectionTitle(
+  doc: Doc,
+  title: string,
+  x: number,
+  y: number,
+  w: number,
+  theme: DocumentTheme
+) {
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(theme.accent)
   text(doc, title.toUpperCase(), x, y, { width: w, characterSpacing: 0.4 })
-  hline(doc, x, y + 14, w, C.brand)
+  hline(doc, x, y + 14, w, theme.accent)
   return y + 20
 }
 
@@ -115,12 +120,11 @@ function drawHeader(
   contractRef: string,
   issuedOn: DateTime,
   cancelled: boolean,
-  logoAbsolutePath: string | null
+  logo: Buffer | null,
+  theme: DocumentTheme
 ) {
   const y = M.top
   const h = 62
-
-  const theme = headerTheme(settings.documentHeaderColor)
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
@@ -132,11 +136,11 @@ function drawHeader(
   const logoSize = 36
   let usedCustomLogo = false
 
-  if (logoAbsolutePath) {
+  if (logo) {
     doc.save()
     try {
       doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
-      doc.image(logoAbsolutePath, logoX, logoY, {
+      doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
         valign: 'center',
@@ -199,9 +203,10 @@ function drawClientBlock(
   x: number,
   y: number,
   w: number,
-  rows: Array<{ label: string; value: string }>
+  rows: Array<{ label: string; value: string }>,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '01 — Locataire', x, y, w)
+  let cy = sectionTitle(doc, '01 — Locataire', x, y, w, theme)
   const labelW = 62
   for (const row of rows) {
     cy = field(doc, row.label, row.value, x, cy, labelW, w - labelW)
@@ -214,9 +219,10 @@ function drawVehicleBlock(
   x: number,
   y: number,
   w: number,
-  rows: Array<{ label: string; value: string }>
+  rows: Array<{ label: string; value: string }>,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '02 — Véhicule loué', x, y, w)
+  let cy = sectionTitle(doc, '02 — Véhicule loué', x, y, w, theme)
   const labelW = 72
   for (const row of rows) {
     cy = field(doc, row.label, row.value, x, cy, labelW, w - labelW)
@@ -230,13 +236,14 @@ function drawDuration(
   start: string,
   end: string,
   days: number,
-  status: string
+  status: string,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '03 — Durée de la location', M.left, y, CONTENT_W)
+  let cy = sectionTitle(doc, '03 — Durée de la location', M.left, y, CONTENT_W, theme)
 
   const boxH = 36
   doc.save()
-  doc.roundedRect(M.left, cy, CONTENT_W, boxH, 4).fill(C.brandSoft)
+  doc.roundedRect(M.left, cy, CONTENT_W, boxH, 4).fill(theme.accentSoft)
   doc.restore()
 
   const col = CONTENT_W / 4
@@ -252,7 +259,7 @@ function drawDuration(
     doc.font('Helvetica').fontSize(7).fillColor(C.muted)
     text(doc, item.label.toUpperCase(), ix, cy + 7, { width: col - 16 })
     if (i === 3) {
-      const colors = statusColors(status)
+      const colors = statusColors(status, theme)
       doc.font('Helvetica-Bold').fontSize(8).fillColor(colors.fg)
     } else {
       doc.font('Helvetica-Bold').fontSize(9).fillColor(C.ink)
@@ -266,15 +273,16 @@ function drawDuration(
 function drawFinance(
   doc: Doc,
   y: number,
-  rows: Array<{ label: string; value: string; emphasize?: boolean }>
+  rows: Array<{ label: string; value: string; emphasize?: boolean }>,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '04 — Conditions financières', M.left, y, CONTENT_W)
+  let cy = sectionTitle(doc, '04 — Conditions financières', M.left, y, CONTENT_W, theme)
 
   rows.forEach((row, i) => {
     const ry = cy + i * 16
     if (row.emphasize) {
       doc.save()
-      doc.rect(M.left, ry - 3, CONTENT_W, 16).fill(C.brandSoft)
+      doc.rect(M.left, ry - 3, CONTENT_W, 16).fill(theme.accentSoft)
       doc.restore()
     } else if (i % 2 === 1) {
       doc.save()
@@ -284,17 +292,17 @@ function drawFinance(
     doc
       .font(row.emphasize ? 'Helvetica-Bold' : 'Helvetica')
       .fontSize(8.5)
-      .fillColor(row.emphasize ? C.brand : C.body)
+      .fillColor(row.emphasize ? theme.accent : C.body)
     text(doc, row.label, M.left + 8, ry, { width: CONTENT_W * 0.55 })
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(row.emphasize ? C.brand : C.ink)
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(row.emphasize ? theme.accent : C.ink)
     text(doc, row.value, M.left + 8, ry, { width: CONTENT_W - 16, align: 'right' })
   })
 
   return cy + rows.length * 16 + 12
 }
 
-function drawClauses(doc: Doc, y: number, clauses: string[]) {
-  let cy = sectionTitle(doc, '05 — Conditions générales', M.left, y, CONTENT_W)
+function drawClauses(doc: Doc, y: number, clauses: string[], theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '05 — Conditions générales', M.left, y, CONTENT_W, theme)
   const colW = (CONTENT_W - 16) / 2
   const left = clauses.slice(0, 3)
   const right = clauses.slice(3)
@@ -302,7 +310,7 @@ function drawClauses(doc: Doc, y: number, clauses: string[]) {
   left.forEach((clause, i) => {
     const iy = cy + i * 22
     doc.save()
-    doc.circle(M.left + 4, iy + 4, 1.6).fill(C.brand)
+    doc.circle(M.left + 4, iy + 4, 1.6).fill(theme.accent)
     doc.restore()
     doc.font('Helvetica').fontSize(7.5).fillColor(C.body)
     text(doc, clause, M.left + 12, iy, { width: colW - 8, lineGap: 1 })
@@ -311,7 +319,7 @@ function drawClauses(doc: Doc, y: number, clauses: string[]) {
     const iy = cy + i * 22
     const ix = M.left + colW + 16
     doc.save()
-    doc.circle(ix + 4, iy + 4, 1.6).fill(C.brand)
+    doc.circle(ix + 4, iy + 4, 1.6).fill(theme.accent)
     doc.restore()
     doc.font('Helvetica').fontSize(7.5).fillColor(C.body)
     text(doc, clause, ix + 12, iy, { width: colW - 8, lineGap: 1 })
@@ -320,15 +328,22 @@ function drawClauses(doc: Doc, y: number, clauses: string[]) {
   return cy + 3 * 22 + 10
 }
 
-function drawNotes(doc: Doc, y: number, notes: string) {
-  let cy = sectionTitle(doc, 'Observations', M.left, y, CONTENT_W)
+function drawNotes(doc: Doc, y: number, notes: string, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, 'Observations', M.left, y, CONTENT_W, theme)
   doc.font('Helvetica').fontSize(8).fillColor(C.body)
   text(doc, notes, M.left, cy, { width: CONTENT_W, lineGap: 1 })
   return cy + 22
 }
 
-function drawSignatures(doc: Doc, y: number, issuedOn: DateTime, clientName: string, company: string) {
-  let cy = sectionTitle(doc, '06 — Signatures', M.left, y, CONTENT_W)
+function drawSignatures(
+  doc: Doc,
+  y: number,
+  issuedOn: DateTime,
+  clientName: string,
+  company: string,
+  theme: DocumentTheme
+) {
+  let cy = sectionTitle(doc, '06 — Signatures', M.left, y, CONTENT_W, theme)
 
   doc.font('Helvetica').fontSize(8).fillColor(C.muted)
   text(doc, `Fait à Dakar, le ${formatDateFr(issuedOn)}`, M.left, cy)
@@ -447,6 +462,7 @@ export default class RentalContractService {
       'Le solde est exigible à la restitution, sauf accord contraire.',
     ]
 
+    const logo = await preparePdfLogo(logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',
@@ -463,20 +479,23 @@ export default class RentalContractService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
+      const theme = headerTheme(settings.documentHeaderColor)
+
       let y = drawHeader(
         doc,
         settings,
         contractRef,
         issuedOn,
         rental.status === 'Annulée',
-        logoAbsolutePath
+        logo,
+        theme
       )
       y = drawPartiesIntro(doc, y, settings.companyName, displayValue(client.fullName))
 
       const gap = 20
       const colW = (CONTENT_W - gap) / 2
-      const leftBottom = drawClientBlock(doc, M.left, y, colW, clientRows)
-      const rightBottom = drawVehicleBlock(doc, M.left + colW + gap, y, colW, vehicleRows)
+      const leftBottom = drawClientBlock(doc, M.left, y, colW, clientRows, theme)
+      const rightBottom = drawVehicleBlock(doc, M.left + colW + gap, y, colW, vehicleRows, theme)
       y = Math.max(leftBottom, rightBottom) + 14
 
       y = drawDuration(
@@ -485,16 +504,17 @@ export default class RentalContractService {
         formatDateFr(rental.startDate),
         formatDateFr(rental.endDate),
         finance.days,
-        rental.status
+        rental.status,
+        theme
       )
-      y = drawFinance(doc, y, financeRows)
-      y = drawClauses(doc, y, clauses)
+      y = drawFinance(doc, y, financeRows, theme)
+      y = drawClauses(doc, y, clauses, theme)
 
       if (rental.notes?.trim()) {
-        y = drawNotes(doc, y, rental.notes.trim())
+        y = drawNotes(doc, y, rental.notes.trim(), theme)
       }
 
-      drawSignatures(doc, y, issuedOn, displayValue(client.fullName), settings.companyName)
+      drawSignatures(doc, y, issuedOn, displayValue(client.fullName), settings.companyName, theme)
       drawFooter(doc, settings)
 
       doc.end()

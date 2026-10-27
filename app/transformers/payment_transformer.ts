@@ -11,6 +11,7 @@ export default class PaymentTransformer extends BaseTransformer<Payment> {
       'method',
       'reference',
       'notes',
+      'cancelledAt',
       'createdAt',
       'updatedAt',
     ])

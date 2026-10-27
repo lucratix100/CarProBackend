@@ -103,6 +103,7 @@ export const validationMessages: ValidationMessages = {
   'endDate.regex': 'La date de fin doit être au format AAAA-MM-JJ.',
   'dailyPrice.required': 'Veuillez indiquer le prix par jour.',
   'dailyPrice.min': 'Le prix par jour ne peut pas être négatif.',
+  'commissionPerDay.min': 'La commission par jour ne peut pas être négative.',
   'plate.required': 'Veuillez saisir l’immatriculation.',
   'fullName.required': 'Veuillez saisir le nom complet.',
   'phone.required': 'Veuillez saisir le téléphone.',

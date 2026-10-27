@@ -35,7 +35,16 @@ export default class AgencyPlanService {
     }
   }
 
+  assertStaffModuleOpen(agency: Agency | null | undefined) {
+    if (agency?.staffModuleEnabled) return
+    throw new Exception(
+      'Collaborateurs, validations et journal ne sont pas autorisés pour cette agence.',
+      { status: 403, code: 'E_STAFF_MODULE_DISABLED' }
+    )
+  }
+
   async assertCanInviteStaff(agency: Agency) {
+    this.assertStaffModuleOpen(agency)
     if (agency.staffPaused) {
       throw new Exception('L’équipe est en pause. Les invitations sont fermées.', {
         status: 422,

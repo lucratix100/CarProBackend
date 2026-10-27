@@ -11,6 +11,7 @@ import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 import { headerTheme } from '#services/document_header_color'
+import { preparePdfLogo } from '#services/image_compress_service'
 import {
   isOwnerCharge,
   scopeAppliedOwnerExpenses,
@@ -173,7 +174,7 @@ function sectionTitle(doc: Doc, title: string, y: number) {
   return cy + 22
 }
 
-function drawHeader(doc: Doc, data: OwnerStatementData) {
+function drawHeader(doc: Doc, data: OwnerStatementData, logo: Buffer | null) {
   const y = M.top
   const h = 62
   const logoX = M.left
@@ -187,11 +188,11 @@ function drawHeader(doc: Doc, data: OwnerStatementData) {
   doc.restore()
 
   let usedCustomLogo = false
-  if (data.logoAbsolutePath) {
+  if (logo) {
     doc.save()
     try {
       doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
-      doc.image(data.logoAbsolutePath, logoX, logoY, {
+      doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
         valign: 'center',
@@ -522,7 +523,7 @@ export default class OwnerStatementService {
       const end = isoDay(rental.endDate)
       if (!rentalOverlapsRange(start, end, from, to)) continue
 
-      const finance = await rentalFinancials(rental, settings.commissionPerDay)
+      const finance = await rentalFinancials(rental)
       totalNet += finance.netTotal
       lines.push({
         rentalId: rental.id,
@@ -599,6 +600,7 @@ export default class OwnerStatementService {
   }
 
   async generatePdf(data: OwnerStatementData) {
+    const logo = await preparePdfLogo(data.logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',
@@ -615,7 +617,7 @@ export default class OwnerStatementService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      let y = drawHeader(doc, data)
+      let y = drawHeader(doc, data, logo)
       y = drawMeta(doc, data, y)
       y = drawSummary(doc, data, y)
       y = drawRentals(doc, data, y)

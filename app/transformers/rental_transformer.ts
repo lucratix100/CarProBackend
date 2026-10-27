@@ -33,6 +33,7 @@ export default class RentalTransformer extends BaseTransformer<Rental> {
         'startDate',
         'endDate',
         'dailyPrice',
+        'commissionPerDay',
         'amountPaid',
         'status',
         'notes',

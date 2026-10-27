@@ -18,6 +18,17 @@ export default class VehicleExpensesController {
     return VehicleExpense.query().where('id', id).where('agencyId', agencyId).firstOrFail()
   }
 
+  #requireCancelReason(reason: unknown) {
+    const value = typeof reason === 'string' ? reason.trim() : ''
+    if (value.length < 2) {
+      throw new Exception('Indiquez un motif d’annulation (au moins 2 caractères).', {
+        status: 422,
+        code: 'E_CANCEL_REASON_REQUIRED',
+      })
+    }
+    return value
+  }
+
   #assertAchatAllowed(vehicle: Vehicle, type: string) {
     if (type === 'Achat' && vehicle.ownerId !== null) {
       throw new Exception(
@@ -83,7 +94,7 @@ export default class VehicleExpensesController {
 
     if (payload.cancel === true) {
       row.cancelledAt = DateTime.now()
-      row.cancelReason = payload.cancelReason ?? 'Annulée'
+      row.cancelReason = this.#requireCancelReason(payload.cancelReason)
       await row.save()
       return serialize(VehicleExpenseTransformer.transform(row))
     }
@@ -102,13 +113,17 @@ export default class VehicleExpensesController {
     return serialize(VehicleExpenseTransformer.transform(row))
   }
 
-  async destroy({ params, response, agencyId }: HttpContext) {
+  async destroy({ params, request, serialize, agencyId }: HttpContext) {
     const row = await this.#findExpense(params.id, agencyId!)
-    if (!row.cancelledAt) {
-      row.cancelledAt = DateTime.now()
-      row.cancelReason = 'Supprimée'
-      await row.save()
+    if (row.cancelledAt) {
+      throw new Exception('Cette dépense est déjà annulée.', {
+        status: 422,
+        code: 'E_EXPENSE_CANCELLED',
+      })
     }
-    return response.ok({ message: 'Dépense annulée.' })
+    row.cancelledAt = DateTime.now()
+    row.cancelReason = this.#requireCancelReason(request.input('cancelReason'))
+    await row.save()
+    return serialize(VehicleExpenseTransformer.transform(row))
   }
 }

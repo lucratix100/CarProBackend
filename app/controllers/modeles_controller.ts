@@ -4,16 +4,21 @@ import Modele from '#models/modele'
 import Marque from '#models/marque'
 import ModeleTransformer from '#transformers/modele_transformer'
 import { createModeleValidator } from '#validators/marque'
+import { whereVisibleCatalog } from '#services/catalog_scope'
 
 export default class ModelesController {
   /**
-   * Liste des modèles, filtrable par marqueId.
+   * Liste des modèles visibles, filtrable par marqueId.
    */
-  async index({ request, serialize }: HttpContext) {
+  async index({ request, serialize, agencyId }: HttpContext) {
     const marqueId = request.input('marqueId')
     const activeOnly = request.input('active') !== '0'
 
     const query = Modele.query().preload('marque').orderBy('name', 'asc')
+    whereVisibleCatalog(query, agencyId!)
+    query.whereHas('marque', (marqueQuery) => {
+      whereVisibleCatalog(marqueQuery, agencyId!)
+    })
     if (activeOnly) query.where('isActive', true)
     if (marqueId) query.where('marqueId', marqueId)
 
@@ -21,15 +26,17 @@ export default class ModelesController {
     return serialize(ModeleTransformer.transform(modeles).useVariant('withMarque'))
   }
 
-  async store({ request, response, serialize }: HttpContext) {
+  async store({ request, response, serialize, agencyId }: HttpContext) {
     const payload = await request.validateUsing(createModeleValidator)
-    await Marque.findOrFail(payload.marqueId)
+    const marqueQuery = Marque.query().where('id', payload.marqueId)
+    whereVisibleCatalog(marqueQuery, agencyId!)
+    await marqueQuery.firstOrFail()
 
-    const existing = await Modele.query()
+    const existing = Modele.query()
       .where('marqueId', payload.marqueId)
       .whereRaw('lower(name) = ?', [payload.name.toLowerCase()])
-      .first()
-    if (existing) {
+    whereVisibleCatalog(existing, agencyId!)
+    if (await existing.first()) {
       throw new Exception('Ce modèle existe déjà pour cette marque.', {
         status: 422,
         code: 'E_MODELE_TAKEN',
@@ -40,6 +47,7 @@ export default class ModelesController {
       marqueId: payload.marqueId,
       name: payload.name,
       isActive: payload.isActive ?? true,
+      agencyId: agencyId!,
     })
     await modele.load('marque')
 

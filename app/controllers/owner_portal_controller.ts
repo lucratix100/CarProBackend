@@ -86,7 +86,7 @@ export default class OwnerPortalController {
     let activeRentals = 0
 
     for (const rental of rentals) {
-      const finance = await rentalFinancials(rental, settings.commissionPerDay)
+      const finance = await rentalFinancials(rental)
       netRevenue += finance.netTotal
       daysRented += finance.days
       if (
@@ -217,7 +217,6 @@ export default class OwnerPortalController {
         code: 'E_NO_AGENCY',
       })
     }
-    const settings = await Setting.current(settingsAgencyId)
     const vehicleId = request.input('vehicleId')
 
     const vehicles = await Vehicle.query().where('ownerId', ownerId)
@@ -240,7 +239,7 @@ export default class OwnerPortalController {
     const rentals = await query
     const result = []
     for (const rental of rentals) {
-      const finance = await rentalFinancials(rental, settings.commissionPerDay)
+      const finance = await rentalFinancials(rental)
       const serialized = await serialize(RentalTransformer.transform(rental).useVariant('ownerView'))
       const base = (serialized as { data?: Record<string, unknown> }).data ?? serialized
       result.push({
@@ -266,7 +265,6 @@ export default class OwnerPortalController {
         code: 'E_NO_AGENCY',
       })
     }
-    const settings = await Setting.current(settingsAgencyId)
     const filterVehicleId = request.input('vehicleId')
       ? Number(request.input('vehicleId'))
       : null
@@ -315,7 +313,7 @@ export default class OwnerPortalController {
     const lines = []
 
     for (const rental of rentals) {
-      const finance = await rentalFinancials(rental, settings.commissionPerDay)
+      const finance = await rentalFinancials(rental)
       totalNet += finance.netTotal
       lines.push({
         rentalId: rental.id,

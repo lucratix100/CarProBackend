@@ -59,7 +59,10 @@ export default class InvoicesController {
     const base = (serialized as { data?: Record<string, unknown> }).data ?? serialized
     const amounts = invoiceAmounts(invoice.amountHt, Number(settings.tvaRate))
     const payments = await this.#payments.listForInvoice(invoice.id)
-    const amountPaid = payments.reduce((sum, payment) => sum + payment.amount, 0)
+    const amountPaid = payments.reduce(
+      (sum, payment) => (payment.cancelledAt ? sum : sum + payment.amount),
+      0
+    )
 
     return {
       ...base,
@@ -87,7 +90,30 @@ export default class InvoicesController {
     const data = await Promise.all(
       paginator.all().map((invoice) => this.#withAmounts(invoice, serialize))
     )
-    return { data, meta: paginationMeta(paginator, page, perPage) }
+    return {
+      data,
+      meta: paginationMeta(paginator, page, perPage),
+      summary: await this.#summary(agencyId!),
+    }
+  }
+
+  async #summary(agencyId: number) {
+    const count = async (status?: string) => {
+      const query = Invoice.query().where('agencyId', agencyId)
+      if (status) query.where('status', status)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+
+    const [total, paid, partial, pending, overdue] = await Promise.all([
+      count(),
+      count('Payée'),
+      count('Partiellement payée'),
+      count('En attente'),
+      count('En retard'),
+    ])
+
+    return { total, paid, partial, pending, overdue }
   }
 
   async store({ request, response, serialize, agencyId }: HttpContext) {
@@ -138,7 +164,10 @@ export default class InvoicesController {
   async update({ params, request, serialize, agencyId }: HttpContext) {
     const invoice = await this.#findScoped(params.id, agencyId!)
     const payload = await request.validateUsing(updateInvoiceValidator)
-    const paymentCount = await Payment.query().where('invoiceId', invoice.id).count('* as total')
+    const paymentCount = await Payment.query()
+      .where('invoiceId', invoice.id)
+      .whereNull('cancelledAt')
+      .count('* as total')
     const hasPayments = Number(paymentCount[0].$extras.total) > 0
 
     if (invoice.rentalId) {

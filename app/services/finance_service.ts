@@ -68,12 +68,24 @@ export function invoiceAmounts(amountHt: number, tvaRate: number) {
 }
 
 export async function rentalFinancials(
-  rental: Pick<Rental, 'startDate' | 'endDate' | 'dailyPrice'> & { agencyId?: number },
+  rental: Pick<Rental, 'startDate' | 'endDate' | 'dailyPrice'> & {
+    agencyId?: number
+    /** Commission figée à la création de la location. */
+    commissionPerDay?: number | null
+  },
   commissionPerDay?: number,
   tvaRate?: number
 ): Promise<RentalFinancials> {
   let commissionDay = commissionPerDay
   let rate = tvaRate
+
+  if (
+    commissionDay === undefined &&
+    rental.commissionPerDay !== undefined &&
+    rental.commissionPerDay !== null
+  ) {
+    commissionDay = Number(rental.commissionPerDay)
+  }
 
   if (commissionDay === undefined || rate === undefined) {
     if (!rental.agencyId) {

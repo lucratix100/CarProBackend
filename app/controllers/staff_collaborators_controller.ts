@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
 import User from '#models/user'
 import PermissionService from '#services/permission_service'
+import PasswordResetService from '#services/password_reset_service'
 import StaffInvitationService from '#services/staff_invitation_service'
 import {
   inviteStaffValidator,
@@ -49,12 +50,33 @@ export default class StaffCollaboratorsController {
     }
   }
 
+  async #summary(agencyId: number) {
+    const count = async (status?: string) => {
+      const query = User.query().where('agencyId', agencyId).where('role', 'staff')
+      if (status) query.where('status', status)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+    const [total, active, invited, suspended, blocked] = await Promise.all([
+      count(),
+      count('active'),
+      count('invited'),
+      count('suspended'),
+      count('blocked'),
+    ])
+    return { total, active, invited, suspended, blocked }
+  }
+
   async index({ request, serialize, agencyId }: HttpContext) {
+    const status = String(request.input('status') || '')
     const query = User.query()
       .where('agencyId', agencyId!)
       .where('role', 'staff')
       .preload('staffRole')
       .orderBy('fullName', 'asc')
+    if (['invited', 'active', 'suspended', 'blocked', 'revoked'].includes(status)) {
+      query.where('status', status)
+    }
 
     const users = isPaginatedRequest(request) ? null : await query
     if (users) {
@@ -71,7 +93,11 @@ export default class StaffCollaboratorsController {
     for (const user of paginator.all()) {
       items.push(await this.#serializeStaff(user, serialize))
     }
-    return { data: items, meta: paginationMeta(paginator, page, perPage) }
+    return {
+      data: items,
+      meta: paginationMeta(paginator, page, perPage),
+      summary: await this.#summary(agencyId!),
+    }
   }
 
   async store({ request, response, serialize, agencyId }: HttpContext) {
@@ -180,6 +206,45 @@ export default class StaffCollaboratorsController {
         code: 'E_RESEND_INVITE',
       })
     }
+  }
+
+  /**
+   * Renvoie un email de réinitialisation à un collaborateur déjà activé.
+   */
+  async resendPasswordEmail({ params, serialize, agencyId, auth, request }: HttpContext) {
+    const user = await this.#findStaff(params.id, agencyId!)
+    const actor = auth.use('api').getUserOrFail()
+
+    if (user.status !== 'active' || !user.passwordSetAt) {
+      throw new Exception(
+        'Ce collaborateur n’a pas encore activé son compte. Renvoyez plutôt l’invitation.',
+        { status: 422, code: 'E_NOT_ACTIVATED' }
+      )
+    }
+
+    try {
+      await new PasswordResetService().issueResetForUser(user, undefined, { strict: true })
+    } catch (error) {
+      throw new Exception((error as Error).message, {
+        status: 422,
+        code: 'E_MAIL_FAILED',
+      })
+    }
+
+    await this.#audit.log({
+      actor,
+      agencyId: agencyId!,
+      action: 'staff.password_email',
+      module: 'staff',
+      entityType: 'user',
+      entityId: user.id,
+      summary: `Email de réinitialisation envoyé à ${user.email}`,
+      ip: request.ip(),
+    })
+
+    return serialize({
+      message: `Email envoyé à ${user.email}. Le collaborateur peut choisir un nouveau mot de passe.`,
+    })
   }
 
   /**

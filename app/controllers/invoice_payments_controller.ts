@@ -117,6 +117,6 @@ export default class InvoicePaymentsController {
       })
     }
 
-    return response.ok({ message: 'Paiement supprimé.' })
+    return response.ok({ message: 'Paiement annulé. Il reste dans l’historique.' })
   }
 }

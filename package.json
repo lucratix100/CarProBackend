@@ -77,6 +77,7 @@
     "pdfkit": "^0.20.2",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
+    "sharp": "^0.35.5",
     "tesseract.js": "^7.0.0"
   },
   "hotHook": {
@@ -88,6 +89,7 @@
   "allowScripts": {
     "@swc/core": true,
     "better-sqlite3": true,
+    "sharp": true,
     "esbuild": true,
     "fsevents": true
   },

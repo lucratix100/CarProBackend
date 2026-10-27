@@ -11,7 +11,17 @@ import {
   resolveMaintenanceCharge,
   scopeAppliedExpenses,
 } from '#services/maintenance_expense_service'
+import { todayISO } from '#services/finance_service'
 import { isPaginatedRequest, paginationMeta, readPage, unwrapSerializedList } from '#services/pagination'
+
+function scopeSoon(query: ReturnType<typeof Maintenance.query>, today: string) {
+  return query
+    .whereNull('cancelledAt')
+    .where('performedOn', '>', today)
+    .whereNotNull('nextDueOn')
+    .where('nextDueOn', '>', today)
+    .whereRaw('next_due_on <= (?::date + alert_days)', [today])
+}
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -107,12 +117,21 @@ export default class MaintenancesController {
 
   #filteredQuery(
     agencyId: number,
-    filters: { vehicleId?: string | number; type?: string; includeCancelled?: boolean }
+    filters: {
+      vehicleId?: string | number
+      type?: string
+      includeCancelled?: boolean
+      alert?: string
+    }
   ) {
     const query = this.#scopedQuery(agencyId)
     if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
     if (filters.type) query.where('type', filters.type)
-    if (!filters.includeCancelled) query.whereNull('cancelledAt')
+    const today = todayISO()
+    if (filters.alert === 'cancelled') query.whereNotNull('cancelledAt')
+    else if (filters.alert === 'done') scopeAppliedExpenses(query, today)
+    else if (filters.alert === 'soon') scopeSoon(query, today)
+    else if (!filters.includeCancelled) query.whereNull('cancelledAt')
     return query
   }
 
@@ -127,13 +146,22 @@ export default class MaintenancesController {
       const rows = await scopeAppliedExpenses(base()).where('chargedTo', chargedTo).sum('cost as total')
       return Number(rows[0]?.$extras?.total ?? 0)
     }
-    const cancelledRows = await base().whereNotNull('cancelledAt').count('* as total')
-    const [owner, agency] = await Promise.all([sumCharged('owner'), sumCharged('agency')])
-    return {
-      owner,
-      agency,
-      cancelled: Number(cancelledRows[0]?.$extras?.total ?? 0),
+    const today = todayISO()
+    const count = async (apply: (query: ReturnType<typeof Maintenance.query>) => void) => {
+      const query = base()
+      apply(query)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
     }
+    const [owner, agency, total, done, soon, cancelled] = await Promise.all([
+      sumCharged('owner'),
+      sumCharged('agency'),
+      count((query) => query.whereNull('cancelledAt')),
+      count((query) => scopeAppliedExpenses(query, today)),
+      count((query) => scopeSoon(query, today)),
+      count((query) => query.whereNotNull('cancelledAt')),
+    ])
+    return { owner, agency, total, done, soon, cancelled }
   }
 
   async index({ request, serialize, agencyId }: HttpContext) {
@@ -141,7 +169,13 @@ export default class MaintenancesController {
     const type = request.input('type')
     const includeCancelled =
       request.input('includeCancelled') === 'true' || request.input('includeCancelled') === true
-    const filters = { vehicleId, type, includeCancelled }
+    const alert = String(request.input('alert') || '')
+    const filters = {
+      vehicleId,
+      type,
+      includeCancelled,
+      alert: alert === 'done' || alert === 'soon' || alert === 'cancelled' ? alert : undefined,
+    }
 
     if (!isPaginatedRequest(request)) {
       const rows = await this.#filteredQuery(agencyId!, filters)

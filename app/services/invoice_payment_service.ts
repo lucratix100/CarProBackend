@@ -26,7 +26,7 @@ export function resolveInvoiceStatus(totalPaid: number, amountTtc: number, renta
 
 export default class InvoicePaymentService {
   async totalPaid(invoiceId: number) {
-    const payments = await Payment.query().where('invoiceId', invoiceId)
+    const payments = await Payment.query().where('invoiceId', invoiceId).whereNull('cancelledAt')
     return payments.reduce((sum, payment) => sum + payment.amount, 0)
   }
 
@@ -53,7 +53,10 @@ export default class InvoicePaymentService {
   async ensureInitialPayment(invoice: Invoice, amount: number, note = 'Acompte initial') {
     if (amount <= 0) return null
 
-    const existing = await Payment.query().where('invoiceId', invoice.id).first()
+    const existing = await Payment.query()
+      .where('invoiceId', invoice.id)
+      .whereNull('cancelledAt')
+      .first()
     if (existing) return existing
 
     const payment = await Payment.create({
@@ -100,8 +103,15 @@ export default class InvoicePaymentService {
 
   async remove(paymentId: number) {
     const payment = await Payment.findOrFail(paymentId)
+    if (payment.cancelledAt) {
+      throw new Exception('Ce paiement est déjà annulé.', {
+        status: 422,
+        code: 'E_PAYMENT_ALREADY_CANCELLED',
+      })
+    }
     const invoice = await Invoice.findOrFail(payment.invoiceId)
-    await payment.delete()
+    payment.cancelledAt = DateTime.now()
+    await payment.save()
     await this.syncInvoice(invoice)
   }
 }

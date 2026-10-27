@@ -31,6 +31,7 @@ export const updateAgencyValidator = vine.create({
   clearMarketplacePublishBan: vine.boolean().optional(),
   vehicleLimit: vine.number().min(0).max(100000).nullable().optional(),
   staffLimit: vine.number().min(0).max(100000).nullable().optional(),
+  staffModuleEnabled: vine.boolean().optional(),
   staffPaused: vine.boolean().optional(),
   acceptOwnerApplications: vine.boolean().optional(),
 })

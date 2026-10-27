@@ -12,6 +12,7 @@ import RentalService from '#services/rental_service'
 import InvoicePaymentService from '#services/invoice_payment_service'
 import ClientLicenseUploadService from '#services/client_license_upload_service'
 import VehiclePhotoUploadService from '#services/vehicle_photo_upload_service'
+import { assertVehicleDeletable } from '#services/vehicle_deletion_guard'
 import AuditService from '#services/audit_service'
 import AdminNotificationService from '#services/admin_notification_service'
 import {
@@ -224,6 +225,10 @@ export default class ValidationService {
 
     await this.#applyRequest(request)
 
+    if (request.actionCode === 'vehicles.delete') {
+      request.vehicleId = null
+    }
+
     request.status = 'approved'
     request.reviewedByUserId = reviewer.id
     request.reviewedByName = reviewer.fullName ?? reviewer.email
@@ -242,7 +247,7 @@ export default class ValidationService {
       entityId: request.entityId,
       clientId: request.clientId,
       rentalId: request.rentalId,
-      vehicleId: request.vehicleId,
+      vehicleId: request.actionCode === 'vehicles.delete' ? null : request.vehicleId,
       oldValues: request.oldValues,
       newValues: request.newValues,
       summary: request.summary,
@@ -395,6 +400,7 @@ export default class ValidationService {
           .where('agencyId', request.agencyId)
           .preload('photos')
           .firstOrFail()
+        await assertVehicleDeletable(vehicle.id)
         const photos = new VehiclePhotoUploadService()
         for (const photo of vehicle.photos) {
           await photos.removeIfExists(photo.path)

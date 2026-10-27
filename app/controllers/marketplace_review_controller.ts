@@ -34,7 +34,7 @@ export default class MarketplaceReviewController {
   async forVehicle({ params, response }: HttpContext) {
     const vehicle = await Vehicle.query()
       .where('id', params.id)
-      .where('status', 'Disponible')
+      .whereIn('status', ['Disponible', 'Loué'])
       .where('complianceHold', false)
       .where('marketplacePublicationStatus', 'published')
       .whereHas('agency', (aq) => {

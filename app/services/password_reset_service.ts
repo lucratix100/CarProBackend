@@ -32,13 +32,17 @@ export default class PasswordResetService {
   /**
    * Émet un lien de reset pour un utilisateur authentifié (après vérif. mot de passe).
    */
-  async issueResetForUser(user: User, hours = PASSWORD_RESET_HOURS) {
+  async issueResetForUser(
+    user: User,
+    hours = PASSWORD_RESET_HOURS,
+    options?: { strict?: boolean }
+  ) {
     user.passwordResetToken = randomBytes(32).toString('hex')
     user.passwordResetExpiresAt = DateTime.now().plus({ hours })
     await user.save()
 
     const resetUrl = this.buildResetUrl(user.passwordResetToken!)
-    await this.dispatchEmail(user, resetUrl, hours)
+    await this.dispatchEmail(user, resetUrl, hours, options?.strict === true)
 
     return {
       message: `Un lien de changement de mot de passe a été envoyé à ${user.email}. Il est valable ${hours} h.`,
@@ -79,7 +83,7 @@ export default class PasswordResetService {
     return `${env.get('FRONTEND_URL').replace(/\/$/, '')}/reset-password/${token}`
   }
 
-  private async dispatchEmail(user: User, resetUrl: string, hours: number) {
+  private async dispatchEmail(user: User, resetUrl: string, hours: number, strict = false) {
     try {
       await mail.send(new PasswordResetNotification(user, resetUrl, hours))
       logger.info({ to: user.email }, '[password-reset] Email lien de réinitialisation envoyé')
@@ -88,6 +92,9 @@ export default class PasswordResetService {
         { err: error, to: user.email, resetUrl },
         '[password-reset] Échec envoi email — le token a bien été créé'
       )
+      if (strict) {
+        throw new Error('L’email n’a pas pu être envoyé. Réessayez dans un instant.')
+      }
     }
   }
 }

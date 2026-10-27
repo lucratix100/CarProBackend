@@ -19,6 +19,7 @@ export default class VehicleTransformer extends BaseTransformer<Vehicle> {
         'status',
         'mileage',
         'dailyPrice',
+        'commissionPerDay',
         'insuranceCompany',
         'insuranceExpiresAt',
         'technicalVisitAt',

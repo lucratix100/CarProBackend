@@ -105,6 +105,7 @@ export default class StaffInvitationService {
     }
 
     const agency = user.agencyId ? await Agency.find(user.agencyId) : null
+    this.#plan.assertStaffModuleOpen(agency)
     if (agency?.staffPaused) {
       throw new Exception('L’équipe est en pause. Les invitations sont fermées.', {
         status: 422,
@@ -118,7 +119,13 @@ export default class StaffInvitationService {
     await user.save()
 
     const activationUrl = this.buildActivationUrl(user.invitationToken!)
-    await this.dispatchInvitationEmail(user, agency, activationUrl)
+    const sent = await this.dispatchInvitationEmail(user, agency, activationUrl)
+    if (!sent) {
+      throw new Exception('L’email n’a pas pu être envoyé. Réessayez dans un instant.', {
+        status: 422,
+        code: 'E_MAIL_FAILED',
+      })
+    }
     return { user, activationUrl }
   }
 
@@ -155,6 +162,13 @@ export default class StaffInvitationService {
       })
     }
 
+    if (!user.agency?.staffModuleEnabled) {
+      throw new Exception(
+        'L’accès collaborateurs n’est pas autorisé pour cette agence.',
+        { status: 422, code: 'E_STAFF_MODULE_DISABLED' }
+      )
+    }
+
     if (user.agency?.staffPaused) {
       throw new Exception(
         'L’équipe de cette agence est en pause. Vous pourrez activer votre compte lorsque l’accès sera rétabli.',
@@ -189,11 +203,13 @@ export default class StaffInvitationService {
         { to: user.email, agency: agency?.name ?? null },
         '[invitation] Email collaborateur envoyé'
       )
+      return true
     } catch (error) {
       logger.error(
         { err: error, to: user.email, activationUrl },
         '[invitation] Échec envoi email collaborateur — le compte a bien été créé'
       )
+      return false
     }
   }
 

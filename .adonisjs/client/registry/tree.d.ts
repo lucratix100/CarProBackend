@@ -211,6 +211,7 @@ export interface ApiDefinition {
       update: typeof routes['staff.staff_collaborators.update']
       updateStatus: typeof routes['staff.staff_collaborators.update_status']
       resendInvitation: typeof routes['staff.staff_collaborators.resend_invitation']
+      resendPasswordEmail: typeof routes['staff.staff_collaborators.resend_password_email']
     }
   }
   staffCollaborators: {

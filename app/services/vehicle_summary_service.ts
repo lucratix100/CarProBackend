@@ -2,7 +2,6 @@ import Vehicle from '#models/vehicle'
 import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
 import VehicleExpense from '#models/vehicle_expense'
-import Setting from '#models/setting'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
 import {
   isExpenseApplied,
@@ -17,7 +16,6 @@ export type VehicleSummaryOptions = {
 
 export default class VehicleSummaryService {
   async build(vehicle: Vehicle, options: VehicleSummaryOptions = {}) {
-    const settings = await Setting.current(vehicle.agencyId)
     const today = todayISO()
     const isAgencyOwned = vehicle.ownerId === null
 
@@ -41,7 +39,6 @@ export default class VehicleSummaryService {
 
     const vehicleExpenses = await VehicleExpense.query()
       .where('vehicleId', vehicle.id)
-      .whereNull('cancelledAt')
       .orderBy('spentOn', 'desc')
       .orderBy('id', 'desc')
 
@@ -52,7 +49,7 @@ export default class VehicleSummaryService {
     const rentalLines = []
 
     for (const rental of rentals) {
-      const finance = await rentalFinancials(rental, settings.commissionPerDay)
+      const finance = await rentalFinancials(rental)
       daysRented += finance.days
       netRevenue += finance.netTotal
       grossRevenue += finance.grossTotal
@@ -115,13 +112,16 @@ export default class VehicleSummaryService {
     for (const row of vehicleExpenses) {
       const amount = Number(row.amount || 0)
       const spentIso = row.spentOn?.toISODate?.() ?? null
-      const applied = Boolean(spentIso && spentIso <= today)
-      if (!applied) continue
+      const cancelled = Boolean(row.cancelledAt)
+      const applied = !cancelled && Boolean(spentIso && spentIso <= today)
+      if (!applied && !cancelled) continue
 
-      if (row.type === 'Achat') {
-        purchaseCost += amount
-      } else {
-        otherOperatingExpenses += amount
+      if (applied) {
+        if (row.type === 'Achat') {
+          purchaseCost += amount
+        } else {
+          otherOperatingExpenses += amount
+        }
       }
 
       operatingExpenseLines.push({
@@ -135,7 +135,9 @@ export default class VehicleSummaryService {
         amount,
         provider: row.provider,
         description: row.notes,
-        isApplied: true,
+        isApplied: applied,
+        isCancelled: cancelled,
+        cancelReason: row.cancelReason,
       })
     }
 
@@ -164,6 +166,7 @@ export default class VehicleSummaryService {
     )
 
     const pendingVehicleExpenses = vehicleExpenses.filter((row) => {
+      if (row.cancelledAt) return false
       const spentIso = row.spentOn?.toISODate?.() ?? null
       return Boolean(spentIso && spentIso > today)
     })
@@ -186,8 +189,11 @@ export default class VehicleSummaryService {
         color: vehicle.color,
         mileage: vehicle.mileage,
         dailyPrice: options.ownerView
-          ? Math.max(0, vehicle.dailyPrice - settings.commissionPerDay)
+          ? Math.max(0, vehicle.dailyPrice - Number(vehicle.commissionPerDay))
           : vehicle.dailyPrice,
+        ...(options.ownerView
+          ? {}
+          : { commissionPerDay: Number(vehicle.commissionPerDay) }),
         insuranceCompany: vehicle.insuranceCompany,
         insuranceExpiresAt: vehicle.insuranceExpiresAt,
         technicalVisitAt: vehicle.technicalVisitAt,
@@ -211,7 +217,7 @@ export default class VehicleSummaryService {
         daysRented,
         netRevenue,
         ...(options.ownerView ? {} : { grossRevenue }),
-        expenseCount: expenseLines.length,
+        expenseCount: expenseLines.filter((line) => line.isApplied).length,
         totalExpenses,
         purchaseCost: isAgencyOwned ? purchaseCost : 0,
         maintenanceExpenses: maintenanceForBalance,

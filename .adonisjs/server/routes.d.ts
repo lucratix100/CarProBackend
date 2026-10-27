@@ -127,6 +127,7 @@ export type ScannedRoutes = {
     'staff.staff_collaborators.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'staff.staff_collaborators.update_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'staff.staff_collaborators.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.resend_password_email': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'staff_collaborators.my_permissions': { paramsTuple?: []; params?: {} }
     'validations.validations.settings': { paramsTuple?: []; params?: {} }
     'validations.validations.update_settings': { paramsTuple?: []; params?: {} }
@@ -398,6 +399,7 @@ export type ScannedRoutes = {
     'staff.staff_roles.store': { paramsTuple?: []; params?: {} }
     'staff.staff_collaborators.store': { paramsTuple?: []; params?: {} }
     'staff.staff_collaborators.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'staff.staff_collaborators.resend_password_email': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'validations.validations.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'validations.validations.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owner_portal.owner_portal.mark_all_notifications_read': { paramsTuple?: []; params?: {} }

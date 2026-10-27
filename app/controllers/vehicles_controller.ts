@@ -26,7 +26,9 @@ import { createVehicleValidator, updateVehicleValidator } from '#validators/vehi
 import AgencyPlanService from '#services/agency_plan_service'
 import AuditService from '#services/audit_service'
 import ValidationService, { pendingValidationResponse } from '#services/validation_service'
+import { assertVehicleDeletable } from '#services/vehicle_deletion_guard'
 import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
+import { whereVisibleCatalog } from '#services/catalog_scope'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -34,12 +36,14 @@ function toDate(value: string | null | undefined) {
   return DateTime.fromISO(value)
 }
 
-async function resolveMarqueModele(marqueId: number, modeleId: number) {
-  const marque = await Marque.findOrFail(marqueId)
-  const modele = await Modele.query()
-    .where('id', modeleId)
-    .where('marqueId', marqueId)
-    .first()
+async function resolveMarqueModele(marqueId: number, modeleId: number, agencyId: number) {
+  const marqueQuery = Marque.query().where('id', marqueId)
+  whereVisibleCatalog(marqueQuery, agencyId)
+  const marque = await marqueQuery.firstOrFail()
+
+  const modeleQuery = Modele.query().where('id', modeleId).where('marqueId', marqueId)
+  whereVisibleCatalog(modeleQuery, agencyId)
+  const modele = await modeleQuery.first()
 
   if (!modele) {
     throw new Exception('Ce modèle n’appartient pas à la marque sélectionnée.', {
@@ -201,13 +205,24 @@ export default class VehiclesController {
       return Number(rows[0]?.$extras?.total ?? 0)
     }
 
-    const [total, published, pending, draft] = await Promise.all([
+    const countStatus = async (status: string) => {
+      const rows = await this.#vehicleFilterQuery(agencyId, {
+        ownerId: filters.ownerId,
+        q: filters.q,
+        status,
+      }).count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+
+    const [total, published, pending, draft, rented, outOfService] = await Promise.all([
       countOf(),
       countOf('published'),
       countOf('pending_review'),
       countOf(['draft', 'rejected']),
+      countStatus('Loué'),
+      countStatus('Hors service'),
     ])
-    return { total, published, pending, draft }
+    return { total, published, pending, draft, rented, outOfService }
   }
 
   async index({ request, serialize, agencyId }: HttpContext) {
@@ -251,7 +266,11 @@ export default class VehiclesController {
       )
     }
 
-    const { marque, modele } = await resolveMarqueModele(payload.marqueId, payload.modeleId)
+    const { marque, modele } = await resolveMarqueModele(
+      payload.marqueId,
+      payload.modeleId,
+      agencyId!
+    )
 
     const existing = await Vehicle.query()
       .where('agencyId', agencyId!)
@@ -276,6 +295,9 @@ export default class VehiclesController {
       status: payload.status,
       mileage: payload.mileage ?? 0,
       dailyPrice: payload.dailyPrice,
+      commissionPerDay:
+        payload.commissionPerDay ??
+        (await Setting.current(agencyId!)).commissionPerDay,
       insuranceCompany: payload.insuranceCompany ?? null,
       insuranceExpiresAt: toDate(payload.insuranceExpiresAt) ?? null,
       technicalVisitAt: toDate(payload.technicalVisitAt) ?? null,
@@ -308,6 +330,7 @@ export default class VehiclesController {
         plate: vehicle.plate,
         status: vehicle.status,
         dailyPrice: vehicle.dailyPrice,
+        commissionPerDay: vehicle.commissionPerDay,
       },
       summary: `Création du véhicule ${vehicle.brand} ${vehicle.model} (${vehicle.plate})`,
       ip: request.ip(),
@@ -560,6 +583,7 @@ export default class VehiclesController {
     const beforeSnapshot = {
       status: vehicle.status,
       dailyPrice: vehicle.dailyPrice,
+      commissionPerDay: vehicle.commissionPerDay,
       plate: vehicle.plate,
       ownerId: vehicle.ownerId,
       mileage: vehicle.mileage,
@@ -614,7 +638,7 @@ export default class VehiclesController {
       nextMarqueId &&
       nextModeleId
     ) {
-      const { marque, modele } = await resolveMarqueModele(nextMarqueId, nextModeleId)
+      const { marque, modele } = await resolveMarqueModele(nextMarqueId, nextModeleId, agencyId!)
       vehicle.marqueId = marque.id
       vehicle.modeleId = modele.id
       vehicle.brand = marque.name
@@ -631,6 +655,7 @@ export default class VehiclesController {
       status: payload.status ?? vehicle.status,
       mileage: payload.mileage ?? vehicle.mileage,
       dailyPrice: payload.dailyPrice ?? vehicle.dailyPrice,
+      commissionPerDay: payload.commissionPerDay ?? vehicle.commissionPerDay,
       insuranceCompany:
         payload.insuranceCompany === undefined
           ? vehicle.insuranceCompany
@@ -677,6 +702,7 @@ export default class VehiclesController {
       newValues: {
         status: vehicle.status,
         dailyPrice: vehicle.dailyPrice,
+        commissionPerDay: vehicle.commissionPerDay,
         plate: vehicle.plate,
         ownerId: vehicle.ownerId,
         mileage: vehicle.mileage,
@@ -876,6 +902,8 @@ export default class VehiclesController {
     const vehicleId = vehicle.id
     const user = auth.use('api').getUserOrFail()
 
+    await assertVehicleDeletable(vehicleId)
+
     const gate = await this.#validation.gate({
       agencyId: agencyId!,
       actor: user,
@@ -907,7 +935,7 @@ export default class VehiclesController {
       module: 'vehicles',
       entityType: 'vehicle',
       entityId: vehicleId,
-      vehicleId,
+      vehicleId: null,
       oldValues: { label, plate },
       summary: `Suppression du véhicule ${label} (${plate})`,
       ip: request.ip(),

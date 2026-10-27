@@ -39,7 +39,19 @@ function luminance(hex: string) {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
 }
 
-export function headerTheme(value: string | null | undefined) {
+export type DocumentTheme = {
+  background: string
+  ink: string
+  muted: string
+  badge: string
+  badgeInk: string
+  /** Couleur d’accent pour titres, lignes et pastilles du corps. */
+  accent: string
+  /** Fond teinté pour blocs et lignes mises en avant. */
+  accentSoft: string
+}
+
+export function headerTheme(value: string | null | undefined): DocumentTheme {
   const background = normalizeHeaderColor(value)
   const light = luminance(background) > 0.62
   const badge = light ? mix(background, '#000000', 0.16) : mix(background, '#ffffff', 0.16)
@@ -49,5 +61,7 @@ export function headerTheme(value: string | null | undefined) {
     muted: light ? mix(background, '#0f172a', 0.55) : mix(background, '#ffffff', 0.72),
     badge,
     badgeInk: luminance(badge) > 0.62 ? '#0f172a' : '#ffffff',
+    accent: background,
+    accentSoft: mix(background, '#ffffff', 0.9),
   }
 }

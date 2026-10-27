@@ -20,7 +20,13 @@ export default class AuthMiddleware {
     const user = ctx.auth.use('api').user
     if (user?.role === 'staff' && user.agencyId) {
       const agency = await Agency.find(user.agencyId)
-      if (agency?.staffPaused) {
+      if (!agency?.staffModuleEnabled) {
+        throw new Exception(
+          'L’accès collaborateurs n’est pas autorisé pour cette agence.',
+          { status: 403, code: 'E_STAFF_MODULE_DISABLED' }
+        )
+      }
+      if (agency.staffPaused) {
         throw new Exception(
           'L’accès des collaborateurs est en pause. Contactez le gérant de votre agence.',
           { status: 403, code: 'E_STAFF_PAUSED' }

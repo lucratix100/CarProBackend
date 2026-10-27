@@ -13,6 +13,7 @@ export default class AgencyTransformer extends BaseTransformer<Agency> {
         'canUseCustomLogo',
         'vehicleLimit',
         'staffLimit',
+        'staffModuleEnabled',
         'staffPaused',
         'acceptOwnerApplications',
         'notes',

@@ -22,6 +22,7 @@ export default class OwnerTransformer extends BaseTransformer<Owner> {
   withUser() {
     return {
       ...this.toObject(),
+      vehiclesCount: Number(this.resource.$extras.vehicles_count ?? 0),
       user: this.resource.user
         ? {
             id: this.resource.user.id,

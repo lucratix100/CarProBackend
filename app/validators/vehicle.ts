@@ -20,6 +20,8 @@ export const createVehicleValidator = vine.create({
   status: vine.enum(vehicleStatuses),
   mileage: vine.number().min(0).optional(),
   dailyPrice: vine.number().min(0),
+  /** Absent : reprend la commission par défaut de l’agence. */
+  commissionPerDay: vine.number().min(0).optional(),
   /** Prix d’achat : crée automatiquement une dépense « Achat » (voitures agence uniquement). */
   purchasePrice: vine.number().min(0).optional(),
   purchaseDate: isoDate().optional(),
@@ -44,6 +46,7 @@ export const updateVehicleValidator = vine.create({
   status: vine.enum(vehicleStatuses).optional(),
   mileage: vine.number().min(0).optional(),
   dailyPrice: vine.number().min(0).optional(),
+  commissionPerDay: vine.number().min(0).optional(),
   insuranceCompany: vine.string().trim().maxLength(120).nullable().optional(),
   insuranceExpiresAt: isoDate().nullable().optional(),
   technicalVisitAt: isoDate().nullable().optional(),

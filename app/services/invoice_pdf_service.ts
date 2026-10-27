@@ -7,6 +7,7 @@ import Setting from '#models/setting'
 import { invoiceAmounts } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 import { headerTheme } from '#services/document_header_color'
+import { preparePdfLogo } from '#services/image_compress_service'
 
 const C = {
   brand: '#0f4a42',
@@ -101,7 +102,7 @@ function sectionTitle(doc: Doc, title: string, y: number) {
 
 function drawLogo(
   doc: Doc,
-  logoAbsolutePath: string | null,
+  logo: Buffer | null,
   logoX: number,
   logoY: number,
   logoSize: number,
@@ -109,11 +110,11 @@ function drawLogo(
   badgeInk: string
 ) {
   let usedCustomLogo = false
-  if (logoAbsolutePath) {
+  if (logo) {
     doc.save()
     try {
       doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
-      doc.image(logoAbsolutePath, logoX, logoY, {
+      doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
         valign: 'center',
@@ -140,7 +141,7 @@ function drawHeader(
   companyName: string,
   invoiceRef: string,
   issuedOn: DateTime,
-  logoAbsolutePath: string | null,
+  logo: Buffer | null,
   headerColor: string | null
 ) {
   const theme = headerTheme(headerColor)
@@ -154,7 +155,7 @@ function drawHeader(
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
   doc.restore()
 
-  drawLogo(doc, logoAbsolutePath, logoX, logoY, logoSize, theme.badge, theme.badgeInk)
+  drawLogo(doc, logo, logoX, logoY, logoSize, theme.badge, theme.badgeInk)
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
   text(doc, companyName, M.left + 48, y + 14)
@@ -338,7 +339,10 @@ export default class InvoicePdfService {
       const right = b.paidOn?.toISODate() ?? ''
       return left.localeCompare(right) || a.id - b.id
     })
-    const amountPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0)
+    const amountPaid = payments.reduce(
+      (sum, payment) => (payment.cancelledAt ? sum : sum + Number(payment.amount)),
+      0
+    )
     const balance = Math.max(0, amounts.ttc - amountPaid)
     const invoiceRef = `PCS-FAC-${String(invoice.id).padStart(5, '0')}`
     const client = invoice.client
@@ -382,11 +386,14 @@ export default class InvoicePdfService {
     ]
     const paymentRows = payments.map((payment) => ({
       paidOn: formatDateFr(payment.paidOn),
-      method: displayValue(payment.method),
+      method: payment.cancelledAt
+        ? `${displayValue(payment.method)} · Annulé`
+        : displayValue(payment.method),
       reference: displayValue(payment.reference),
       amount: formatCfa(Number(payment.amount)),
     }))
 
+    const logo = await preparePdfLogo(logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',
@@ -407,7 +414,7 @@ export default class InvoicePdfService {
         settings.companyName,
         invoiceRef,
         invoice.issuedOn,
-        logoAbsolutePath,
+        logo,
         settings.documentHeaderColor
       )
       y = drawParties(doc, y, clientRows, invoiceRows, invoice.status)

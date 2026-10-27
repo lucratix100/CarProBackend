@@ -48,7 +48,7 @@ export default class MarketplaceBookingsController {
   async #publishedVehicle(vehicleId: number) {
     const vehicle = await Vehicle.query()
       .where('id', vehicleId)
-      .where('status', 'Disponible')
+      .whereIn('status', ['Disponible', 'Loué'])
       .where('complianceHold', false)
       .where('marketplacePublicationStatus', 'published')
       .whereHas('agency', (aq) => {

@@ -32,17 +32,21 @@ export default class InvitationsController {
     const staffUser = await staffInvitation.findValidInvitation(params.token)
 
     if (staffUser) {
+      const moduleClosed = !staffUser.agency?.staffModuleEnabled
       const paused = Boolean(staffUser.agency?.staffPaused)
+      const activationBlocked = moduleClosed || paused
       return serialize({
         role: 'staff',
         email: staffUser.email,
         fullName: staffUser.fullName,
         expiresAt: staffUser.invitationExpiresAt,
         terms: PLATFORM_TERMS,
-        activationBlocked: paused,
-        message: paused
-          ? 'L’équipe de cette agence est en pause. Vous pourrez activer votre compte lorsque l’accès sera rétabli.'
-          : 'Définissez un mot de passe personnel et acceptez les conditions pour activer votre compte collaborateur.',
+        activationBlocked,
+        message: moduleClosed
+          ? 'L’accès collaborateurs n’est pas autorisé pour cette agence.'
+          : paused
+            ? 'L’équipe de cette agence est en pause. Vous pourrez activer votre compte lorsque l’accès sera rétabli.'
+            : 'Définissez un mot de passe personnel et acceptez les conditions pour activer votre compte collaborateur.',
       })
     }
 

@@ -1,9 +1,15 @@
 import { mkdir, unlink, access } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
+import { join } from 'node:path'
 import app from '@adonisjs/core/services/app'
 import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
 import type { HttpContext } from '@adonisjs/core/http'
+import {
+  INCOMING_IMAGE_BYTES,
+  INCOMING_IMAGE_LABEL,
+  writeCompressedImage,
+} from '#services/image_compress_service'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
 /** Taille max bannière : 1,5 Mo */
@@ -39,7 +45,7 @@ export default class BannerUploadService {
 
   #tooLarge() {
     return new Exception(
-      `Bannière : l’image dépasse ${MAX_BANNER_LABEL}. Compressez-la (max ${MAX_BANNER_LABEL}).`,
+      `Bannière : l’image dépasse ${INCOMING_IMAGE_LABEL}. Choisissez une image plus légère (max ${INCOMING_IMAGE_LABEL}, réduite automatiquement sous ${MAX_BANNER_LABEL}).`,
       {
         status: 422,
         code: 'E_BANNER_IMAGE_TOO_LARGE',
@@ -50,16 +56,16 @@ export default class BannerUploadService {
   validateFile(file: MultipartFile | null) {
     if (!file) return null
 
-    if (typeof file.size === 'number' && file.size > MAX_BANNER_BYTES) {
+    if (typeof file.size === 'number' && file.size > INCOMING_IMAGE_BYTES) {
       throw this.#tooLarge()
     }
 
-    file.sizeLimit = MAX_BANNER_BYTES
+    file.sizeLimit = INCOMING_IMAGE_BYTES
     file.allowedExtensions = ALLOWED_EXTENSIONS
     file.validate()
 
     if (!file.isValid) {
-      if (isSizeError(file) || (typeof file.size === 'number' && file.size > MAX_BANNER_BYTES)) {
+      if (isSizeError(file) || (typeof file.size === 'number' && file.size > INCOMING_IMAGE_BYTES)) {
         throw this.#tooLarge()
       }
       const detail = file.errors.map((e) => e.message).join(' ')
@@ -82,11 +88,26 @@ export default class BannerUploadService {
 
   async store(file: MultipartFile, bannerId: number) {
     await this.ensureStorage()
-    const ext = (file.extname || 'png').toLowerCase()
-    const fileName = `banner-${bannerId}-${Date.now()}.${ext}`
-    await file.move(this.storageDir(), { name: fileName, overwrite: true })
+    if (!file.isValid || !file.tmpPath) {
+      throw new Exception('Impossible d’enregistrer l’image de la bannière.', {
+        status: 500,
+        code: 'E_BANNER_IMAGE_UPLOAD_FAILED',
+      })
+    }
 
-    if (!file.isValid || file.errors.length) {
+    const fileName = `banner-${bannerId}-${Date.now()}.jpg`
+    const destination = join(this.storageDir(), fileName)
+    try {
+      await writeCompressedImage(file.tmpPath, destination, {
+        maxWidth: 1920,
+        maxBytes: MAX_BANNER_BYTES,
+        format: 'jpeg',
+      })
+    } catch (error) {
+      await unlink(destination).catch(() => {})
+      if (error instanceof Error && error.message === 'IMAGE_STILL_TOO_LARGE') {
+        throw this.#tooLarge()
+      }
       throw new Exception('Impossible d’enregistrer l’image de la bannière.', {
         status: 500,
         code: 'E_BANNER_IMAGE_UPLOAD_FAILED',

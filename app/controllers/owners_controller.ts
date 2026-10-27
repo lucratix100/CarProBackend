@@ -27,8 +27,37 @@ export default class OwnersController {
   /**
    * List all vehicle owners (admin).
    */
+  #scoped(agencyId: number) {
+    return Owner.query().where('agencyId', agencyId).preload('user').withCount('vehicles')
+  }
+
+  async #summary(agencyId: number) {
+    const count = async (apply?: (query: ReturnType<typeof Owner.query>) => void) => {
+      const query = Owner.query().where('agencyId', agencyId)
+      apply?.(query)
+      const rows = await query.count('* as total')
+      return Number(rows[0]?.$extras?.total ?? 0)
+    }
+
+    const [total, active, inactive, invited] = await Promise.all([
+      count(),
+      count((query) => query.where('isActive', true)),
+      count((query) => query.where('isActive', false)),
+      count((query) => query.whereHas('user', (user) => user.where('status', 'invited'))),
+    ])
+
+    return { total, active, inactive, invited }
+  }
+
   async index({ request, serialize, agencyId }: HttpContext) {
-    const query = Owner.query().where('agencyId', agencyId!).preload('user').orderBy('id', 'desc')
+    const status = String(request.input('status') || '')
+    const query = this.#scoped(agencyId!)
+    if (status === 'active') query.where('isActive', true)
+    else if (status === 'inactive') query.where('isActive', false)
+    else if (status === 'invited') {
+      query.whereHas('user', (user) => user.where('status', 'invited'))
+    }
+    query.orderBy('id', 'desc')
 
     if (!isPaginatedRequest(request)) {
       const owners = await query
@@ -43,6 +72,7 @@ export default class OwnersController {
     return {
       data: unwrapSerializedList(serialized),
       meta: paginationMeta(paginator, page, perPage),
+      summary: await this.#summary(agencyId!),
     }
   }
 

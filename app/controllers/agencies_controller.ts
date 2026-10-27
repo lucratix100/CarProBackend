@@ -197,6 +197,7 @@ export default class AgenciesController {
             publishOnMarketplace: false,
             vehicleLimit: Math.trunc(payload.vehicleLimit),
             staffLimit: Math.trunc(payload.staffLimit),
+            staffModuleEnabled: Math.trunc(payload.staffLimit) > 0,
             staffPaused: false,
             acceptOwnerApplications: false,
           },
@@ -332,6 +333,13 @@ export default class AgenciesController {
     const pauseChanged =
       payload.staffPaused !== undefined && payload.staffPaused !== agency.staffPaused
     const nextPaused = payload.staffPaused === undefined ? agency.staffPaused : payload.staffPaused
+    const moduleChanged =
+      payload.staffModuleEnabled !== undefined &&
+      payload.staffModuleEnabled !== agency.staffModuleEnabled
+    const nextModuleEnabled =
+      payload.staffModuleEnabled === undefined
+        ? agency.staffModuleEnabled
+        : payload.staffModuleEnabled
 
     agency.merge({
       name: payload.name ?? agency.name,
@@ -360,6 +368,7 @@ export default class AgenciesController {
           : payload.staffLimit === null
             ? null
             : Math.trunc(payload.staffLimit),
+      staffModuleEnabled: nextModuleEnabled,
       staffPaused: nextPaused,
       acceptOwnerApplications:
         payload.acceptOwnerApplications === undefined
@@ -375,9 +384,9 @@ export default class AgenciesController {
     await agency.save()
     await agency.load('city')
 
-    if (pauseChanged) {
+    if (pauseChanged || (moduleChanged && !agency.staffModuleEnabled)) {
       await this.#plan.extendInvitedExpirations(agency.id)
-      if (agency.staffPaused) {
+      if (agency.staffPaused || !agency.staffModuleEnabled) {
         await this.#plan.revokeStaffSessions(agency.id)
       }
     }

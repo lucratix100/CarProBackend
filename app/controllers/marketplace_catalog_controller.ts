@@ -78,7 +78,7 @@ export default class MarketplaceCatalogController {
 
   #publishedVehicleQuery() {
     return Vehicle.query()
-      .where('status', 'Disponible')
+      .whereIn('status', ['Disponible', 'Loué'])
       .where('complianceHold', false)
       .where('marketplacePublicationStatus', 'published')
       .whereHas('agency', (agencyQuery) => {
@@ -159,14 +159,6 @@ export default class MarketplaceCatalogController {
     if (sort === 'rating_desc') {
       const allRows = await query.orderBy('dailyPrice', 'asc').limit(200)
       rows = allRows
-      if (startDate && endDate) {
-        const available: Vehicle[] = []
-        for (const vehicle of rows) {
-          const conflict = await this.#rentals.findConflict(vehicle.id, startDate, endDate)
-          if (!conflict) available.push(vehicle)
-        }
-        rows = available
-      }
       const agencyRatings = await this.#reviews.aggregatesForAgencies(
         rows.map((v) => v.agencyId).filter(Boolean)
       )
@@ -186,6 +178,14 @@ export default class MarketplaceCatalogController {
       meta.lastPage = Math.max(1, Math.ceil(rows.length / perPage))
       const offset = (page - 1) * perPage
       const pageRows = rows.slice(offset, offset + perPage)
+      const busyIds =
+        startDate && endDate
+          ? await this.#rentals.conflictingVehicleIds(
+              pageRows.map((vehicle) => vehicle.id),
+              startDate,
+              endDate
+            )
+          : null
       return response.ok({
         data: pageRows.map((vehicle) => {
           const rating = agencyRatings.get(vehicle.agencyId) ?? { avg: null, count: 0 }
@@ -198,6 +198,8 @@ export default class MarketplaceCatalogController {
             fuel: vehicle.fuel,
             vehicleType: vehicle.vehicleType,
             dailyPrice: vehicle.dailyPrice,
+            status: vehicle.status,
+            availableForPeriod: busyIds ? !busyIds.has(vehicle.id) : null,
             label: vehicle.label,
             ratingAvg: rating.avg,
             ratingCount: rating.count,
@@ -219,14 +221,14 @@ export default class MarketplaceCatalogController {
     const paginated = await query.orderBy('dailyPrice', priceOrder).paginate(page, perPage)
     rows = paginated.all()
 
-    if (startDate && endDate) {
-      const available: Vehicle[] = []
-      for (const vehicle of rows) {
-        const conflict = await this.#rentals.findConflict(vehicle.id, startDate, endDate)
-        if (!conflict) available.push(vehicle)
-      }
-      rows = available
-    }
+    const busyIds =
+      startDate && endDate
+        ? await this.#rentals.conflictingVehicleIds(
+            rows.map((vehicle) => vehicle.id),
+            startDate,
+            endDate
+          )
+        : null
 
     const agencyRatings = await this.#reviews.aggregatesForAgencies(
       rows.map((v) => v.agencyId).filter(Boolean)
@@ -245,27 +247,29 @@ export default class MarketplaceCatalogController {
           year: vehicle.year,
           color: vehicle.color,
           fuel: vehicle.fuel,
-          vehicleType: vehicle.vehicleType,
-          dailyPrice: vehicle.dailyPrice,
-          label: vehicle.label,
-          ratingAvg: rating.avg,
-          ratingCount: rating.count,
-          agency: this.#agencyPayload(vehicle.agency, {
-            settings: settingsByAgency.get(vehicle.agencyId) ?? null,
+            vehicleType: vehicle.vehicleType,
+            dailyPrice: vehicle.dailyPrice,
+            status: vehicle.status,
+            availableForPeriod: busyIds ? !busyIds.has(vehicle.id) : null,
+            label: vehicle.label,
             ratingAvg: rating.avg,
             ratingCount: rating.count,
-          }),
-          marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
-          modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
-          ...this.#photoUrls(vehicle),
-        }
-      }),
-      meta: {
-        total: startDate && endDate ? rows.length : paginated.total,
-        perPage: paginated.perPage,
-        currentPage: paginated.currentPage,
-        lastPage: startDate && endDate ? 1 : paginated.lastPage,
-      },
+            agency: this.#agencyPayload(vehicle.agency, {
+              settings: settingsByAgency.get(vehicle.agencyId) ?? null,
+              ratingAvg: rating.avg,
+              ratingCount: rating.count,
+            }),
+            marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
+            modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
+            ...this.#photoUrls(vehicle),
+          }
+        }),
+        meta: {
+          total: paginated.total,
+          perPage: paginated.perPage,
+          currentPage: paginated.currentPage,
+          lastPage: paginated.lastPage,
+        },
     })
   }
 
@@ -295,6 +299,7 @@ export default class MarketplaceCatalogController {
       vehicleType: vehicle.vehicleType,
       mileage: vehicle.mileage,
       dailyPrice: vehicle.dailyPrice,
+      status: vehicle.status,
       label: vehicle.label,
       ratingAvg: agencyRating.avg,
       ratingCount: agencyRating.count,
