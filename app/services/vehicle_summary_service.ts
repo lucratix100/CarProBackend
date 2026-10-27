@@ -23,7 +23,7 @@ export default class VehicleSummaryService {
       .where('vehicleId', vehicle.id)
       .whereNot('status', 'Annulée')
       .preload('client')
-      .orderBy('startDate', 'desc')
+      .orderBy('startDate', 'desc') 
 
     const allMaintenances = await Maintenance.query()
       .where('vehicleId', vehicle.id)
