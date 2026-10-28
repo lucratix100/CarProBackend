@@ -357,7 +357,7 @@ export default class PartnerApplicationService {
     const approved = relevant.find((row) => row.status === 'approved')
     if (approved) {
       return approved.type === 'agency'
-        ? 'Vous avez déjà une agence sur carPro.'
+        ? 'Vous avez déjà une agence sur mobiprofil.'
         : 'Vous avez déjà un compte propriétaire.'
     }
     return null

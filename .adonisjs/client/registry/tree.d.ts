@@ -40,6 +40,7 @@ export interface ApiDefinition {
       rejectLogo: typeof routes['agencies.agencies.reject_logo']
       inviteAdmin: typeof routes['agencies.agencies.invite_admin']
       resendAdminInvitation: typeof routes['agencies.agencies.resend_admin_invitation']
+      reactivateAdmin: typeof routes['agencies.agencies.reactivate_admin']
       revokeAdmin: typeof routes['agencies.agencies.revoke_admin']
     }
   }
@@ -85,6 +86,8 @@ export interface ApiDefinition {
       index: typeof routes['owners.owners.index']
       store: typeof routes['owners.owners.store']
       statement: typeof routes['owners.owners.statement']
+      emailStatement: typeof routes['owners.owners.email_statement']
+      account: typeof routes['owners.owners.account']
       show: typeof routes['owners.owners.show']
       update: typeof routes['owners.owners.update']
       destroy: typeof routes['owners.owners.destroy']
@@ -177,6 +180,15 @@ export interface ApiDefinition {
       show: typeof routes['maintenances.maintenances.show']
       update: typeof routes['maintenances.maintenances.update']
       destroy: typeof routes['maintenances.maintenances.destroy']
+    }
+  }
+  complianceDocuments: {
+    complianceDocuments: {
+      index: typeof routes['complianceDocuments.compliance_documents.index']
+      store: typeof routes['complianceDocuments.compliance_documents.store']
+      show: typeof routes['complianceDocuments.compliance_documents.show']
+      update: typeof routes['complianceDocuments.compliance_documents.update']
+      destroy: typeof routes['complianceDocuments.compliance_documents.destroy']
     }
   }
   settings: {

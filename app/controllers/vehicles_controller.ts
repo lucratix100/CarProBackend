@@ -22,6 +22,12 @@ import Setting from '#models/setting'
 import MarketplacePublicationModerationService from '#services/marketplace_publication_moderation_service'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { isExpenseApplied, isOwnerCharge } from '#services/maintenance_expense_service'
+import {
+  complianceDocumentsForVehicles,
+  complianceKindLabel,
+  complianceSpentOn,
+  isComplianceCostApplied,
+} from '#services/compliance_document_service'
 import { createVehicleValidator, updateVehicleValidator } from '#validators/vehicle'
 import AgencyPlanService from '#services/agency_plan_service'
 import AuditService from '#services/audit_service'
@@ -554,6 +560,26 @@ export default class VehiclesController {
       }
     })
 
+    const documents = await complianceDocumentsForVehicles([vehicle.id])
+    for (const row of documents) {
+      const cost = Number(row.cost || 0)
+      const applied = isComplianceCostApplied(row)
+      if (applied) totalExpenses += cost
+      expenses.push({
+        maintenanceId: row.id,
+        vehicleId: row.vehicleId,
+        type: complianceKindLabel(row.kind),
+        performedOn: complianceSpentOn(row),
+        cost,
+        chargedTo: isOwnerCharge(vehicle.ownerId, row.chargedTo) ? 'owner' : 'agency',
+        mileage: null,
+        provider: row.provider,
+        nextDueOn: row.expiresOn,
+        description: row.notes,
+        isApplied: applied,
+      })
+    }
+
     return serialize({
       vehicle: {
         id: vehicle.id,
@@ -780,7 +806,7 @@ export default class VehiclesController {
 
     if (!agency.publishOnMarketplace) {
       throw new Exception(
-        'Votre agence n’est pas encore publiée sur le catalogue carPro. Contactez le support.',
+        'Votre agence n’est pas encore publiée sur le catalogue mobiprofil. Contactez le support.',
         { status: 422, code: 'E_AGENCY_NOT_ON_MARKETPLACE' }
       )
     }
@@ -858,7 +884,7 @@ export default class VehiclesController {
 
     return response.ok({
       ...(await this.#withPhotos(vehicle, serialize)),
-      message: 'Demande envoyée. carPro vérifiera l’annonce avant publication.',
+      message: 'Demande envoyée. mobiprofil vérifiera l’annonce avant publication.',
     })
   }
 
@@ -957,7 +983,7 @@ export default class VehiclesController {
     await safeNotify(ownerId, {
       type: OWNER_NOTIFICATION_TYPES.VEHICLE_REMOVED,
       title: 'Véhicule retiré de votre flotte',
-      body: `${label} (${plate}) a été supprimé de la gestion PCS.`,
+      body: `${label} (${plate}) a été supprimé de la gestion mobiprofil.`,
       href: '/portal/vehicles',
       meta: { vehicleId },
     })

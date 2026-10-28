@@ -1,13 +1,20 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
+import mail from '@adonisjs/mail/services/main'
 import Owner from '#models/owner'
 import OwnerInvitationService from '#services/owner_invitation_service'
 import OwnerNotificationService from '#services/owner_notification_service'
 import OwnerStatementService from '#services/owner_statement_service'
 import OwnerTransformer from '#transformers/owner_transformer'
+import OwnerStatementNotification from '#mails/owner_statement_notification'
 import { OWNER_NOTIFICATION_TYPES } from '#constants/owner_notification_types'
 import { createOwnerValidator, updateOwnerValidator } from '#validators/owner'
 import { isPaginatedRequest, paginationMeta, readPage, unwrapSerializedList } from '#services/pagination'
+
+function parseIsoDateInput(value: unknown) {
+  const text = String(value ?? '').trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : undefined
+}
 
 async function safeNotify(ownerId: number, payload: Parameters<OwnerNotificationService['notify']>[1]) {
   try {
@@ -109,8 +116,41 @@ export default class OwnersController {
    * Show one owner (admin).
    */
   async show({ params, serialize, agencyId }: HttpContext) {
-    const owner = await this.#findScoped(params.id, agencyId!)
+    const owner = await Owner.query()
+      .where('id', params.id)
+      .where('agencyId', agencyId!)
+      .preload('user')
+      .withCount('vehicles')
+      .firstOrFail()
     return serialize(OwnerTransformer.transform(owner).useVariant('withUser'))
+  }
+
+  /**
+   * Owner account summary for a period (vehicles, revenues, expenses).
+   * Query: from, to (ISO dates, optional).
+   */
+  async account({ params, request, agencyId }: HttpContext) {
+    const data = await this.#statementService.build(Number(params.id), agencyId!, {
+      from: parseIsoDateInput(request.input('from')),
+      to: parseIsoDateInput(request.input('to')),
+    })
+
+    return {
+      ownerId: data.ownerId,
+      ownerName: data.ownerName,
+      ownerEmail: data.ownerEmail,
+      ownerPhone: data.ownerPhone,
+      companyName: data.companyName,
+      from: data.from,
+      to: data.to,
+      issuedOn: data.issuedOn.toISODate(),
+      totalNet: data.totalNet,
+      totalExpenses: data.totalExpenses,
+      balance: data.balance,
+      lines: data.lines,
+      expenses: data.expenses,
+      byVehicle: data.byVehicle,
+    }
   }
 
   /**
@@ -119,8 +159,8 @@ export default class OwnersController {
    */
   async statement({ params, request, response, agencyId }: HttpContext) {
     const data = await this.#statementService.build(Number(params.id), agencyId!, {
-      from: request.input('from'),
-      to: request.input('to'),
+      from: parseIsoDateInput(request.input('from')),
+      to: parseIsoDateInput(request.input('to')),
     })
     const pdf = await this.#statementService.generatePdf(data)
     const fromSlug = data.from ?? 'debut'
@@ -130,6 +170,57 @@ export default class OwnersController {
     response.header('Content-Type', 'application/pdf')
     response.header('Content-Disposition', `inline; filename="${filename}"`)
     return response.send(pdf)
+  }
+
+  /**
+   * Email the owner statement PDF for a period (admin).
+   * Body/query: from, to (ISO dates, optional).
+   */
+  async emailStatement({ params, request, response, agencyId }: HttpContext) {
+    const from = parseIsoDateInput(request.input('from'))
+    const to = parseIsoDateInput(request.input('to'))
+    const data = await this.#statementService.build(Number(params.id), agencyId!, { from, to })
+
+    if (!data.ownerEmail) {
+      throw new Exception('Ce propriétaire n’a pas d’adresse e-mail.', {
+        status: 422,
+        code: 'E_OWNER_NO_EMAIL',
+      })
+    }
+
+    const pdf = await this.#statementService.generatePdf(data)
+    const fromSlug = data.from ?? 'debut'
+    const toSlug = data.to ?? 'fin'
+    const filename = `releve-compte-${data.ownerId}-${fromSlug}_${toSlug}.pdf`
+
+    try {
+      await mail.send(
+        new OwnerStatementNotification({
+          email: data.ownerEmail,
+          fullName: data.ownerName,
+          companyName: data.companyName,
+          from: data.from,
+          to: data.to,
+          totalNet: data.totalNet,
+          totalExpenses: data.totalExpenses,
+          balance: data.balance,
+          filename,
+          pdf,
+        })
+      )
+    } catch {
+      throw new Exception('Impossible d’envoyer le relevé par e-mail pour le moment.', {
+        status: 502,
+        code: 'E_STATEMENT_EMAIL',
+      })
+    }
+
+    return response.ok({
+      message: `Relevé envoyé à ${data.ownerEmail}.`,
+      email: data.ownerEmail,
+      from: data.from,
+      to: data.to,
+    })
   }
 
   /**
@@ -179,14 +270,14 @@ export default class OwnersController {
       await safeNotify(owner.id, {
         type: OWNER_NOTIFICATION_TYPES.ACCOUNT_ACTIVATED,
         title: 'Compte réactivé',
-        body: 'Votre accès au portail propriétaire a été réactivé par PCS.',
+        body: 'Votre accès au portail propriétaire a été réactivé par mobiprofil.',
         href: '/portal',
       })
     } else if (becameInactive) {
       await safeNotify(owner.id, {
         type: OWNER_NOTIFICATION_TYPES.ACCOUNT_DEACTIVATED,
         title: 'Compte désactivé',
-        body: 'Votre accès au portail propriétaire a été désactivé par PCS.',
+        body: 'Votre accès au portail propriétaire a été désactivé par mobiprofil.',
         href: '/portal',
       })
     }
@@ -208,7 +299,7 @@ export default class OwnersController {
     await safeNotify(owner.id, {
       type: OWNER_NOTIFICATION_TYPES.ACCOUNT_DEACTIVATED,
       title: 'Compte révoqué',
-      body: 'Votre accès au portail propriétaire a été révoqué par PCS.',
+      body: 'Votre accès au portail propriétaire a été révoqué par mobiprofil.',
       href: '/portal',
     })
 

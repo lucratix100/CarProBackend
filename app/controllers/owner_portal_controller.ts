@@ -6,6 +6,11 @@ import Maintenance from '#models/maintenance'
 import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
+import {
+  appliedOwnerComplianceCosts,
+  complianceKindLabel,
+  complianceSpentIso,
+} from '#services/compliance_document_service'
 import { scopeAppliedOwnerExpenses } from '#services/maintenance_expense_service'
 import VehicleSummaryService from '#services/vehicle_summary_service'
 import OwnerNotificationService from '#services/owner_notification_service'
@@ -98,7 +103,12 @@ export default class OwnerPortalController {
       }
     }
 
-    const totalExpenses = maintenances.reduce((sum, row) => sum + Number(row.cost || 0), 0)
+    const totalExpenses =
+      maintenances.reduce((sum, row) => sum + Number(row.cost || 0), 0) +
+      (await appliedOwnerComplianceCosts(vehicleIds)).reduce(
+        (sum, row) => sum + Number(row.cost || 0),
+        0
+      )
     const publicLogo =
       agency && settings ? resolvePublicLogoPath(agency, settings) : null
 
@@ -176,22 +186,42 @@ export default class OwnerPortalController {
       .orderBy('performedOn', 'desc')
       .orderBy('id', 'desc')) as Maintenance[]
 
+    const documents = await appliedOwnerComplianceCosts([vehicle.id])
+
     let totalExpenses = 0
-    const expenses = rows.map((row) => {
-      const cost = Number(row.cost || 0)
-      totalExpenses += cost
-      return {
-        maintenanceId: row.id,
-        vehicleId: row.vehicleId,
-        type: row.type,
-        performedOn: row.performedOn,
-        cost,
-        mileage: row.mileage,
-        provider: row.provider,
-        nextDueOn: row.nextDueOn,
-        description: row.description,
-      }
-    })
+    const expenses = [
+      ...rows.map((row) => {
+        const cost = Number(row.cost || 0)
+        totalExpenses += cost
+        return {
+          maintenanceId: row.id,
+          vehicleId: row.vehicleId,
+          type: row.type,
+          performedOn: row.performedOn,
+          cost,
+          mileage: row.mileage,
+          provider: row.provider,
+          nextDueOn: row.nextDueOn,
+          description: row.description,
+        }
+      }),
+      ...documents.map((row) => {
+        const cost = Number(row.cost || 0)
+        totalExpenses += cost
+        return {
+          maintenanceId: row.id,
+          documentId: row.id,
+          vehicleId: row.vehicleId,
+          type: complianceKindLabel(row.kind),
+          performedOn: complianceSpentIso(row),
+          cost,
+          mileage: null,
+          provider: row.provider,
+          nextDueOn: row.expiresOn,
+          description: row.notes,
+        }
+      }),
+    ]
 
     return serialize({
       vehicle: {
@@ -353,6 +383,27 @@ export default class OwnerPortalController {
         description: row.description,
       })
 
+      const current = byVehicle.get(row.vehicleId)
+      if (current) {
+        current.expenses += cost
+        current.maintenanceCount += 1
+      }
+    }
+
+    for (const row of await appliedOwnerComplianceCosts(vehicleIds)) {
+      const cost = Number(row.cost || 0)
+      totalExpenses += cost
+      expenses.push({
+        maintenanceId: row.id,
+        documentId: row.id,
+        vehicleId: row.vehicleId,
+        label: row.vehicle?.label ?? null,
+        plate: row.vehicle?.plate ?? null,
+        type: complianceKindLabel(row.kind),
+        performedOn: complianceSpentIso(row),
+        cost,
+        description: row.notes,
+      })
       const current = byVehicle.get(row.vehicleId)
       if (current) {
         current.expenses += cost

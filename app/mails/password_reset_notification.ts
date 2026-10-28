@@ -5,7 +5,7 @@ import type User from '#models/user'
  * Lien pour définir un nouveau mot de passe après « Mot de passe oublié ».
  */
 export default class PasswordResetNotification extends BaseMail {
-  subject = 'Réinitialisez votre mot de passe — Profil Car Service'
+  subject = 'Réinitialisez votre mot de passe — mobiprofil'
 
   constructor(
     private user: User,
@@ -33,7 +33,7 @@ export default class PasswordResetNotification extends BaseMail {
 <html lang="fr">
 <body style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; background: #f8fafc; padding: 24px;">
   <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0;">
-    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">Profil Car Service</p>
+    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">mobiprofil</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">Réinitialisation du mot de passe</h1>
     <p>Bonjour ${escapeHtml(name)},</p>
     <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.</p>
@@ -55,7 +55,7 @@ export default class PasswordResetNotification extends BaseMail {
     return [
       `Bonjour ${name},`,
       '',
-      'Vous avez demandé la réinitialisation de votre mot de passe Profil Car Service.',
+      'Vous avez demandé la réinitialisation de votre mot de passe mobiprofil.',
       `Définissez-en un nouveau via ce lien (expire dans ${expiry}) :`,
       this.resetUrl,
       '',

@@ -54,7 +54,7 @@ function buildProAccess(user: User | null, roleHint: 'admin' | 'owner' | null): 
       loginUrl,
       dashboardUrl,
       homePath,
-      message: 'Ce compte pro a été désactivé. Contactez le support carPro.',
+      message: 'Ce compte pro a été désactivé. Contactez le support mobiprofil.',
     }
   }
 

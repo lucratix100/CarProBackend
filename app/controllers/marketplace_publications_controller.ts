@@ -174,7 +174,7 @@ export default class MarketplacePublicationsController {
       await this.#notifications.notifyAgencyAdmins(vehicle.agencyId, {
         type: ADMIN_NOTIFICATION_TYPES.MARKETPLACE_PUBLICATION_APPROVED,
         title: 'Annonce catalogue approuvée',
-        body: `${vehicle.label} est maintenant visible sur carPro.`,
+        body: `${vehicle.label} est maintenant visible sur mobiprofil.`,
         href: `/admin/vehicles/${vehicle.id}`,
         meta: {
           vehicleId: vehicle.id,
@@ -395,7 +395,7 @@ export default class MarketplacePublicationsController {
       await this.#notifications.notifyAgencyAdmins(vehicle.agencyId, {
         type: ADMIN_NOTIFICATION_TYPES.MARKETPLACE_PUBLICATION_UNPUBLISHED,
         title: 'Annonce retirée du catalogue',
-        body: `${vehicle.label} a été retiré du catalogue par carPro.`,
+        body: `${vehicle.label} a été retiré du catalogue par mobiprofil.`,
         href: `/admin/vehicles/${vehicle.id}`,
         meta: { vehicleId: vehicle.id, status: 'draft' },
       })

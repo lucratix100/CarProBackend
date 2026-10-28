@@ -2,12 +2,18 @@ import Vehicle from '#models/vehicle'
 import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
 import VehicleExpense from '#models/vehicle_expense'
+import VehicleComplianceDocument from '#models/vehicle_compliance_document'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
 import {
   isExpenseApplied,
   isOwnerCharge,
   scopeAppliedExpenses,
 } from '#services/maintenance_expense_service'
+import {
+  complianceKindLabel,
+  complianceSpentOn,
+  isComplianceCostApplied,
+} from '#services/compliance_document_service'
 
 export type VehicleSummaryOptions = {
   /** Masquer commission / CA brut pour le portail owner */
@@ -89,7 +95,7 @@ export default class VehicleSummaryService {
       if (options.ownerView && chargedTo === 'agency') return []
       return [
         {
-          source: 'maintenance' as const,
+          source: 'maintenance' as 'maintenance' | 'compliance',
           id: row.id,
           maintenanceId: row.id,
           type: row.type,
@@ -104,6 +110,43 @@ export default class VehicleSummaryService {
         },
       ]
     })
+
+    const complianceDocs = await VehicleComplianceDocument.query().where('vehicleId', vehicle.id)
+    let pendingComplianceCount = 0
+    let pendingComplianceTotal = 0
+    for (const row of complianceDocs) {
+      const cost = Number(row.cost || 0)
+      const chargedTo = isOwnerCharge(vehicle.ownerId, row.chargedTo)
+        ? ('owner' as const)
+        : ('agency' as const)
+      if (!isComplianceCostApplied(row, today)) {
+        const onOwner = chargedTo === 'owner'
+        const counts = options.ownerView || !isAgencyOwned ? onOwner : true
+        if (counts) {
+          pendingComplianceCount += 1
+          pendingComplianceTotal += cost
+        }
+        continue
+      }
+      if (chargedTo === 'owner') ownerMaintenance += cost
+      else agencyMaintenance += cost
+      if (options.ownerView && chargedTo === 'agency') continue
+      const spentOn = complianceSpentOn(row)
+      maintenanceLines.push({
+        source: 'compliance' as const,
+        id: row.id,
+        maintenanceId: row.id,
+        type: complianceKindLabel(row.kind),
+        spentOn,
+        performedOn: spentOn,
+        cost,
+        amount: cost,
+        provider: row.provider,
+        description: row.notes,
+        isApplied: true,
+        chargedTo,
+      })
+    }
 
     let purchaseCost = 0
     let otherOperatingExpenses = 0
@@ -224,8 +267,8 @@ export default class VehicleSummaryService {
         agencyMaintenanceExpenses: isAgencyOwned ? 0 : agencyMaintenance,
         otherExpenses: otherOperatingExpenses,
         revenueForBalance,
-        pendingExpenseCount: pendingExpenses.length + pendingVehicleExpenses.length,
-        pendingExpenseTotal: pendingExpenseTotal + pendingVehicleExpenseTotal,
+        pendingExpenseCount: pendingExpenses.length + pendingVehicleExpenses.length + pendingComplianceCount,
+        pendingExpenseTotal: pendingExpenseTotal + pendingVehicleExpenseTotal + pendingComplianceTotal,
         balance,
         profitPositive: balance > 0,
         profitNegative: balance < 0,

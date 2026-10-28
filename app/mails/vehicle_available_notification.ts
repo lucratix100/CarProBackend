@@ -36,7 +36,7 @@ export default class VehicleAvailableNotification extends BaseMail {
 <html lang="fr">
 <body style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; background: #f8fafc; padding: 24px;">
   <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0;">
-    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">carPro</p>
+    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">mobiprofil</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">Véhicule disponible</h1>
     <p>Bonjour ${escapeHtml(name)},</p>
     <p>
@@ -48,7 +48,7 @@ export default class VehicleAvailableNotification extends BaseMail {
         Voir et réserver
       </a>
     </p>
-    <p style="font-size: 13px; color: #64748b;">Vous recevez cet email car vous avez activé l’alerte « Me prévenir si dispo » sur carPro.</p>
+    <p style="font-size: 13px; color: #64748b;">Vous recevez cet email car vous avez activé l’alerte « Me prévenir si dispo » sur mobiprofil.</p>
   </div>
 </body>
 </html>`
@@ -63,7 +63,7 @@ export default class VehicleAvailableNotification extends BaseMail {
       '',
       `Voir et réserver : ${this.payload.vehicleUrl}`,
       '',
-      '— carPro',
+      '— mobiprofil',
     ].join('\n')
   }
 }

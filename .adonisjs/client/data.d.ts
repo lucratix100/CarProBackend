@@ -22,6 +22,7 @@ import type SettingTransformer from '#transformers/setting_transformer'
 import type UserTransformer from '#transformers/user_transformer'
 import type VehicleExpenseTransformer from '#transformers/vehicle_expense_transformer'
 import type VehicleTransformer from '#transformers/vehicle_transformer'
+import type ComplianceDocumentTransformer from '#transformers/compliance_document_transformer'
 
 export namespace Data {
   export type AdminNotification = InferData<AdminNotificationTransformer>
@@ -91,5 +92,9 @@ export namespace Data {
   export type Vehicle = InferData<VehicleTransformer>
   export namespace Vehicle {
     export type Variants = InferVariants<VehicleTransformer>
+  }
+  export type ComplianceDocument = InferData<ComplianceDocumentTransformer>
+  export namespace ComplianceDocument {
+    export type Variants = InferVariants<ComplianceDocumentTransformer>
   }
 }

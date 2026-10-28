@@ -29,6 +29,54 @@ const RENTAL_AUDIT_FIELDS = [
   'notes',
 ] as const
 
+type RentalSearch = {
+  from?: string
+  to?: string
+  client?: string
+  plate?: string
+}
+
+function parseIsoDate(value: unknown) {
+  const text = String(value ?? '').trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : ''
+}
+
+function likeTerm(value: string) {
+  return `%${value.replace(/[%_\\]/g, '\\$&')}%`
+}
+
+function applyRentalSearch(query: ReturnType<typeof Rental.query>, search: RentalSearch) {
+  if (search.from) query.where('endDate', '>=', search.from)
+  if (search.to) query.where('startDate', '<=', search.to)
+
+  const client = search.client?.trim()
+  if (client) {
+    const term = likeTerm(client)
+    query.whereHas('client', (clientQuery) => {
+      clientQuery.where((builder) => {
+        builder.whereILike('fullName', term).orWhereILike('phone', term)
+      })
+    })
+  }
+
+  const plate = search.plate?.trim()
+  if (plate) {
+    const term = likeTerm(plate)
+    const compact = plate.replace(/[\s-]/g, '').toUpperCase()
+    query.whereHas('vehicle', (vehicleQuery) => {
+      vehicleQuery.where((builder) => {
+        builder.whereILike('plate', term)
+        if (compact) {
+          builder.orWhereRaw(
+            `replace(replace(upper(plate), ' ', ''), '-', '') like ?`,
+            [likeTerm(compact)]
+          )
+        }
+      })
+    })
+  }
+}
+
 export default class RentalsController {
   #service = new RentalService()
   #contractService = new RentalContractService()
@@ -142,6 +190,12 @@ export default class RentalsController {
     const source = request.input('source')
     const vehicleId = request.input('vehicleId')
     const clientId = request.input('clientId')
+    const search: RentalSearch = {
+      from: parseIsoDate(request.input('from')),
+      to: parseIsoDate(request.input('to')),
+      client: String(request.input('client', '')).trim().slice(0, 80),
+      plate: String(request.input('plate', '')).trim().slice(0, 40),
+    }
     const page = Math.max(1, Number(request.input('page', 1)) || 1)
     const perPageRaw = Number(request.input('perPage', 10)) || 10
     const perPage = Math.min(100, Math.max(1, perPageRaw))
@@ -155,6 +209,7 @@ export default class RentalsController {
     if (source === 'marketplace' || source === 'agency') query.where('source', source)
     if (vehicleId) query.where('vehicleId', vehicleId)
     if (clientId) query.where('clientId', clientId)
+    applyRentalSearch(query, search)
 
     // Ordre d’arrivée stable (id) — une modification ne change pas la position.
     const paginator = await query.orderBy('id', 'desc').paginate(page, perPage)
@@ -175,13 +230,14 @@ export default class RentalsController {
         firstPage: Number(rawMeta.firstPage ?? rawMeta.first_page ?? 1),
       },
       data,
-      summary: await this.#summary(agencyId!),
+      summary: await this.#summary(agencyId!, search),
     }
   }
 
-  async #summary(agencyId: number) {
+  async #summary(agencyId: number, search: RentalSearch = {}) {
     const count = async (status?: string) => {
       const query = Rental.query().where('agencyId', agencyId)
+      applyRentalSearch(query, search)
       if (status) query.where('status', status)
       const rows = await query.count('* as total')
       return Number(rows[0]?.$extras?.total ?? 0)

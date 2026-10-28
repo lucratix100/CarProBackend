@@ -58,7 +58,7 @@ export default class MarketplaceBookingDecisionNotification extends BaseMail {
 <html lang="fr">
 <body style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; background: #f8fafc; padding: 24px;">
   <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0;">
-    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">carPro</p>
+    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">mobiprofil</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">${
       approved ? 'Réservation confirmée' : 'Demande refusée'
     }</h1>
@@ -72,7 +72,7 @@ export default class MarketplaceBookingDecisionNotification extends BaseMail {
     ${
       approved
         ? '<p>Présentez-vous à l’agence le jour du départ avec votre permis et votre CIN.</p>'
-        : '<p>Vous pouvez consulter d’autres véhicules sur carPro.</p>'
+        : '<p>Vous pouvez consulter d’autres véhicules sur mobiprofil.</p>'
     }
     <p style="margin: 28px 0;">
       <a href="${this.payload.reservationsUrl}" style="display: inline-block; background: #3f3f6d; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
@@ -97,7 +97,7 @@ export default class MarketplaceBookingDecisionNotification extends BaseMail {
       '',
       `Mes réservations : ${this.payload.reservationsUrl}`,
       '',
-      '— carPro',
+      '— mobiprofil',
     ]
       .filter(Boolean)
       .join('\n')

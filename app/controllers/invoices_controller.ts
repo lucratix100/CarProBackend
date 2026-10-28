@@ -21,6 +21,60 @@ function unwrapSerialized<T>(payload: unknown): T {
   return payload as T
 }
 
+type InvoiceSearch = {
+  status?: string
+  clientId?: string | number
+  from?: string
+  to?: string
+  client?: string
+  plate?: string
+}
+
+function parseIsoDate(value: unknown) {
+  const text = String(value ?? '').trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : ''
+}
+
+function likeTerm(value: string) {
+  return `%${value.replace(/[%_\\]/g, '\\$&')}%`
+}
+
+function applyInvoiceSearch(query: ReturnType<typeof Invoice.query>, search: InvoiceSearch) {
+  if (search.status) query.where('status', search.status)
+  if (search.clientId) query.where('clientId', search.clientId)
+  if (search.from) query.where('issuedOn', '>=', search.from)
+  if (search.to) query.where('issuedOn', '<=', search.to)
+
+  const client = search.client?.trim()
+  if (client) {
+    const term = likeTerm(client)
+    query.whereHas('client', (clientQuery) => {
+      clientQuery.where((builder) => {
+        builder.whereILike('fullName', term).orWhereILike('phone', term)
+      })
+    })
+  }
+
+  const plate = search.plate?.trim()
+  if (plate) {
+    const term = likeTerm(plate)
+    const compact = plate.replace(/[\s-]/g, '').toUpperCase()
+    query.whereHas('rental', (rentalQuery) => {
+      rentalQuery.whereHas('vehicle', (vehicleQuery) => {
+        vehicleQuery.where((builder) => {
+          builder.whereILike('plate', term)
+          if (compact) {
+            builder.orWhereRaw(
+              `replace(replace(upper(plate), ' ', ''), '-', '') like ?`,
+              [likeTerm(compact)]
+            )
+          }
+        })
+      })
+    })
+  }
+}
+
 export default class InvoicesController {
   #payments = new InvoicePaymentService()
   #pdf = new InvoicePdfService()
@@ -74,11 +128,16 @@ export default class InvoicesController {
   }
 
   async index({ request, serialize, agencyId }: HttpContext) {
-    const status = request.input('status')
-    const clientId = request.input('clientId')
+    const search: InvoiceSearch = {
+      status: String(request.input('status', '')).trim() || undefined,
+      clientId: request.input('clientId') || undefined,
+      from: parseIsoDate(request.input('from')) || undefined,
+      to: parseIsoDate(request.input('to')) || undefined,
+      client: String(request.input('client', '')).trim().slice(0, 80) || undefined,
+      plate: String(request.input('plate', '')).trim().slice(0, 40) || undefined,
+    }
     const query = Invoice.query().where('agencyId', agencyId!).preload('client')
-    if (status) query.where('status', status)
-    if (clientId) query.where('clientId', clientId)
+    applyInvoiceSearch(query, search)
 
     if (!isPaginatedRequest(request)) {
       const invoices = await query.orderBy('issuedOn', 'desc')
@@ -90,17 +149,18 @@ export default class InvoicesController {
     const data = await Promise.all(
       paginator.all().map((invoice) => this.#withAmounts(invoice, serialize))
     )
+    const { status: _status, ...summarySearch } = search
     return {
       data,
       meta: paginationMeta(paginator, page, perPage),
-      summary: await this.#summary(agencyId!),
+      summary: await this.#summary(agencyId!, summarySearch),
     }
   }
 
-  async #summary(agencyId: number) {
+  async #summary(agencyId: number, search: Omit<InvoiceSearch, 'status'> = {}) {
     const count = async (status?: string) => {
       const query = Invoice.query().where('agencyId', agencyId)
-      if (status) query.where('status', status)
+      applyInvoiceSearch(query, { ...search, status })
       const rows = await query.count('* as total')
       return Number(rows[0]?.$extras?.total ?? 0)
     }

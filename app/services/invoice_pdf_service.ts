@@ -6,18 +6,15 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { invoiceAmounts } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
-import { headerTheme } from '#services/document_header_color'
+import { headerTheme, type DocumentTheme } from '#services/document_header_color'
 import { preparePdfLogo } from '#services/image_compress_service'
 
 const C = {
-  brand: '#0f4a42',
-  brandSoft: '#e7f2f0',
   ink: '#0f172a',
   body: '#334155',
   muted: '#64748b',
   line: '#cbd5e1',
   lineSoft: '#e2e8f0',
-  white: '#ffffff',
   danger: '#b91c1c',
   dangerBg: '#fef2f2',
   warning: '#b45309',
@@ -59,7 +56,7 @@ function displayValue(value: string | null | undefined) {
   return trimmed
 }
 
-function statusColors(status: string) {
+function statusColors(status: string, theme: DocumentTheme) {
   switch (status) {
     case 'Payée':
       return { bg: C.successBg, fg: C.success }
@@ -68,7 +65,7 @@ function statusColors(status: string) {
     case 'Partiellement payée':
       return { bg: C.warningBg, fg: C.warning }
     default:
-      return { bg: C.brandSoft, fg: C.brand }
+      return { bg: theme.accentSoft, fg: theme.accent }
   }
 }
 
@@ -92,11 +89,11 @@ function ensureSpace(doc: Doc, y: number, needed: number) {
   return M.top
 }
 
-function sectionTitle(doc: Doc, title: string, y: number) {
+function sectionTitle(doc: Doc, title: string, y: number, theme: DocumentTheme) {
   const cy = ensureSpace(doc, y, 28)
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.brand)
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(theme.accent)
   text(doc, title.toUpperCase(), M.left, cy, { width: CONTENT_W, characterSpacing: 0.4 })
-  hline(doc, M.left, cy + 14, CONTENT_W, C.brand)
+  hline(doc, M.left, cy + 14, CONTENT_W, theme.accent)
   return cy + 22
 }
 
@@ -132,7 +129,7 @@ function drawLogo(
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(badge)
     doc.restore()
     doc.font('Helvetica-Bold').fontSize(11).fillColor(badgeInk)
-    text(doc, 'PCS', logoX + 7, logoY + 12)
+    text(doc, 'MP', logoX + 10, logoY + 12)
   }
 }
 
@@ -142,9 +139,8 @@ function drawHeader(
   invoiceRef: string,
   issuedOn: DateTime,
   logo: Buffer | null,
-  headerColor: string | null
+  theme: DocumentTheme
 ) {
-  const theme = headerTheme(headerColor)
   const y = M.top
   const h = 62
   const logoX = M.left
@@ -184,15 +180,16 @@ function drawParties(
   y: number,
   clientRows: Array<{ label: string; value: string }>,
   invoiceRows: Array<{ label: string; value: string }>,
-  status: string
+  status: string,
+  theme: DocumentTheme
 ) {
   const gap = 20
   const colW = (CONTENT_W - gap) / 2
-  const leftTitle = sectionTitle(doc, '01 — Client', y)
+  const leftTitle = sectionTitle(doc, '01 — Client', y, theme)
   const rightX = M.left + colW + gap
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.brand)
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(theme.accent)
   text(doc, '02 — FACTURE', rightX, leftTitle - 22, { width: colW, characterSpacing: 0.4 })
-  hline(doc, rightX, leftTitle - 8, colW, C.brand)
+  hline(doc, rightX, leftTitle - 8, colW, theme.accent)
 
   let left = leftTitle
   for (const row of clientRows) {
@@ -204,7 +201,7 @@ function drawParties(
     right = field(doc, row.label, row.value, rightX, right, 78, colW - 78)
   }
 
-  const colors = statusColors(status)
+  const colors = statusColors(status, theme)
   const badgeW = 110
   const badgeY = right
   doc.save()
@@ -220,15 +217,16 @@ function drawLine(
   doc: Doc,
   y: number,
   description: string,
-  amountHt: number
+  amountHt: number,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '03 — Désignation', y)
+  let cy = sectionTitle(doc, '03 — Désignation', y, theme)
   cy = ensureSpace(doc, cy, 36)
 
   doc.save()
-  doc.rect(M.left, cy, CONTENT_W, 18).fill(C.brand)
+  doc.rect(M.left, cy, CONTENT_W, 18).fill(theme.accent)
   doc.restore()
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.white)
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(theme.ink)
   text(doc, 'DÉSIGNATION', M.left + 8, cy + 5, { width: CONTENT_W * 0.7 })
   text(doc, 'MONTANT HT', M.left + 8, cy + 5, { width: CONTENT_W - 16, align: 'right' })
   cy += 18
@@ -247,22 +245,23 @@ function drawLine(
 function drawTotals(
   doc: Doc,
   y: number,
-  rows: Array<{ label: string; value: string; emphasize?: boolean }>
+  rows: Array<{ label: string; value: string; emphasize?: boolean }>,
+  theme: DocumentTheme
 ) {
   let cy = ensureSpace(doc, y, rows.length * 16 + 8)
   rows.forEach((row, i) => {
     const ry = cy + i * 16
     if (row.emphasize) {
       doc.save()
-      doc.rect(M.left, ry - 3, CONTENT_W, 16).fill(C.brandSoft)
+      doc.rect(M.left, ry - 3, CONTENT_W, 16).fill(theme.accentSoft)
       doc.restore()
     }
     doc
       .font(row.emphasize ? 'Helvetica-Bold' : 'Helvetica')
       .fontSize(8.5)
-      .fillColor(row.emphasize ? C.brand : C.body)
+      .fillColor(row.emphasize ? theme.accent : C.body)
     text(doc, row.label, M.left + 8, ry, { width: CONTENT_W * 0.55 })
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(row.emphasize ? C.brand : C.ink)
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(row.emphasize ? theme.accent : C.ink)
     text(doc, row.value, M.left + 8, ry, { width: CONTENT_W - 16, align: 'right' })
   })
   return cy + rows.length * 16 + 12
@@ -271,9 +270,10 @@ function drawTotals(
 function drawPayments(
   doc: Doc,
   y: number,
-  payments: Array<{ paidOn: string; method: string; reference: string; amount: string }>
+  payments: Array<{ paidOn: string; method: string; reference: string; amount: string }>,
+  theme: DocumentTheme
 ) {
-  let cy = sectionTitle(doc, '04 — Paiements', y)
+  let cy = sectionTitle(doc, '04 — Paiements', y, theme)
   if (payments.length === 0) {
     doc.font('Helvetica').fontSize(8).fillColor(C.muted)
     text(doc, 'Aucun paiement enregistré.', M.left, cy)
@@ -409,18 +409,19 @@ export default class InvoicePdfService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
+      const theme = headerTheme(settings.documentHeaderColor)
       let y = drawHeader(
         doc,
         settings.companyName,
         invoiceRef,
         invoice.issuedOn,
         logo,
-        settings.documentHeaderColor
+        theme
       )
-      y = drawParties(doc, y, clientRows, invoiceRows, invoice.status)
-      y = drawLine(doc, y, designation, amounts.amountHt)
-      y = drawTotals(doc, y, totalRows)
-      drawPayments(doc, y, paymentRows)
+      y = drawParties(doc, y, clientRows, invoiceRows, invoice.status, theme)
+      y = drawLine(doc, y, designation, amounts.amountHt, theme)
+      y = drawTotals(doc, y, totalRows, theme)
+      drawPayments(doc, y, paymentRows, theme)
       drawFooter(doc, settings.companyName)
       doc.end()
     })

@@ -27,6 +27,7 @@ export default class MaintenanceTransformer extends BaseTransformer<Maintenance>
         'id',
         'vehicleId',
         'type',
+        'typeDetail',
         'performedOn',
         'cost',
         'chargedTo',

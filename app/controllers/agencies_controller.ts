@@ -546,4 +546,43 @@ export default class AgenciesController {
 
     return response.ok({ message: 'Administrateur révoqué.' })
   }
+
+  /**
+   * Restore a revoked agency admin.
+   * An account that already set a password becomes active again.
+   * An account that never finished the invitation is re-invited.
+   */
+  async reactivateAdmin({ params, serialize }: HttpContext) {
+    const agency = await Agency.findOrFail(params.agencyId ?? params.id)
+    const user = await User.query()
+      .where('id', params.adminId)
+      .where('agencyId', agency.id)
+      .where('role', 'admin')
+      .firstOrFail()
+
+    if (user.status !== 'revoked') {
+      throw new Exception('Ce compte n’est pas révoqué.', {
+        status: 422,
+        code: 'E_ADMIN_NOT_REVOKED',
+      })
+    }
+
+    if (user.passwordSetAt) {
+      user.status = 'active'
+      await user.save()
+      return serialize({
+        admin: UserTransformer.transform(user),
+        message: 'Administrateur réactivé.',
+      })
+    }
+
+    user.status = 'invited'
+    await user.save()
+    await new AdminInvitationService().resend(user)
+
+    return serialize({
+      admin: UserTransformer.transform(user),
+      message: 'Invitation renvoyée. Le gérant doit réactiver son compte.',
+    })
+  }
 }

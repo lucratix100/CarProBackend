@@ -10,22 +10,24 @@ import Vehicle from '#models/vehicle'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
-import { headerTheme } from '#services/document_header_color'
+import { headerTheme, type DocumentTheme } from '#services/document_header_color'
 import { preparePdfLogo } from '#services/image_compress_service'
 import {
   isOwnerCharge,
   scopeAppliedOwnerExpenses,
 } from '#services/maintenance_expense_service'
+import {
+  appliedOwnerComplianceCosts,
+  complianceKindLabel,
+  complianceSpentIso,
+} from '#services/compliance_document_service'
 
 const C = {
-  brand: '#0f4a42',
-  brandSoft: '#e7f2f0',
   ink: '#0f172a',
   body: '#334155',
   muted: '#64748b',
   line: '#cbd5e1',
   lineSoft: '#e2e8f0',
-  white: '#ffffff',
   danger: '#b91c1c',
   success: '#166534',
 } as const
@@ -57,6 +59,7 @@ export type OwnerStatementLine = {
 
 export type OwnerStatementExpense = {
   maintenanceId: number
+  documentId?: number
   vehicleId: number
   label: string
   plate: string
@@ -166,22 +169,25 @@ function ensureSpace(doc: Doc, y: number, needed: number) {
   return M.top
 }
 
-function sectionTitle(doc: Doc, title: string, y: number) {
+function sectionTitle(doc: Doc, title: string, y: number, theme: DocumentTheme) {
   const cy = ensureSpace(doc, y, 28)
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.brand)
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(theme.accent)
   text(doc, title.toUpperCase(), M.left, cy, { width: CONTENT_W, characterSpacing: 0.4 })
-  hline(doc, M.left, cy + 14, CONTENT_W, C.brand)
+  hline(doc, M.left, cy + 14, CONTENT_W, theme.accent)
   return cy + 22
 }
 
-function drawHeader(doc: Doc, data: OwnerStatementData, logo: Buffer | null) {
+function drawHeader(
+  doc: Doc,
+  data: OwnerStatementData,
+  logo: Buffer | null,
+  theme: DocumentTheme
+) {
   const y = M.top
   const h = 62
   const logoX = M.left
   const logoY = y + 12
   const logoSize = 36
-
-  const theme = headerTheme(data.headerColor)
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
@@ -210,7 +216,7 @@ function drawHeader(doc: Doc, data: OwnerStatementData, logo: Buffer | null) {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
     doc.restore()
     doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
-    text(doc, 'PCS', logoX + 7, logoY + 12)
+    text(doc, 'MP', logoX + 10, logoY + 12)
   }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
@@ -230,8 +236,8 @@ function drawHeader(doc: Doc, data: OwnerStatementData, logo: Buffer | null) {
   return y + h + 16
 }
 
-function drawMeta(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '01 — Propriétaire & période', y)
+function drawMeta(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '01 — Propriétaire & période', y, theme)
 
   const periodLabel =
     data.from || data.to
@@ -257,21 +263,21 @@ function drawMeta(doc: Doc, data: OwnerStatementData, y: number) {
   return cy + 8
 }
 
-function drawSummary(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '02 — Synthèse', y)
+function drawSummary(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '02 — Synthèse', y, theme)
   cy = ensureSpace(doc, cy, 52)
 
   const boxW = (CONTENT_W - 16) / 3
   const items = [
     { label: 'Revenus nets', value: formatCfa(data.totalNet), color: C.success },
     { label: 'Dépenses', value: formatCfa(data.totalExpenses), color: C.danger },
-    { label: 'Solde période', value: formatCfa(data.balance), color: C.brand },
+    { label: 'Solde période', value: formatCfa(data.balance), color: theme.accent },
   ]
 
   items.forEach((item, i) => {
     const x = M.left + i * (boxW + 8)
     doc.save()
-    doc.roundedRect(x, cy, boxW, 44, 4).fill(C.brandSoft)
+    doc.roundedRect(x, cy, boxW, 44, 4).fill(theme.accentSoft)
     doc.restore()
     doc.font('Helvetica').fontSize(7).fillColor(C.muted)
     text(doc, item.label.toUpperCase(), x + 10, cy + 10, { width: boxW - 20 })
@@ -300,8 +306,8 @@ function drawTableHeader(
   return y + 18
 }
 
-function drawRentals(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '03 — Locations (crédits nets)', y)
+function drawRentals(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '03 — Locations (crédits nets)', y, theme)
 
   if (data.lines.length === 0) {
     cy = ensureSpace(doc, cy, 16)
@@ -347,8 +353,8 @@ function drawRentals(doc: Doc, data: OwnerStatementData, y: number) {
   return cy + 6
 }
 
-function drawExpenses(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '04 — Dépenses à la charge du propriétaire', y)
+function drawExpenses(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '04 — Dépenses à la charge du propriétaire', y, theme)
 
   if (data.expenses.length === 0) {
     cy = ensureSpace(doc, cy, 16)
@@ -390,8 +396,8 @@ function drawExpenses(doc: Doc, data: OwnerStatementData, y: number) {
   return cy + 6
 }
 
-function drawByVehicle(doc: Doc, data: OwnerStatementData, y: number) {
-  let cy = sectionTitle(doc, '05 — Récapitulatif par véhicule', y)
+function drawByVehicle(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
+  let cy = sectionTitle(doc, '05 — Récapitulatif par véhicule', y, theme)
 
   if (data.byVehicle.length === 0) {
     cy = ensureSpace(doc, cy, 16)
@@ -422,7 +428,7 @@ function drawByVehicle(doc: Doc, data: OwnerStatementData, y: number) {
     })
     text(doc, formatCfa(row.netTotal), cols[2].x, cy, { width: cols[2].w, align: 'right' })
     text(doc, formatCfa(row.expenses), cols[3].x, cy, { width: cols[3].w, align: 'right' })
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.brand)
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(theme.accent)
     text(doc, formatCfa(row.balance), cols[4].x, cy, { width: cols[4].w, align: 'right' })
     cy += 14
     hline(doc, M.left, cy, CONTENT_W, C.lineSoft)
@@ -432,13 +438,13 @@ function drawByVehicle(doc: Doc, data: OwnerStatementData, y: number) {
   return cy + 6
 }
 
-function drawFooterNote(doc: Doc, data: OwnerStatementData, y: number) {
+function drawFooterNote(doc: Doc, data: OwnerStatementData, y: number, theme: DocumentTheme) {
   let cy = ensureSpace(doc, y, 48)
-  cy = sectionTitle(doc, 'Note', cy)
+  cy = sectionTitle(doc, 'Note', cy, theme)
   doc.font('Helvetica').fontSize(7.5).fillColor(C.body)
   text(
     doc,
-    'Montants nets après commission PCS. Les locataires, factures et paiements clients ne figurent pas sur ce relevé. Les dépenses listées sont les entretiens à la charge du propriétaire.',
+    'Montants nets après commission mobiprofil. Les locataires, factures et paiements clients ne figurent pas sur ce relevé. Les dépenses listées sont les entretiens à la charge du propriétaire.',
     M.left,
     cy,
     { width: CONTENT_W, lineGap: 1.5, align: 'justify' }
@@ -575,6 +581,28 @@ export default class OwnerStatementService {
       }
     }
 
+    for (const row of await appliedOwnerComplianceCosts(vehicleIds, { from, to })) {
+      const spent = complianceSpentIso(row) ?? ''
+      const cost = Number(row.cost || 0)
+      totalExpenses += cost
+      expenses.push({
+        maintenanceId: row.id,
+        documentId: row.id,
+        vehicleId: row.vehicleId,
+        label: row.vehicle?.label ?? `Véhicule #${row.vehicleId}`,
+        plate: row.vehicle?.plate ?? '—',
+        type: complianceKindLabel(row.kind),
+        performedOn: spent,
+        cost,
+        description: row.notes,
+      })
+      const current = byVehicle.get(row.vehicleId)
+      if (current) {
+        current.expenses += cost
+        current.maintenanceCount += 1
+      }
+    }
+
     for (const row of byVehicle.values()) {
       row.balance = row.netTotal - row.expenses
     }
@@ -617,13 +645,14 @@ export default class OwnerStatementService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      let y = drawHeader(doc, data, logo)
-      y = drawMeta(doc, data, y)
-      y = drawSummary(doc, data, y)
-      y = drawRentals(doc, data, y)
-      y = drawExpenses(doc, data, y)
-      y = drawByVehicle(doc, data, y)
-      drawFooterNote(doc, data, y)
+      const theme = headerTheme(data.headerColor)
+      let y = drawHeader(doc, data, logo, theme)
+      y = drawMeta(doc, data, y, theme)
+      y = drawSummary(doc, data, y, theme)
+      y = drawRentals(doc, data, y, theme)
+      y = drawExpenses(doc, data, y, theme)
+      y = drawByVehicle(doc, data, y, theme)
+      drawFooterNote(doc, data, y, theme)
 
       doc.end()
     })

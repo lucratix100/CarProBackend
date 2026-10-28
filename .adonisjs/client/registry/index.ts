@@ -126,6 +126,12 @@ const routes = {
     tokens: [{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":0,"val":"admins","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":1,"val":"adminId","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/resend-invitation","type":0,"val":"resend-invitation","end":""}],
     types: placeholder as Registry['agencies.agencies.resend_admin_invitation']['types'],
   },
+  'agencies.agencies.reactivate_admin': {
+    methods: ["POST"],
+    pattern: '/api/v1/agencies/:id/admins/:adminId/reactivate',
+    tokens: [{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":0,"val":"admins","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":1,"val":"adminId","end":""},{"old":"/api/v1/agencies/:id/admins/:adminId/reactivate","type":0,"val":"reactivate","end":""}],
+    types: placeholder as Registry['agencies.agencies.reactivate_admin']['types'],
+  },
   'agencies.agencies.revoke_admin': {
     methods: ["DELETE"],
     pattern: '/api/v1/agencies/:id/admins/:adminId',
@@ -275,6 +281,18 @@ const routes = {
     pattern: '/api/v1/owners/:id/statement',
     tokens: [{"old":"/api/v1/owners/:id/statement","type":0,"val":"api","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"v1","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"owners","end":""},{"old":"/api/v1/owners/:id/statement","type":1,"val":"id","end":""},{"old":"/api/v1/owners/:id/statement","type":0,"val":"statement","end":""}],
     types: placeholder as Registry['owners.owners.statement']['types'],
+  },
+  'owners.owners.email_statement': {
+    methods: ["POST"],
+    pattern: '/api/v1/owners/:id/statement/email',
+    tokens: [{"old":"/api/v1/owners/:id/statement/email","type":0,"val":"api","end":""},{"old":"/api/v1/owners/:id/statement/email","type":0,"val":"v1","end":""},{"old":"/api/v1/owners/:id/statement/email","type":0,"val":"owners","end":""},{"old":"/api/v1/owners/:id/statement/email","type":1,"val":"id","end":""},{"old":"/api/v1/owners/:id/statement/email","type":0,"val":"statement","end":""},{"old":"/api/v1/owners/:id/statement/email","type":0,"val":"email","end":""}],
+    types: placeholder as Registry['owners.owners.email_statement']['types'],
+  },
+  'owners.owners.account': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/owners/:id/account',
+    tokens: [{"old":"/api/v1/owners/:id/account","type":0,"val":"api","end":""},{"old":"/api/v1/owners/:id/account","type":0,"val":"v1","end":""},{"old":"/api/v1/owners/:id/account","type":0,"val":"owners","end":""},{"old":"/api/v1/owners/:id/account","type":1,"val":"id","end":""},{"old":"/api/v1/owners/:id/account","type":0,"val":"account","end":""}],
+    types: placeholder as Registry['owners.owners.account']['types'],
   },
   'owners.owners.show': {
     methods: ["GET","HEAD"],
@@ -623,6 +641,36 @@ const routes = {
     pattern: '/api/v1/maintenances/:id',
     tokens: [{"old":"/api/v1/maintenances/:id","type":0,"val":"api","end":""},{"old":"/api/v1/maintenances/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/maintenances/:id","type":0,"val":"maintenances","end":""},{"old":"/api/v1/maintenances/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['maintenances.maintenances.destroy']['types'],
+  },
+  'complianceDocuments.compliance_documents.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/compliance-documents',
+    tokens: [{"old":"/api/v1/compliance-documents","type":0,"val":"api","end":""},{"old":"/api/v1/compliance-documents","type":0,"val":"v1","end":""},{"old":"/api/v1/compliance-documents","type":0,"val":"compliance-documents","end":""}],
+    types: placeholder as Registry['complianceDocuments.compliance_documents.index']['types'],
+  },
+  'complianceDocuments.compliance_documents.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/compliance-documents',
+    tokens: [{"old":"/api/v1/compliance-documents","type":0,"val":"api","end":""},{"old":"/api/v1/compliance-documents","type":0,"val":"v1","end":""},{"old":"/api/v1/compliance-documents","type":0,"val":"compliance-documents","end":""}],
+    types: placeholder as Registry['complianceDocuments.compliance_documents.store']['types'],
+  },
+  'complianceDocuments.compliance_documents.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/compliance-documents/:id',
+    tokens: [{"old":"/api/v1/compliance-documents/:id","type":0,"val":"api","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"compliance-documents","end":""},{"old":"/api/v1/compliance-documents/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['complianceDocuments.compliance_documents.show']['types'],
+  },
+  'complianceDocuments.compliance_documents.update': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/compliance-documents/:id',
+    tokens: [{"old":"/api/v1/compliance-documents/:id","type":0,"val":"api","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"compliance-documents","end":""},{"old":"/api/v1/compliance-documents/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['complianceDocuments.compliance_documents.update']['types'],
+  },
+  'complianceDocuments.compliance_documents.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/compliance-documents/:id',
+    tokens: [{"old":"/api/v1/compliance-documents/:id","type":0,"val":"api","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/compliance-documents/:id","type":0,"val":"compliance-documents","end":""},{"old":"/api/v1/compliance-documents/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['complianceDocuments.compliance_documents.destroy']['types'],
   },
   'settings.settings.show': {
     methods: ["GET","HEAD"],

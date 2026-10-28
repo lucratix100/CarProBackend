@@ -12,7 +12,7 @@ export default class Setting extends SettingSchema {
     if (!settings) {
       settings = await this.create({
         agencyId,
-        companyName: 'Profil Car Service',
+        companyName: 'mobiprofil',
         commissionPerDay: 10000,
         tvaRate: '0.18',
         documentHeaderColor: '#0f4a42',

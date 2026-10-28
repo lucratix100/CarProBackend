@@ -29,6 +29,23 @@ function toDate(value: string | null | undefined) {
   return DateTime.fromISO(value)
 }
 
+function phoneLookupKeys(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  const keys = new Set<string>()
+  if (digits.length >= 5) keys.add(digits)
+
+  let local = digits
+  if (local.startsWith('00221')) local = local.slice(5)
+  else if (local.startsWith('221') && local.length > 8) local = local.slice(3)
+  if (local.startsWith('0') && local.length > 8) local = local.slice(1)
+  if (local.length >= 5) keys.add(local)
+  if (local.length >= 8) {
+    keys.add(`221${local}`)
+    keys.add(`0${local}`)
+  }
+  return [...keys]
+}
+
 function isFilled(value: string | null | undefined) {
   if (!value) return false
   const normalized = value.trim().toLowerCase()
@@ -177,7 +194,7 @@ export default class ClientsController {
   }
 
   /**
-   * Recherche anti-doublon par n° de pièce et/ou n° de permis (scopé agence).
+   * Recherche anti-doublon par téléphone, n° de pièce et/ou n° de permis (scopé agence).
    */
   async lookup({ request, serialize, agencyId }: HttpContext) {
     const idCardNumber = String(request.input('idCardNumber') || '')
@@ -186,9 +203,10 @@ export default class ClientsController {
     const licenseNumber = String(request.input('licenseNumber') || '')
       .trim()
       .toUpperCase()
+    const phoneKeys = phoneLookupKeys(String(request.input('phone') || ''))
 
-    if (!idCardNumber && !licenseNumber) {
-      throw new Exception('Indiquez un n° de pièce ou un n° de permis.', {
+    if (!idCardNumber && !licenseNumber && phoneKeys.length === 0) {
+      throw new Exception('Indiquez un téléphone, un n° de pièce ou un n° de permis.', {
         status: 422,
         code: 'E_LOOKUP_EMPTY',
       })
@@ -202,6 +220,13 @@ export default class ClientsController {
       if (licenseNumber) {
         builder.orWhereRaw('UPPER(TRIM(license_number)) = ?', [licenseNumber])
       }
+      if (phoneKeys.length > 0) {
+        const placeholders = phoneKeys.map(() => '?').join(', ')
+        builder.orWhereRaw(
+          `regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') in (${placeholders})`,
+          phoneKeys
+        )
+      }
     })
 
     const client = await query.orderBy('id', 'desc').first()
@@ -213,7 +238,7 @@ export default class ClientsController {
     return {
       found: true,
       client: withLicenseFlags(client, serialized),
-      message: 'Ce client existe déjà dans la base Profil Car Service.',
+      message: 'Ce client existe déjà dans la base mobiprofil.',
     }
   }
 

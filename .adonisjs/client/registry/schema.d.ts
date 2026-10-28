@@ -247,6 +247,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['resendAdminInvitation']>>>
     }
   }
+  'agencies.agencies.reactivate_admin': {
+    methods: ["POST"]
+    pattern: '/api/v1/agencies/:id/admins/:adminId/reactivate'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { id: ParamValue; adminId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['reactivateAdmin']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['reactivateAdmin']>>>
+    }
+  }
   'agencies.agencies.revoke_admin': {
     methods: ["DELETE"]
     pattern: '/api/v1/agencies/:id/admins/:adminId'
@@ -545,6 +557,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['statement']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['statement']>>>
+    }
+  }
+  'owners.owners.email_statement': {
+    methods: ["POST"]
+    pattern: '/api/v1/owners/:id/statement/email'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['emailStatement']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['emailStatement']>>>
+    }
+  }
+  'owners.owners.account': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/owners/:id/account'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['account']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/owners_controller').default['account']>>>
     }
   }
   'owners.owners.show': {
@@ -1241,6 +1277,66 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/maintenances_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/maintenances_controller').default['destroy']>>>
+    }
+  }
+  'complianceDocuments.compliance_documents.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/compliance-documents'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['index']>>>
+    }
+  }
+  'complianceDocuments.compliance_documents.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/compliance-documents'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/compliance_document').createComplianceDocumentValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/compliance_document').createComplianceDocumentValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'complianceDocuments.compliance_documents.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/compliance-documents/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['show']>>>
+    }
+  }
+  'complianceDocuments.compliance_documents.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/compliance-documents/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/compliance_document').updateComplianceDocumentValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/compliance_document').updateComplianceDocumentValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'complianceDocuments.compliance_documents.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/compliance-documents/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/compliance_documents_controller').default['destroy']>>>
     }
   }
   'settings.settings.show': {

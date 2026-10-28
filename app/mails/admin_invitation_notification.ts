@@ -5,7 +5,7 @@ import type User from '#models/user'
  * Invitation administrateur d’agence.
  */
 export default class AdminInvitationNotification extends BaseMail {
-  subject = 'Activez votre accès administrateur — Profil Car Service'
+  subject = 'Activez votre accès administrateur — mobiprofil'
 
   constructor(
     private user: User,
@@ -28,7 +28,7 @@ export default class AdminInvitationNotification extends BaseMail {
 <html lang="fr">
 <body style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; background: #f8fafc; padding: 24px;">
   <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0;">
-    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">Profil Car Service</p>
+    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">mobiprofil</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">Activez votre accès administrateur</h1>
     <p>Bonjour ${escapeHtml(name)},</p>
     <p>Vous êtes invité(e) à administrer l’agence <strong>${escapeHtml(agency)}</strong>. Définissez un mot de passe fort et acceptez les conditions de la plateforme pour accéder à la console de gestion.</p>

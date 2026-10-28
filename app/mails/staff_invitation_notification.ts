@@ -5,7 +5,7 @@ import type User from '#models/user'
  * Invitation collaborateur d’agence.
  */
 export default class StaffInvitationNotification extends BaseMail {
-  subject = 'Activez votre compte collaborateur — Profil Car Service'
+  subject = 'Activez votre compte collaborateur — mobiprofil'
 
   constructor(
     private user: User,
@@ -28,10 +28,10 @@ export default class StaffInvitationNotification extends BaseMail {
 <html lang="fr">
 <body style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.5; color: #0f172a; background: #f8fafc; padding: 24px;">
   <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; border: 1px solid #e2e8f0;">
-    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">Profil Car Service</p>
+    <p style="margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">mobiprofil</p>
     <h1 style="margin: 0 0 16px; font-size: 22px;">Activez votre compte collaborateur</h1>
     <p>Bonjour ${escapeHtml(name)},</p>
-    <p>Vous êtes invité(e) à rejoindre l’agence <strong>${escapeHtml(agency)}</strong> sur Profil Car Service. Définissez un mot de passe personnel et acceptez les conditions pour activer votre accès.</p>
+    <p>Vous êtes invité(e) à rejoindre l’agence <strong>${escapeHtml(agency)}</strong> sur mobiprofil. Définissez un mot de passe personnel et acceptez les conditions pour activer votre accès.</p>
     <p style="margin: 28px 0;">
       <a href="${this.activationUrl}" style="display: inline-block; background: #0f4a42; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;">
         Activer mon compte
@@ -48,7 +48,7 @@ export default class StaffInvitationNotification extends BaseMail {
     return [
       `Bonjour ${name},`,
       '',
-      `Vous êtes invité(e) à rejoindre l’agence « ${agency} » sur Profil Car Service.`,
+      `Vous êtes invité(e) à rejoindre l’agence « ${agency} » sur mobiprofil.`,
       'Activez votre compte via ce lien :',
       this.activationUrl,
       '',

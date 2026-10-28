@@ -335,7 +335,7 @@ export class InvoiceSchema extends BaseModel {
 }
 
 export class MaintenanceSchema extends BaseModel {
-  static $columns = ['alertDays', 'cancelReason', 'cancelledAt', 'cancelledByUserId', 'chargedTo', 'cost', 'createdAt', 'description', 'id', 'mileage', 'nextDueOn', 'performedOn', 'provider', 'type', 'updatedAt', 'vehicleId'] as const
+  static $columns = ['alertDays', 'cancelReason', 'cancelledAt', 'cancelledByUserId', 'chargedTo', 'cost', 'createdAt', 'description', 'id', 'mileage', 'nextDueOn', 'performedOn', 'provider', 'type', 'typeDetail', 'updatedAt', 'vehicleId'] as const
   $columns = MaintenanceSchema.$columns
   @column()
   declare alertDays: number
@@ -365,6 +365,8 @@ export class MaintenanceSchema extends BaseModel {
   declare provider: string | null
   @column()
   declare type: string
+  @column()
+  declare typeDetail: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
   @column()
@@ -880,6 +882,35 @@ export class ValidationRequestSchema extends BaseModel {
   declare updatedAt: DateTime | null
   @column()
   declare vehicleId: number | null
+}
+
+export class VehicleComplianceDocumentSchema extends BaseModel {
+  static $columns = ['chargedTo', 'cost', 'createdAt', 'expiresOn', 'id', 'kind', 'notes', 'provider', 'reference', 'startsOn', 'updatedAt', 'vehicleId'] as const
+  $columns = VehicleComplianceDocumentSchema.$columns
+  @column()
+  declare chargedTo: string
+  @column()
+  declare cost: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.date()
+  declare expiresOn: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare kind: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare provider: string
+  @column()
+  declare reference: string | null
+  @column.date()
+  declare startsOn: DateTime | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare vehicleId: number
 }
 
 export class VehicleExpenseSchema extends BaseModel {

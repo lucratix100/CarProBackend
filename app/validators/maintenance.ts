@@ -6,16 +6,18 @@ const maintenanceCharges = ['owner', 'agency'] as const
 const maintenanceTypes = [
   'Vidange',
   'Réparation',
-  'Visite technique',
-  'Assurance',
   'Pneumatiques',
   'Nettoyage',
   'Autre',
 ] as const
 
+/** Conservés pour les lignes déjà enregistrées. Les nouvelles passent par Conformité. */
+const legacyMaintenanceTypes = ['Visite technique', 'Assurance'] as const
+
 export const createMaintenanceValidator = vine.create({
   vehicleId: vine.number().positive(),
   type: vine.enum(maintenanceTypes),
+  typeDetail: vine.string().trim().maxLength(80).optional(),
   performedOn: isoDate(),
   cost: vine.number().min(0),
   chargedTo: vine.enum(maintenanceCharges).optional(),
@@ -28,7 +30,8 @@ export const createMaintenanceValidator = vine.create({
 
 export const updateMaintenanceValidator = vine.create({
   vehicleId: vine.number().positive().optional(),
-  type: vine.enum(maintenanceTypes).optional(),
+  type: vine.enum([...maintenanceTypes, ...legacyMaintenanceTypes]).optional(),
+  typeDetail: vine.string().trim().maxLength(80).nullable().optional(),
   performedOn: isoDate().optional(),
   cost: vine.number().min(0).optional(),
   chargedTo: vine.enum(maintenanceCharges).optional(),

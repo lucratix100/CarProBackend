@@ -27,7 +27,7 @@ function nextStepsForStatus(status: string, canReview: boolean): string {
   if (status === 'Terminée') {
     return canReview
       ? 'Location terminée. Partagez votre avis pour aider les autres clients.'
-      : 'Location terminée. Merci d’avoir choisi carPro.'
+      : 'Location terminée. Merci d’avoir choisi mobiprofil.'
   }
   if (status === 'Annulée') {
     return 'Cette demande a été annulée.'

@@ -42,7 +42,7 @@ export const MARKETPLACE_PUBLICATION_EVENT_LABELS: Record<
   submitted: 'Soumise',
   approved: 'Approuvée',
   rejected: 'Refusée',
-  unpublished: 'Retirée (carPro)',
+  unpublished: 'Retirée (mobiprofil)',
   rereview_requested: 'Re-revue demandée',
   agency_unpublished: 'Retirée (agence)',
 }

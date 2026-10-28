@@ -12,7 +12,7 @@ import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 
 router.get('/', () => {
-  return { hello: 'world', app: 'Profil Car Service API' }
+  return { hello: 'world', app: 'mobiprofil API' }
 })
 
 router
@@ -72,6 +72,10 @@ router
         router.post('/:id/admins/:adminId/resend-invitation', [
           controllers.Agencies,
           'resendAdminInvitation',
+        ])
+        router.post('/:id/admins/:adminId/reactivate', [
+          controllers.Agencies,
+          'reactivateAdmin',
         ])
         router.delete('/:id/admins/:adminId', [controllers.Agencies, 'revokeAdmin'])
       })
@@ -150,6 +154,12 @@ router
           .use(middleware.permission({ permission: 'owners.manage' }))
         router
           .get('/:id/statement', [controllers.Owners, 'statement'])
+          .use(middleware.permission({ permission: 'owners.view' }))
+        router
+          .post('/:id/statement/email', [controllers.Owners, 'emailStatement'])
+          .use(middleware.permission({ permission: 'owners.manage' }))
+        router
+          .get('/:id/account', [controllers.Owners, 'account'])
           .use(middleware.permission({ permission: 'owners.view' }))
         router
           .get('/:id', [controllers.Owners, 'show'])
@@ -384,6 +394,28 @@ router
       })
       .prefix('maintenances')
       .as('maintenances')
+      .use([middleware.auth(), middleware.admin()])
+
+    router
+      .group(() => {
+        router
+          .get('/', [controllers.ComplianceDocuments, 'index'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .post('/', [controllers.ComplianceDocuments, 'store'])
+          .use(middleware.permission({ permission: 'vehicles.manage_documents' }))
+        router
+          .get('/:id', [controllers.ComplianceDocuments, 'show'])
+          .use(middleware.permission({ permission: 'vehicles.view' }))
+        router
+          .patch('/:id', [controllers.ComplianceDocuments, 'update'])
+          .use(middleware.permission({ permission: 'vehicles.manage_documents' }))
+        router
+          .delete('/:id', [controllers.ComplianceDocuments, 'destroy'])
+          .use(middleware.permission({ permission: 'vehicles.manage_documents' }))
+      })
+      .prefix('compliance-documents')
+      .as('complianceDocuments')
       .use([middleware.auth(), middleware.admin()])
 
     router

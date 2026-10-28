@@ -11,6 +11,11 @@ import {
   resolveMaintenanceCharge,
   scopeAppliedExpenses,
 } from '#services/maintenance_expense_service'
+import {
+  assertMaintenanceTypeAllowed,
+  maintenanceDisplayType,
+  normalizeTypeDetail,
+} from '#services/maintenance_type'
 import { todayISO } from '#services/finance_service'
 import { isPaginatedRequest, paginationMeta, readPage, unwrapSerializedList } from '#services/pagination'
 
@@ -21,6 +26,71 @@ function scopeSoon(query: ReturnType<typeof Maintenance.query>, today: string) {
     .whereNotNull('nextDueOn')
     .where('nextDueOn', '>', today)
     .whereRaw('next_due_on <= (?::date + alert_days)', [today])
+}
+
+const MAINTENANCE_TYPES = new Set([
+  'Vidange',
+  'Réparation',
+  'Visite technique',
+  'Assurance',
+  'Pneumatiques',
+  'Nettoyage',
+  'Autre',
+])
+
+type MaintenanceSearch = {
+  vehicleId?: string | number
+  type?: string
+  from?: string
+  to?: string
+  plate?: string
+  owner?: string
+}
+
+function parseIsoDate(value: unknown) {
+  const text = String(value ?? '').trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : ''
+}
+
+function likeTerm(value: string) {
+  return `%${value.replace(/[%_\\]/g, '\\$&')}%`
+}
+
+function parseOwnerFilter(value: unknown) {
+  const text = String(value ?? '').trim()
+  if (text === 'agency') return 'agency'
+  return /^\d+$/.test(text) ? text : ''
+}
+
+function applyMaintenanceSearch(
+  query: ReturnType<typeof Maintenance.query>,
+  filters: MaintenanceSearch
+) {
+  if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
+  if (filters.type && MAINTENANCE_TYPES.has(filters.type)) query.where('type', filters.type)
+  if (filters.from) query.where('performedOn', '>=', filters.from)
+  if (filters.to) query.where('performedOn', '<=', filters.to)
+
+  const plate = filters.plate?.trim()
+  const owner = filters.owner
+  const ownerId = owner && owner !== 'agency' ? Number(owner) : null
+  if (!plate && owner !== 'agency' && !ownerId) return
+
+  query.whereHas('vehicle', (vehicleQuery) => {
+    if (owner === 'agency') vehicleQuery.whereNull('ownerId')
+    else if (ownerId) vehicleQuery.where('ownerId', ownerId)
+    if (!plate) return
+    const term = likeTerm(plate)
+    const compact = plate.replace(/[\s-]/g, '').toUpperCase()
+    vehicleQuery.where((builder) => {
+      builder.whereILike('plate', term)
+      if (compact) {
+        builder.orWhereRaw(`replace(replace(upper(plate), ' ', ''), '-', '') like ?`, [
+          likeTerm(compact),
+        ])
+      }
+    })
+  })
 }
 
 function toDate(value: string | null | undefined) {
@@ -37,7 +107,10 @@ type ExpenseNotifyKind = 'created' | 'updated' | 'removed'
 
 async function notifyExpense(
   vehicle: Vehicle,
-  maintenance: Pick<Maintenance, 'id' | 'type' | 'cost' | 'performedOn' | 'nextDueOn' | 'description'>,
+  maintenance: Pick<
+    Maintenance,
+    'id' | 'type' | 'typeDetail' | 'cost' | 'performedOn' | 'nextDueOn' | 'description'
+  >,
   kind: ExpenseNotifyKind
 ) {
   if (!vehicle.ownerId) return
@@ -57,11 +130,11 @@ async function notifyExpense(
     } as const
 
     const bodies = {
-      created: `${vehicle.label} (${vehicle.plate}) — ${maintenance.type} : ${costLabel}${
+      created: `${vehicle.label} (${vehicle.plate}) — ${maintenanceDisplayType(maintenance.type, maintenance.typeDetail)} : ${costLabel}${
         performed ? ` (le ${performed})` : ''
       }.${due}`,
-      updated: `${vehicle.label} (${vehicle.plate}) — ${maintenance.type} : montant ${costLabel}.${due}`,
-      removed: `${vehicle.label} (${vehicle.plate}) — ${maintenance.type} (${costLabel}) a été retiré de vos dépenses.`,
+      updated: `${vehicle.label} (${vehicle.plate}) — ${maintenanceDisplayType(maintenance.type, maintenance.typeDetail)} : montant ${costLabel}.${due}`,
+      removed: `${vehicle.label} (${vehicle.plate}) — ${maintenanceDisplayType(maintenance.type, maintenance.typeDetail)} (${costLabel}) a été retiré de vos dépenses.`,
     } as const
 
     const types = {
@@ -78,7 +151,7 @@ async function notifyExpense(
       meta: {
         vehicleId: vehicle.id,
         maintenanceId: maintenance.id,
-        type: maintenance.type,
+        type: maintenanceDisplayType(maintenance.type, maintenance.typeDetail),
         cost,
         kind,
       },
@@ -117,16 +190,13 @@ export default class MaintenancesController {
 
   #filteredQuery(
     agencyId: number,
-    filters: {
-      vehicleId?: string | number
-      type?: string
+    filters: MaintenanceSearch & {
       includeCancelled?: boolean
       alert?: string
     }
   ) {
     const query = this.#scopedQuery(agencyId)
-    if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
-    if (filters.type) query.where('type', filters.type)
+    applyMaintenanceSearch(query, filters)
     const today = todayISO()
     if (filters.alert === 'cancelled') query.whereNotNull('cancelledAt')
     else if (filters.alert === 'done') scopeAppliedExpenses(query, today)
@@ -135,11 +205,10 @@ export default class MaintenancesController {
     return query
   }
 
-  async #totals(agencyId: number, filters: { vehicleId?: string | number; type?: string }) {
+  async #totals(agencyId: number, filters: MaintenanceSearch) {
     const base = () => {
       const query = Maintenance.query().whereHas('vehicle', (q) => q.where('agencyId', agencyId))
-      if (filters.vehicleId) query.where('vehicleId', filters.vehicleId)
-      if (filters.type) query.where('type', filters.type)
+      applyMaintenanceSearch(query, filters)
       return query
     }
     const sumCharged = async (chargedTo: 'owner' | 'agency') => {
@@ -166,13 +235,20 @@ export default class MaintenancesController {
 
   async index({ request, serialize, agencyId }: HttpContext) {
     const vehicleId = request.input('vehicleId')
-    const type = request.input('type')
+    const type = String(request.input('type', '')).trim()
     const includeCancelled =
       request.input('includeCancelled') === 'true' || request.input('includeCancelled') === true
     const alert = String(request.input('alert') || '')
-    const filters = {
+    const search: MaintenanceSearch = {
       vehicleId,
-      type,
+      type: MAINTENANCE_TYPES.has(type) ? type : '',
+      from: parseIsoDate(request.input('from')),
+      to: parseIsoDate(request.input('to')),
+      plate: String(request.input('plate', '')).trim().slice(0, 40),
+      owner: parseOwnerFilter(request.input('owner')),
+    }
+    const filters = {
+      ...search,
       includeCancelled,
       alert: alert === 'done' || alert === 'soon' || alert === 'cancelled' ? alert : undefined,
     }
@@ -194,7 +270,7 @@ export default class MaintenancesController {
     return {
       data: unwrapSerializedList(serialized),
       meta: paginationMeta(paginator, page, perPage),
-      totals: await this.#totals(agencyId!, { vehicleId, type }),
+      totals: await this.#totals(agencyId!, search),
     }
   }
 
@@ -202,10 +278,13 @@ export default class MaintenancesController {
     const payload = await request.validateUsing(createMaintenanceValidator)
     const vehicle = await this.#assertVehicleInAgency(payload.vehicleId, agencyId!)
     const chargedTo = resolveMaintenanceCharge(vehicle.ownerId, payload.chargedTo)
+    assertMaintenanceTypeAllowed(payload.type)
+    const typeDetail = normalizeTypeDetail(payload.type, payload.typeDetail)
 
     const row = await Maintenance.create({
       vehicleId: payload.vehicleId,
       type: payload.type,
+      typeDetail,
       performedOn: DateTime.fromISO(payload.performedOn),
       cost: payload.cost,
       chargedTo,
@@ -249,6 +328,7 @@ export default class MaintenancesController {
     const previousSnapshot = {
       id: row.id,
       type: row.type,
+      typeDetail: row.typeDetail,
       cost: row.cost,
       performedOn: row.performedOn,
       nextDueOn: row.nextDueOn,
@@ -262,10 +342,17 @@ export default class MaintenancesController {
       targetVehicle.ownerId,
       payload.chargedTo === undefined ? row.chargedTo : payload.chargedTo
     )
+    const nextType = payload.type ?? row.type
+    assertMaintenanceTypeAllowed(nextType, row.type)
+    const nextDetail = normalizeTypeDetail(
+      nextType,
+      payload.typeDetail === undefined ? row.typeDetail : payload.typeDetail
+    )
 
     row.merge({
       vehicleId: payload.vehicleId ?? row.vehicleId,
-      type: payload.type ?? row.type,
+      type: nextType,
+      typeDetail: nextDetail,
       cost: payload.cost ?? row.cost,
       chargedTo,
       mileage: payload.mileage === undefined ? row.mileage : payload.mileage,

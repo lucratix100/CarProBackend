@@ -38,4 +38,5 @@ export const controllers = {
   VehicleExpenses: () => import('#controllers/vehicle_expenses_controller'),
   VehicleTypes: () => import('#controllers/vehicle_types_controller'),
   Vehicles: () => import('#controllers/vehicles_controller'),
+  ComplianceDocuments: () => import('#controllers/compliance_documents_controller'),
 }

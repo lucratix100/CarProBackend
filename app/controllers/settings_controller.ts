@@ -52,7 +52,7 @@ export default class SettingsController {
     const agency = await Agency.findOrFail(agencyId!)
     if (!agency.canUseCustomLogo) {
       throw new Exception(
-        'Le logo personnalisé n’est pas activé pour cette agence. Contactez carPro.',
+        'Le logo personnalisé n’est pas activé pour cette agence. Contactez mobiprofil.',
         { status: 403, code: 'E_AGENCY_LOGO_DISABLED' }
       )
     }

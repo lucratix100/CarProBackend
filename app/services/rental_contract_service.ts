@@ -130,7 +130,7 @@ function drawHeader(
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
   doc.restore()
 
-  // Logo mark (custom agency logo or carPro fallback)
+  // Logo mark (custom agency logo or mobiprofil fallback)
   const logoX = M.left
   const logoY = y + 12
   const logoSize = 36
@@ -158,7 +158,7 @@ function drawHeader(
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
     doc.restore()
     doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
-    text(doc, 'PCS', logoX + 7, logoY + 12)
+    text(doc, 'MP', logoX + 10, logoY + 12)
   }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
