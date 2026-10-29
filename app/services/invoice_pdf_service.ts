@@ -7,7 +7,7 @@ import Setting from '#models/setting'
 import { invoiceAmounts } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 import { headerTheme, type DocumentTheme } from '#services/document_header_color'
-import { preparePdfLogo } from '#services/image_compress_service'
+import { resolvePdfLogoBuffer } from '#services/brand_assets'
 
 const C = {
   ink: '#0f172a',
@@ -110,7 +110,7 @@ function drawLogo(
   if (logo) {
     doc.save()
     try {
-      doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).clip()
       doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
@@ -126,10 +126,10 @@ function drawLogo(
 
   if (!usedCustomLogo) {
     doc.save()
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(badge)
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).fill(badge)
     doc.restore()
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(badgeInk)
-    text(doc, 'MP', logoX + 10, logoY + 12)
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(badgeInk)
+    text(doc, 'MP', logoX + 14, logoY + 18)
   }
 }
 
@@ -142,10 +142,11 @@ function drawHeader(
   theme: DocumentTheme
 ) {
   const y = M.top
-  const h = 62
+  const h = 72
   const logoX = M.left
-  const logoY = y + 12
-  const logoSize = 36
+  const logoY = y + 10
+  const logoSize = 52
+  const textX = M.left + logoSize + 12
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
@@ -154,9 +155,9 @@ function drawHeader(
   drawLogo(doc, logo, logoX, logoY, logoSize, theme.badge, theme.badgeInk)
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
-  text(doc, companyName, M.left + 48, y + 14)
+  text(doc, companyName, textX, y + 18)
   doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
-  text(doc, 'Location de véhicules · Dakar, Sénégal', M.left + 48, y + 34)
+  text(doc, 'Location de véhicules · Dakar, Sénégal', textX, y + 38)
 
   doc.font('Helvetica-Bold').fontSize(12).fillColor(theme.ink)
   text(doc, 'FACTURE', M.left, y + 14, { width: CONTENT_W, align: 'right' })
@@ -393,7 +394,7 @@ export default class InvoicePdfService {
       amount: formatCfa(Number(payment.amount)),
     }))
 
-    const logo = await preparePdfLogo(logoAbsolutePath)
+    const logo = await resolvePdfLogoBuffer(logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',

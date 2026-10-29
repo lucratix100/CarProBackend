@@ -7,7 +7,7 @@ import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 import { headerTheme, type DocumentTheme } from '#services/document_header_color'
-import { preparePdfLogo } from '#services/image_compress_service'
+import { resolvePdfLogoBuffer } from '#services/brand_assets'
 
 const C = {
   ink: '#0f172a',
@@ -124,7 +124,7 @@ function drawHeader(
   theme: DocumentTheme
 ) {
   const y = M.top
-  const h = 62
+  const h = 72
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
@@ -132,14 +132,15 @@ function drawHeader(
 
   // Logo mark (custom agency logo or mobiprofil fallback)
   const logoX = M.left
-  const logoY = y + 12
-  const logoSize = 36
+  const logoY = y + 10
+  const logoSize = 52
+  const textX = M.left + logoSize + 12
   let usedCustomLogo = false
 
   if (logo) {
     doc.save()
     try {
-      doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).clip()
       doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
@@ -155,16 +156,16 @@ function drawHeader(
 
   if (!usedCustomLogo) {
     doc.save()
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).fill(theme.badge)
     doc.restore()
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
-    text(doc, 'MP', logoX + 10, logoY + 12)
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.badgeInk)
+    text(doc, 'MP', logoX + 14, logoY + 18)
   }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
-  text(doc, settings.companyName, M.left + 48, y + 14)
+  text(doc, settings.companyName, textX, y + 18)
   doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
-  text(doc, 'Location de véhicules · Dakar, Sénégal', M.left + 48, y + 34)
+  text(doc, 'Location de véhicules · Dakar, Sénégal', textX, y + 38)
 
   doc.font('Helvetica-Bold').fontSize(12).fillColor(theme.ink)
   text(doc, 'CONTRAT DE LOCATION', M.left, y + 14, {
@@ -462,7 +463,7 @@ export default class RentalContractService {
       'Le solde est exigible à la restitution, sauf accord contraire.',
     ]
 
-    const logo = await preparePdfLogo(logoAbsolutePath)
+    const logo = await resolvePdfLogoBuffer(logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',

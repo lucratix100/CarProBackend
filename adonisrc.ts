@@ -105,7 +105,12 @@ export default defineConfig({
   | the production build.
   |
   */
-  metaFiles: [],
+  metaFiles: [
+    {
+      pattern: 'resources/brand/**',
+      reloadServer: false,
+    },
+  ],
 
   hooks: {
     init: [

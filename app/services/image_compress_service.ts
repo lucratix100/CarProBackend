@@ -79,13 +79,13 @@ export async function writeCompressedImage(
   await writeFile(destinationPath, last)
 }
 
-/** Logo affiché en 36 pt dans les PDF : 150 px suffisent, transparence conservée. */
+/** Logo affiché ~52 pt dans les PDF : 220 px pour un rendu net. */
 export async function preparePdfLogo(absolutePath: string | null): Promise<Buffer | null> {
   if (!absolutePath) return null
   try {
     return await sharp(absolutePath, { failOn: 'none' })
       .rotate()
-      .resize(150, 150, { fit: 'inside', withoutEnlargement: true })
+      .resize(220, 220, { fit: 'inside', withoutEnlargement: true })
       .png({ compressionLevel: 9 })
       .toBuffer()
   } catch {

@@ -10,6 +10,7 @@ export const controllers = {
   Agencies: () => import('#controllers/agencies_controller'),
   Cities: () => import('#controllers/cities_controller'),
   Clients: () => import('#controllers/clients_controller'),
+  ComplianceDocuments: () => import('#controllers/compliance_documents_controller'),
   HomepageBanners: () => import('#controllers/homepage_banners_controller'),
   Invitations: () => import('#controllers/invitations_controller'),
   InvoicePayments: () => import('#controllers/invoice_payments_controller'),
@@ -38,5 +39,4 @@ export const controllers = {
   VehicleExpenses: () => import('#controllers/vehicle_expenses_controller'),
   VehicleTypes: () => import('#controllers/vehicle_types_controller'),
   Vehicles: () => import('#controllers/vehicles_controller'),
-  ComplianceDocuments: () => import('#controllers/compliance_documents_controller'),
 }

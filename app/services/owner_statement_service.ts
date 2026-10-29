@@ -11,7 +11,7 @@ import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
 import { headerTheme, type DocumentTheme } from '#services/document_header_color'
-import { preparePdfLogo } from '#services/image_compress_service'
+import { resolvePdfLogoBuffer } from '#services/brand_assets'
 import {
   isOwnerCharge,
   scopeAppliedOwnerExpenses,
@@ -184,10 +184,11 @@ function drawHeader(
   theme: DocumentTheme
 ) {
   const y = M.top
-  const h = 62
+  const h = 72
   const logoX = M.left
-  const logoY = y + 12
-  const logoSize = 36
+  const logoY = y + 10
+  const logoSize = 52
+  const textX = M.left + logoSize + 12
 
   doc.save()
   doc.rect(0, 0, PAGE_W, y + h).fill(theme.background)
@@ -197,7 +198,7 @@ function drawHeader(
   if (logo) {
     doc.save()
     try {
-      doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).clip()
+      doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).clip()
       doc.image(logo, logoX, logoY, {
         fit: [logoSize, logoSize],
         align: 'center',
@@ -213,16 +214,16 @@ function drawHeader(
 
   if (!usedCustomLogo) {
     doc.save()
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 6).fill(theme.badge)
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 8).fill(theme.badge)
     doc.restore()
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.badgeInk)
-    text(doc, 'MP', logoX + 10, logoY + 12)
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.badgeInk)
+    text(doc, 'MP', logoX + 14, logoY + 18)
   }
 
   doc.font('Helvetica-Bold').fontSize(14).fillColor(theme.ink)
-  text(doc, data.companyName, M.left + 48, y + 14)
+  text(doc, data.companyName, textX, y + 18)
   doc.font('Helvetica').fontSize(8).fillColor(theme.muted)
-  text(doc, 'Mandat de gestion · Relevé de compte propriétaire', M.left + 48, y + 34)
+  text(doc, 'Mandat de gestion · Relevé de compte propriétaire', textX, y + 38)
 
   doc.font('Helvetica-Bold').fontSize(11).fillColor(theme.ink)
   text(doc, 'RELEVÉ DE COMPTE', M.left, y + 14, { width: CONTENT_W, align: 'right' })
@@ -628,7 +629,7 @@ export default class OwnerStatementService {
   }
 
   async generatePdf(data: OwnerStatementData) {
-    const logo = await preparePdfLogo(data.logoAbsolutePath)
+    const logo = await resolvePdfLogoBuffer(data.logoAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',

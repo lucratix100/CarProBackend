@@ -9,6 +9,7 @@ import type AdminNotificationTransformer from '#transformers/admin_notification_
 import type AgencyTransformer from '#transformers/agency_transformer'
 import type CityTransformer from '#transformers/city_transformer'
 import type ClientTransformer from '#transformers/client_transformer'
+import type ComplianceDocumentTransformer from '#transformers/compliance_document_transformer'
 import type HomepageBannerTransformer from '#transformers/homepage_banner_transformer'
 import type InvoiceTransformer from '#transformers/invoice_transformer'
 import type MaintenanceTransformer from '#transformers/maintenance_transformer'
@@ -22,7 +23,6 @@ import type SettingTransformer from '#transformers/setting_transformer'
 import type UserTransformer from '#transformers/user_transformer'
 import type VehicleExpenseTransformer from '#transformers/vehicle_expense_transformer'
 import type VehicleTransformer from '#transformers/vehicle_transformer'
-import type ComplianceDocumentTransformer from '#transformers/compliance_document_transformer'
 
 export namespace Data {
   export type AdminNotification = InferData<AdminNotificationTransformer>
@@ -40,6 +40,10 @@ export namespace Data {
   export type Client = InferData<ClientTransformer>
   export namespace Client {
     export type Variants = InferVariants<ClientTransformer>
+  }
+  export type ComplianceDocument = InferData<ComplianceDocumentTransformer>
+  export namespace ComplianceDocument {
+    export type Variants = InferVariants<ComplianceDocumentTransformer>
   }
   export type HomepageBanner = InferData<HomepageBannerTransformer>
   export namespace HomepageBanner {
@@ -92,9 +96,5 @@ export namespace Data {
   export type Vehicle = InferData<VehicleTransformer>
   export namespace Vehicle {
     export type Variants = InferVariants<VehicleTransformer>
-  }
-  export type ComplianceDocument = InferData<ComplianceDocumentTransformer>
-  export namespace ComplianceDocument {
-    export type Variants = InferVariants<ComplianceDocumentTransformer>
   }
 }
