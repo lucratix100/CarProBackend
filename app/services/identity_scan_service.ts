@@ -15,6 +15,11 @@ export type IdentityScanWarning =
   | 'incoherent'
 
 export type IdentityScanFields = {
+  /** Prénoms tels que sur la CNI / le passeport */
+  firstNames: string | null
+  /** Nom de famille tel que sur la CNI / le passeport */
+  lastName: string | null
+  /** Prénoms + nom. Seule valeur enregistrée sur le client. */
   fullName: string | null
   birthDate: string | null
   idCardNumber: string | null
@@ -94,6 +99,8 @@ function isSizeError(file: MultipartFile) {
 
 function emptyFields(): IdentityScanFields {
   return {
+    firstNames: null,
+    lastName: null,
     fullName: null,
     birthDate: null,
     idCardNumber: null,
@@ -329,6 +336,14 @@ function parseSenegalCedeaoFields(text: string): {
   const confidence: Partial<Record<keyof IdentityScanFields, number>> = {}
 
   const { firstNames, lastName, score } = extractCedeaoFullNameParts(text)
+  if (firstNames) {
+    fields.firstNames = titleCaseName(firstNames)
+    confidence.firstNames = score
+  }
+  if (lastName) {
+    fields.lastName = titleCaseName(lastName)
+    confidence.lastName = score
+  }
   const fullName = composeFullName(firstNames, lastName)
   if (fullName) {
     fields.fullName = fullName
@@ -622,20 +637,25 @@ function findMrzLines(text: string): string[] {
   return []
 }
 
+function isDrivingLicenseText(upper: string) {
+  return (
+    /PERMIS\s+DE\s+CONDUIRE/.test(upper) ||
+    /DRIVING\s+LICEN[CS]E/.test(upper) ||
+    /DRIVER'?S?\s+LICEN[CS]E/.test(upper)
+  )
+}
+
 function detectDocumentType(text: string, mrzCode: string | null): IdentityDocumentType {
   const upper = text.toUpperCase()
-  if (mrzCode?.startsWith('P')) return 'passport'
-  if (mrzCode?.startsWith('I') || mrzCode?.startsWith('ID') || mrzCode?.startsWith('C')) return 'cni'
+  // Le mot « permis » prime sur une MRZ de type carte : un permis ne doit pas devenir une CNI.
+  if (isDrivingLicenseText(upper)) return 'driving_license'
+  if (mrzCode?.startsWith('P') || /PASSEPORT|PASSPORT/.test(upper)) return 'passport'
   if (
-    /PERMIS\s+DE\s+CONDUIRE|DRIVING\s+LICEN[CS]E|DRIVER'?S?\s+LICEN[CS]E/.test(upper) ||
-    /\bCAT(?:EGORIE)?\s*[A-Z0-9]/.test(upper)
-  ) {
-    return 'driving_license'
-  }
-  if (/PASSEPORT|PASSPORT/.test(upper)) return 'passport'
-  if (
+    mrzCode?.startsWith('I') ||
+    mrzCode?.startsWith('ID') ||
+    mrzCode?.startsWith('C') ||
     isSenegalCedeaoCard(text) ||
-    /CARTE\s+NATIONALE|CNI|IDENTITY\s+CARD|CARTE\s+D.?IDENTIT|CEDEAO/.test(upper)
+    /CARTE\s+NATIONALE|\bCNI\b|IDENTITY\s+CARD|CARTE\s+D.?IDENTIT|CEDEAO/.test(upper)
   ) {
     return 'cni'
   }
@@ -827,8 +847,17 @@ export default class IdentityScanService {
         const f = parsed.fields
         mrzDocCode = f.documentCode ?? null
 
-        // Nom complet = prénom(s) + nom
-        const fullName = composeFullName(f.firstName?.trim() || null, f.lastName?.trim() || null)
+        const given = f.firstName?.trim() || null
+        const family = f.lastName?.trim() || null
+        if (given && isLikelyPersonName(given)) {
+          fields.firstNames = titleCaseName(given)
+          fieldConfidence.firstNames = 0.95
+        }
+        if (family && isLikelyLastName(family)) {
+          fields.lastName = titleCaseName(family)
+          fieldConfidence.lastName = 0.95
+        }
+        const fullName = composeFullName(given, family)
         if (fullName) {
           fields.fullName = fullName
           fieldConfidence.fullName = 0.95
@@ -858,18 +887,51 @@ export default class IdentityScanService {
 
     let documentType = detectDocumentType(text, mrzDocCode)
 
-    // CNI CEDEAO Sénégal : parseur dédié (Prénoms + Nom → fullName)
-    if (isSenegalCedeaoCard(text) || documentType === 'cni') {
-      documentType = documentType === 'unknown' ? 'cni' : documentType
+    // Un numéro MRZ sur un permis est le n° de permis, pas un n° de CNI.
+    if (documentType === 'driving_license' && fields.idCardNumber && !fields.licenseNumber) {
+      fields.licenseNumber = fields.idCardNumber
+      fieldConfidence.licenseNumber = fieldConfidence.idCardNumber ?? 0.7
+      fields.idCardNumber = null
+      delete fieldConfidence.idCardNumber
+    }
+
+    // CNI CEDEAO Sénégal : Prénoms + Nom restent séparés, fullName est leur somme.
+    if (
+      documentType !== 'driving_license' &&
+      documentType !== 'passport' &&
+      (isSenegalCedeaoCard(text) || documentType === 'cni')
+    ) {
+      documentType = 'cni'
       const senegal = parseSenegalCedeaoFields(text)
       mergeFields(fields, fieldConfidence, senegal.fields, senegal.confidence, !usedMrz)
     }
 
+    if (documentType !== 'driving_license' && (!fields.firstNames || !fields.lastName)) {
+      const parts = extractCedeaoFullNameParts(text)
+      if (!fields.firstNames && parts.firstNames) {
+        fields.firstNames = titleCaseName(parts.firstNames)
+        fieldConfidence.firstNames = parts.score
+      }
+      if (!fields.lastName && parts.lastName) {
+        fields.lastName = titleCaseName(parts.lastName)
+        fieldConfidence.lastName = parts.score
+      }
+    }
+
     if (!fields.fullName) {
-      const name = guessFullNameFromText(text)
-      if (name) {
-        fields.fullName = name
-        fieldConfidence.fullName = 0.55
+      const composed = composeFullName(fields.firstNames, fields.lastName)
+      if (composed) {
+        fields.fullName = composed
+        fieldConfidence.fullName = Math.min(
+          fieldConfidence.firstNames ?? 0.55,
+          fieldConfidence.lastName ?? 0.55
+        )
+      } else {
+        const name = guessFullNameFromText(text)
+        if (name) {
+          fields.fullName = name
+          fieldConfidence.fullName = 0.55
+        }
       }
     }
 
@@ -881,7 +943,7 @@ export default class IdentityScanService {
       }
     }
 
-    // Expiration : non préremplie (délivrance souvent confondue avec expiration)
+    // Expiration du permis : seulement si le document est un permis (voir plus bas).
     // Ville : saisie manuelle
 
     if (!fields.idCardNumber && documentType !== 'driving_license') {
@@ -898,14 +960,21 @@ export default class IdentityScanService {
       }
     }
 
-    if (documentType === 'driving_license' || LICENSE_NUMBER_LABEL.test(text)) {
+    if (documentType === 'driving_license') {
       const lic = extractValueNearLabel(text, LICENSE_NUMBER_LABEL)
       if (lic) {
         fields.licenseNumber = lic.replace(/\s+/g, '').toUpperCase()
         fieldConfidence.licenseNumber = 0.6
-      } else if (documentType === 'driving_license' && fields.idCardNumber && !fields.licenseNumber) {
-        fields.licenseNumber = fields.idCardNumber
-        fieldConfidence.licenseNumber = 0.5
+      }
+      if (!fields.licenseExpiresAt) {
+        const exp = extractDateNearLabel(text, EXPIRY_LABEL)
+        if (exp) {
+          fields.licenseExpiresAt = exp
+          fieldConfidence.licenseExpiresAt = 0.6
+        } else if (fields.documentExpiresAt) {
+          fields.licenseExpiresAt = fields.documentExpiresAt
+          fieldConfidence.licenseExpiresAt = fieldConfidence.documentExpiresAt ?? 0.7
+        }
       }
     }
 
@@ -926,13 +995,13 @@ export default class IdentityScanService {
       }
     }
 
-    const cat = text.match(CATEGORY_LABEL)
-    if (cat?.[1]) {
-      fields.licenseCategories = normalizeSpaces(cat[1]).toUpperCase()
-      fieldConfidence.licenseCategories = 0.5
+    if (documentType === 'driving_license') {
+      const cat = text.match(CATEGORY_LABEL)
+      if (cat?.[1]) {
+        fields.licenseCategories = normalizeSpaces(cat[1]).toUpperCase()
+        fieldConfidence.licenseCategories = 0.5
+      }
     }
-
-    // Ne pas reporter documentExpiresAt → licenseExpiresAt (saisie manuelle)
 
     const filledCount = Object.values(fields).filter(Boolean).length
     if (ocrConfidence < 0.35 || (text.trim().length < 20 && !usedMrz)) {

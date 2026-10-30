@@ -486,6 +486,18 @@ const routes = {
     tokens: [{"old":"/api/v1/clients/:id/license/:side","type":0,"val":"api","end":""},{"old":"/api/v1/clients/:id/license/:side","type":0,"val":"v1","end":""},{"old":"/api/v1/clients/:id/license/:side","type":0,"val":"clients","end":""},{"old":"/api/v1/clients/:id/license/:side","type":1,"val":"id","end":""},{"old":"/api/v1/clients/:id/license/:side","type":0,"val":"license","end":""},{"old":"/api/v1/clients/:id/license/:side","type":1,"val":"side","end":""}],
     types: placeholder as Registry['clients.clients.license_file']['types'],
   },
+  'clients.clients.upload_id_card': {
+    methods: ["POST"],
+    pattern: '/api/v1/clients/:id/id-card',
+    tokens: [{"old":"/api/v1/clients/:id/id-card","type":0,"val":"api","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"v1","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"clients","end":""},{"old":"/api/v1/clients/:id/id-card","type":1,"val":"id","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"id-card","end":""}],
+    types: placeholder as Registry['clients.clients.upload_id_card']['types'],
+  },
+  'clients.clients.id_card_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/clients/:id/id-card',
+    tokens: [{"old":"/api/v1/clients/:id/id-card","type":0,"val":"api","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"v1","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"clients","end":""},{"old":"/api/v1/clients/:id/id-card","type":1,"val":"id","end":""},{"old":"/api/v1/clients/:id/id-card","type":0,"val":"id-card","end":""}],
+    types: placeholder as Registry['clients.clients.id_card_file']['types'],
+  },
   'clients.clients.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/clients/:id',

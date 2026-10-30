@@ -293,6 +293,12 @@ router
           .get('/:id/license/:side', [controllers.Clients, 'licenseFile'])
           .use(middleware.permission({ permission: 'clients.view_documents' }))
         router
+          .post('/:id/id-card', [controllers.Clients, 'uploadIdCard'])
+          .use(middleware.permission({ permission: 'clients.manage_identity' }))
+        router
+          .get('/:id/id-card', [controllers.Clients, 'idCardFile'])
+          .use(middleware.permission({ permission: 'clients.view_documents' }))
+        router
           .get('/:id', [controllers.Clients, 'show'])
           .use(middleware.permission({ permission: 'clients.view' }))
         router

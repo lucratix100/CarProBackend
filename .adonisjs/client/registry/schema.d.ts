@@ -967,6 +967,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['licenseFile']>>>
     }
   }
+  'clients.clients.upload_id_card': {
+    methods: ["POST"]
+    pattern: '/api/v1/clients/:id/id-card'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['uploadIdCard']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['uploadIdCard']>>>
+    }
+  }
+  'clients.clients.id_card_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/clients/:id/id-card'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['idCardFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/clients_controller').default['idCardFile']>>>
+    }
+  }
   'clients.clients.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/clients/:id'

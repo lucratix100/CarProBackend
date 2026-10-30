@@ -85,10 +85,11 @@ export default class ClientLicenseUploadService {
     return file
   }
 
-  async store(file: MultipartFile, clientId: number, side: 'recto' | 'verso') {
+  async store(file: MultipartFile, clientId: number, side: 'recto' | 'verso' | 'idcard') {
     await this.ensureStorage()
+    const label = side === 'idcard' ? 'la pièce d’identité' : `le ${side} du permis`
     if (!file.isValid || !file.tmpPath) {
-      throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
+      throw new Exception(`Impossible d’enregistrer ${label}.`, {
         status: 500,
         code: 'E_LICENSE_UPLOAD_FAILED',
       })
@@ -99,7 +100,7 @@ export default class ClientLicenseUploadService {
       const fileName = `client-${clientId}-${side}-${Date.now()}.pdf`
       await file.move(this.storageDir(), { name: fileName, overwrite: true })
       if (!file.isValid || file.errors.length) {
-        throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
+        throw new Exception(`Impossible d’enregistrer ${label}.`, {
           status: 500,
           code: 'E_LICENSE_UPLOAD_FAILED',
         })
@@ -118,9 +119,11 @@ export default class ClientLicenseUploadService {
     } catch (error) {
       await unlink(destination).catch(() => {})
       if (error instanceof Error && error.message === 'IMAGE_STILL_TOO_LARGE') {
-        throw this.#tooLarge(side === 'recto' ? 'Recto' : 'Verso')
+        throw this.#tooLarge(
+          side === 'idcard' ? 'Pièce d’identité' : side === 'recto' ? 'Recto' : 'Verso'
+        )
       }
-      throw new Exception(`Impossible d’enregistrer le ${side} du permis.`, {
+      throw new Exception(`Impossible d’enregistrer ${label}.`, {
         status: 500,
         code: 'E_LICENSE_UPLOAD_FAILED',
       })

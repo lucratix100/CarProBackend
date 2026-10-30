@@ -234,7 +234,7 @@ export class ClientAuthAccessTokenSchema extends BaseModel {
 }
 
 export class ClientSchema extends BaseModel {
-  static $columns = ['agencyId', 'birthDate', 'city', 'createdAt', 'createdByUserId', 'email', 'fullName', 'id', 'idCardNumber', 'isActive', 'licenseExpiresAt', 'licenseNumber', 'licenseRectoPath', 'licenseVersoPath', 'notes', 'phone', 'source', 'type', 'updatedAt', 'updatedByUserId'] as const
+  static $columns = ['agencyId', 'birthDate', 'city', 'createdAt', 'createdByUserId', 'email', 'fullName', 'id', 'idCardNumber', 'idCardPath', 'isActive', 'licenseExpiresAt', 'licenseNumber', 'licenseRectoPath', 'licenseVersoPath', 'notes', 'phone', 'source', 'type', 'updatedAt', 'updatedByUserId'] as const
   $columns = ClientSchema.$columns
   @column()
   declare agencyId: number | null
@@ -254,6 +254,8 @@ export class ClientSchema extends BaseModel {
   declare id: number
   @column()
   declare idCardNumber: string | null
+  @column()
+  declare idCardPath: string | null
   @column()
   declare isActive: boolean
   @column.date()

@@ -140,6 +140,8 @@ export interface ApiDefinition {
       lookup: typeof routes['clients.clients.lookup']
       uploadLicense: typeof routes['clients.clients.upload_license']
       licenseFile: typeof routes['clients.clients.license_file']
+      uploadIdCard: typeof routes['clients.clients.upload_id_card']
+      idCardFile: typeof routes['clients.clients.id_card_file']
       show: typeof routes['clients.clients.show']
       update: typeof routes['clients.clients.update']
       destroy: typeof routes['clients.clients.destroy']

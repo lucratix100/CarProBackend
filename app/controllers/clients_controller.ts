@@ -145,6 +145,8 @@ function withLicenseFlags(client: Client, serialized: unknown) {
     hasLicenseVerso: Boolean(client.licenseVersoPath),
     licenseRectoUrl: client.licenseRectoPath ? `/clients/${client.id}/license/recto` : null,
     licenseVersoUrl: client.licenseVersoPath ? `/clients/${client.id}/license/verso` : null,
+    hasIdCard: Boolean(client.idCardPath),
+    idCardUrl: client.idCardPath ? `/clients/${client.id}/id-card` : null,
     licenseExpired,
     isVerified,
   }
@@ -505,6 +507,72 @@ export default class ClientsController {
     return response.stream(createReadStream(absolutePath))
   }
 
+  async uploadIdCard({ params, request, response, serialize, agencyId, auth }: HttpContext) {
+    const client = await this.#findScoped(params.id, agencyId!)
+    const file = this.#uploads.validateFile(request.file('file'), 'Pièce d’identité')
+    if (!file) {
+      throw new Exception('Ajoutez la photo de la pièce d’identité.', {
+        status: 422,
+        code: 'E_ID_CARD_FILE_REQUIRED',
+      })
+    }
+
+    const previous = client.idCardPath
+    client.idCardPath = await this.#uploads.store(file, client.id, 'idcard')
+    await this.#uploads.removeIfExists(previous)
+
+    const user = auth.use('api').getUserOrFail()
+    client.updatedByUserId = user.id
+    await client.save()
+
+    await this.#audit.log({
+      actor: user,
+      agencyId: agencyId!,
+      action: 'client.identity_upload',
+      module: 'clients',
+      entityType: 'client',
+      entityId: client.id,
+      clientId: client.id,
+      newValues: { idCard: true },
+      summary: `Pièce d’identité scannée — ${client.fullName}`,
+      ip: request.ip(),
+    })
+
+    const serialized = await serialize(ClientTransformer.transform(client))
+    return response.ok(await this.#withActors(client, serialized))
+  }
+
+  async idCardFile({ params, response, agencyId }: HttpContext) {
+    const client = await this.#findScoped(params.id, agencyId!)
+    if (!client.idCardPath) {
+      throw new Exception('Pièce d’identité introuvable.', { status: 404, code: 'E_ID_CARD_MISSING' })
+    }
+
+    const absolutePath = this.#uploads.absolutePath(client.idCardPath)
+    try {
+      await access(absolutePath)
+    } catch {
+      throw new Exception('Fichier introuvable sur le serveur.', {
+        status: 404,
+        code: 'E_ID_CARD_FILE_MISSING',
+      })
+    }
+
+    const ext = client.idCardPath.split('.').pop()?.toLowerCase()
+    const contentType =
+      ext === 'pdf'
+        ? 'application/pdf'
+        : ext === 'png'
+          ? 'image/png'
+          : ext === 'webp'
+            ? 'image/webp'
+            : 'image/jpeg'
+
+    response.header('Content-Type', contentType)
+    response.header('Content-Disposition', `inline; filename="cni-${client.id}.${ext}"`)
+    return response.stream(createReadStream(absolutePath))
+  }
+
   async destroy({ params, response, agencyId, auth, request }: HttpContext) {
     const client = await this.#findScoped(params.id, agencyId!)
     const user = auth.use('api').getUserOrFail()
@@ -535,6 +603,7 @@ export default class ClientsController {
 
     await this.#uploads.removeIfExists(client.licenseRectoPath)
     await this.#uploads.removeIfExists(client.licenseVersoPath)
+    await this.#uploads.removeIfExists(client.idCardPath)
     await client.delete()
     await this.#audit.log({
       actor: user,

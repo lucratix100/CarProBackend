@@ -84,6 +84,8 @@ export type ScannedRoutes = {
     'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.upload_license': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
+    'clients.clients.upload_id_card': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'clients.clients.id_card_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -222,6 +224,7 @@ export type ScannedRoutes = {
     'clients.clients.index': { paramsTuple?: []; params?: {} }
     'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
+    'clients.clients.id_card_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.index': { paramsTuple?: []; params?: {} }
     'rentals.rentals.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -313,6 +316,7 @@ export type ScannedRoutes = {
     'clients.clients.index': { paramsTuple?: []; params?: {} }
     'clients.clients.lookup': { paramsTuple?: []; params?: {} }
     'clients.clients.license_file': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'side': ParamValue} }
+    'clients.clients.id_card_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'clients.clients.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.index': { paramsTuple?: []; params?: {} }
     'rentals.rentals.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -403,6 +407,7 @@ export type ScannedRoutes = {
     'clients.clients.store': { paramsTuple?: []; params?: {} }
     'clients.clients.scan_identity': { paramsTuple?: []; params?: {} }
     'clients.clients.upload_license': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'clients.clients.upload_id_card': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.store': { paramsTuple?: []; params?: {} }
     'rentals.rentals.extend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rentals.rentals.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

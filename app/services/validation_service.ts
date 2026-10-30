@@ -378,6 +378,7 @@ export default class ValidationService {
         const uploads = new ClientLicenseUploadService()
         await uploads.removeIfExists(client.licenseRectoPath)
         await uploads.removeIfExists(client.licenseVersoPath)
+        await uploads.removeIfExists(client.idCardPath)
         await client.delete()
         break
       }
