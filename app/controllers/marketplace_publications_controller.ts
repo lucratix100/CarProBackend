@@ -16,10 +16,16 @@ import VehiclePhotoUploadService, {
 import { ADMIN_NOTIFICATION_TYPES } from '#constants/admin_notification_types'
 import { MARKETPLACE_PUBLICATION_LABELS } from '#constants/marketplace_publication'
 import {
+  approveMarketplacePublicationValidator,
   bulkApproveMarketplacePublicationsValidator,
   listMarketplacePublicationsValidator,
   rejectMarketplacePublicationValidator,
 } from '#validators/marketplace_publication'
+import {
+  listMarketplaceBoostsValidator,
+  rejectMarketplaceBoostValidator,
+} from '#validators/marketplace_boost'
+import { boostDatePayload, resetVehicleBoost } from '#services/marketplace_boost_service'
 
 const REPORT_REASON_LABELS: Record<string, string> = {
   misleading: 'Annonce trompeuse',
@@ -74,6 +80,7 @@ export default class MarketplacePublicationsController {
       marketplaceReviewedAt: vehicle.marketplaceReviewedAt?.toISO?.() ?? null,
       marketplaceRejectionReason: vehicle.marketplaceRejectionReason,
       marketplaceIsRereview: Boolean(vehicle.marketplaceIsRereview),
+      ...boostDatePayload(vehicle),
       photosCount: photoItems.length,
       photoUrl: photoItems[0]?.url ?? vehicle.photoUrl,
       openReportsCount,
@@ -133,7 +140,32 @@ export default class MarketplacePublicationsController {
     }
   }
 
-  async #approveOne(vehicle: Vehicle, reviewerId: number) {
+  async #setCoverPhoto(vehicle: Vehicle, coverPhotoId: number) {
+    const photos = await VehiclePhoto.query()
+      .where('vehicleId', vehicle.id)
+      .orderBy('position', 'asc')
+      .orderBy('id', 'asc')
+
+    const cover = photos.find((photo) => photo.id === coverPhotoId)
+    if (!cover) {
+      throw new Exception('Choisissez une photo de couverture parmi celles du véhicule.', {
+        status: 422,
+        code: 'E_COVER_PHOTO',
+      })
+    }
+
+    const ordered = [cover, ...photos.filter((photo) => photo.id !== cover.id)]
+    for (const [index, photo] of ordered.entries()) {
+      if (photo.position !== index) {
+        photo.position = index
+        await photo.save()
+      }
+    }
+
+    vehicle.photoUrl = `/vehicles/${vehicle.id}/photos/${cover.id}`
+  }
+
+  async #approveOne(vehicle: Vehicle, reviewerId: number, coverPhotoId: number) {
     if (vehicle.marketplacePublicationStatus !== 'pending_review') {
       throw new Exception('Ce véhicule n’est pas en attente de validation.', {
         status: 422,
@@ -155,6 +187,8 @@ export default class MarketplacePublicationsController {
         code: 'E_PHOTOS_REQUIRED',
       })
     }
+
+    await this.#setCoverPhoto(vehicle, coverPhotoId)
 
     vehicle.marketplacePublicationStatus = 'published'
     vehicle.marketplaceReviewedAt = DateTime.now()
@@ -271,14 +305,15 @@ export default class MarketplacePublicationsController {
     return response.stream(createReadStream(absolutePath))
   }
 
-  async approve({ params, auth, response }: HttpContext) {
+  async approve({ params, request, auth, response }: HttpContext) {
     const reviewer = auth.use('api').getUserOrFail()
+    const payload = await request.validateUsing(approveMarketplacePublicationValidator)
     const vehicle = await Vehicle.query()
       .where('id', params.id)
       .preload('agency')
       .firstOrFail()
 
-    await this.#approveOne(vehicle, reviewer.id)
+    await this.#approveOne(vehicle, reviewer.id, payload.coverPhotoId)
     await vehicle.load('agency', (aq) => aq.preload('city'))
     return response.ok({
       ...(await this.#serializeVehicle(vehicle)),
@@ -296,7 +331,18 @@ export default class MarketplacePublicationsController {
     for (const id of payload.ids) {
       try {
         const vehicle = await Vehicle.query().where('id', id).preload('agency').firstOrFail()
-        await this.#approveOne(vehicle, reviewer.id)
+        const cover = await VehiclePhoto.query()
+          .where('vehicleId', vehicle.id)
+          .orderBy('position', 'asc')
+          .orderBy('id', 'asc')
+          .first()
+        if (!cover) {
+          throw new Exception('Choisissez une photo de couverture parmi celles du véhicule.', {
+            status: 422,
+            code: 'E_COVER_PHOTO',
+          })
+        }
+        await this.#approveOne(vehicle, reviewer.id, cover.id)
         approved.push(id)
       } catch (error) {
         failed.push({
@@ -383,6 +429,7 @@ export default class MarketplacePublicationsController {
     vehicle.marketplaceReviewedByUserId = reviewer.id
     vehicle.marketplaceRejectionReason = null
     vehicle.marketplaceIsRereview = false
+    resetVehicleBoost(vehicle)
     await vehicle.save()
 
     await this.#moderation.logEvent({
@@ -408,6 +455,121 @@ export default class MarketplacePublicationsController {
       ...(await this.#serializeVehicle(vehicle)),
       message: 'Véhicule retiré du catalogue.',
       label: MARKETPLACE_PUBLICATION_LABELS.draft,
+    })
+  }
+
+  async boostIndex({ request, response }: HttpContext) {
+    const filters = await request.validateUsing(listMarketplaceBoostsValidator)
+    const page = filters.page ?? 1
+    const perPage = filters.perPage ?? 20
+    const status = filters.status ?? 'pending_review'
+
+    const query = Vehicle.query()
+      .where('vehicles.boost_status', status)
+      .join('agencies', 'agencies.id', 'vehicles.agency_id')
+      .select('vehicles.*')
+      .preload('agency', (aq) => aq.preload('city'))
+      .orderBy('vehicles.boost_submitted_at', 'asc')
+      .orderBy('vehicles.id', 'asc')
+
+    if (filters.q?.trim()) {
+      const q = `%${filters.q.trim()}%`
+      query.where((builder) => {
+        builder
+          .whereILike('vehicles.plate', q)
+          .orWhereILike('vehicles.brand', q)
+          .orWhereILike('vehicles.model', q)
+          .orWhereILike('agencies.name', q)
+      })
+    }
+
+    const paginated = await query.paginate(page, perPage)
+    const rows = await Promise.all(paginated.all().map((vehicle) => this.#serializeVehicle(vehicle)))
+
+    return response.ok({
+      data: rows,
+      meta: paginated.getMeta(),
+    })
+  }
+
+  async approveBoost({ params, auth, response }: HttpContext) {
+    const reviewer = auth.use('api').getUserOrFail()
+    const vehicle = await Vehicle.query().where('id', params.id).preload('agency').firstOrFail()
+
+    if (vehicle.boostStatus !== 'pending_review') {
+      throw new Exception('Ce boost n’est pas en attente de validation.', {
+        status: 422,
+        code: 'E_BOOST_NOT_PENDING',
+      })
+    }
+
+    if (vehicle.marketplacePublicationStatus !== 'published') {
+      throw new Exception('L’annonce n’est plus publiée. Le boost ne peut pas être approuvé.', {
+        status: 422,
+        code: 'E_BOOST_NOT_PUBLISHED',
+      })
+    }
+
+    vehicle.boostStatus = 'approved'
+    vehicle.boostReviewedAt = DateTime.now()
+    vehicle.boostReviewedByUserId = reviewer.id
+    vehicle.boostRejectionReason = null
+    await vehicle.save()
+
+    try {
+      await this.#notifications.notifyAgencyAdmins(vehicle.agencyId, {
+        type: ADMIN_NOTIFICATION_TYPES.MARKETPLACE_BOOST_APPROVED,
+        title: 'Boost approuvé',
+        body: `${vehicle.label} sera mis en avant sur le catalogue pendant la période choisie.`,
+        href: `/admin/vehicles/${vehicle.id}`,
+        meta: { vehicleId: vehicle.id, boostStatus: 'approved' },
+      })
+    } catch {
+      // ignore
+    }
+
+    await vehicle.load('agency', (aq) => aq.preload('city'))
+    return response.ok({
+      ...(await this.#serializeVehicle(vehicle)),
+      message: 'Boost approuvé.',
+    })
+  }
+
+  async rejectBoost({ params, request, auth, response }: HttpContext) {
+    const reviewer = auth.use('api').getUserOrFail()
+    const payload = await request.validateUsing(rejectMarketplaceBoostValidator)
+    const vehicle = await Vehicle.query().where('id', params.id).firstOrFail()
+
+    if (vehicle.boostStatus !== 'pending_review') {
+      throw new Exception('Ce boost n’est pas en attente de validation.', {
+        status: 422,
+        code: 'E_BOOST_NOT_PENDING',
+      })
+    }
+
+    const reason = payload.reason.trim()
+    vehicle.boostStatus = 'rejected'
+    vehicle.boostReviewedAt = DateTime.now()
+    vehicle.boostReviewedByUserId = reviewer.id
+    vehicle.boostRejectionReason = reason
+    await vehicle.save()
+
+    try {
+      await this.#notifications.notifyAgencyAdmins(vehicle.agencyId, {
+        type: ADMIN_NOTIFICATION_TYPES.MARKETPLACE_BOOST_REJECTED,
+        title: 'Boost refusé',
+        body: `${vehicle.label} : ${reason}`,
+        href: `/admin/vehicles/${vehicle.id}`,
+        meta: { vehicleId: vehicle.id, boostStatus: 'rejected' },
+      })
+    } catch {
+      // ignore
+    }
+
+    await vehicle.load('agency', (aq) => aq.preload('city'))
+    return response.ok({
+      ...(await this.#serializeVehicle(vehicle)),
+      message: 'Boost refusé.',
     })
   }
 

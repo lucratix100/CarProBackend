@@ -47,6 +47,7 @@ export interface ApiDefinition {
   marketplacePublications: {
     marketplacePublications: {
       index: typeof routes['marketplace_publications.marketplace_publications.index']
+      boostIndex: typeof routes['marketplace_publications.marketplace_publications.boost_index']
       agencies: typeof routes['marketplace_publications.marketplace_publications.agencies']
       bulkApprove: typeof routes['marketplace_publications.marketplace_publications.bulk_approve']
       photoFile: typeof routes['marketplace_publications.marketplace_publications.photo_file']
@@ -55,6 +56,8 @@ export interface ApiDefinition {
       approve: typeof routes['marketplace_publications.marketplace_publications.approve']
       reject: typeof routes['marketplace_publications.marketplace_publications.reject']
       unpublish: typeof routes['marketplace_publications.marketplace_publications.unpublish']
+      approveBoost: typeof routes['marketplace_publications.marketplace_publications.approve_boost']
+      rejectBoost: typeof routes['marketplace_publications.marketplace_publications.reject_boost']
     }
   }
   marketplaceReports: {
@@ -118,6 +121,8 @@ export interface ApiDefinition {
       destroyPhoto: typeof routes['vehicles.vehicles.destroy_photo']
       submitMarketplace: typeof routes['vehicles.vehicles.submit_marketplace']
       unpublishMarketplace: typeof routes['vehicles.vehicles.unpublish_marketplace']
+      requestBoost: typeof routes['vehicles.vehicles.request_boost']
+      cancelBoost: typeof routes['vehicles.vehicles.cancel_boost']
       show: typeof routes['vehicles.vehicles.show']
       update: typeof routes['vehicles.vehicles.update']
       destroy: typeof routes['vehicles.vehicles.destroy']
@@ -158,6 +163,16 @@ export interface ApiDefinition {
       show: typeof routes['rentals.rentals.show']
       update: typeof routes['rentals.rentals.update']
       destroy: typeof routes['rentals.rentals.destroy']
+    }
+  }
+  sales: {
+    vehicleSales: {
+      index: typeof routes['sales.vehicle_sales.index']
+      store: typeof routes['sales.vehicle_sales.store']
+      accept: typeof routes['sales.vehicle_sales.accept']
+      reject: typeof routes['sales.vehicle_sales.reject']
+      markSold: typeof routes['sales.vehicle_sales.mark_sold']
+      show: typeof routes['sales.vehicle_sales.show']
     }
   }
   invoices: {
@@ -299,6 +314,12 @@ export interface ApiDefinition {
       store: typeof routes['marketplace.marketplace_bookings.store']
       show: typeof routes['marketplace.marketplace_bookings.show']
       cancel: typeof routes['marketplace.marketplace_bookings.cancel']
+    }
+    marketplaceSales: {
+      index: typeof routes['marketplace.marketplace_sales.index']
+      store: typeof routes['marketplace.marketplace_sales.store']
+      show: typeof routes['marketplace.marketplace_sales.show']
+      cancel: typeof routes['marketplace.marketplace_sales.cancel']
     }
     marketplaceFavorite: {
       index: typeof routes['marketplace.marketplace_favorite.index']

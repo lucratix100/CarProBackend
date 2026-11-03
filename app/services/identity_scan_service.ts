@@ -3,6 +3,7 @@ import { parse as parseMrz } from 'mrz'
 import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
 import { readFile } from 'node:fs/promises'
+import sharp from 'sharp'
 
 export type IdentityDocumentType = 'cni' | 'passport' | 'driving_license' | 'unknown'
 
@@ -693,6 +694,87 @@ function isExpired(isoDate: string | null): boolean {
   return isoDate < new Date().toISOString().slice(0, 10)
 }
 
+function unreadableResult(): IdentityScanResult {
+  return {
+    documentType: 'unknown',
+    confidence: 0,
+    fields: emptyFields(),
+    fieldConfidence: {},
+    warnings: ['unreadable'],
+    rawTextPreview: '',
+    usedMrz: false,
+  }
+}
+
+/** Niveaux de gris, contraste et taille adaptés à Tesseract (carte déjà cadrée). */
+async function prepareOcrImage(buffer: Buffer): Promise<Buffer> {
+  const rotated = await sharp(buffer, { failOn: 'none' }).rotate().toBuffer()
+  const meta = await sharp(rotated).metadata()
+  const width = meta.width ?? 0
+  let pipeline = sharp(rotated)
+  if (width > 0) {
+    const targetWidth = width < 1600 ? 1800 : Math.min(width, 2200)
+    pipeline = pipeline.resize({ width: targetWidth, withoutEnlargement: false })
+  }
+  return pipeline.grayscale().normalise().sharpen().png().toBuffer()
+}
+
+function scanNeedsAnotherPass(result: IdentityScanResult) {
+  if (!result.fields.fullName) return true
+  if (result.warnings.includes('unreadable') || result.warnings.includes('partial')) return true
+  if (!result.fields.idCardNumber && !result.fields.licenseNumber && !result.fields.birthDate) {
+    return true
+  }
+  return result.confidence < 0.55
+}
+
+function mergeScanResults(results: IdentityScanResult[]): IdentityScanResult {
+  const usable = results.filter((result) => result.rawTextPreview || result.fields.fullName)
+  const pool = usable.length > 0 ? usable : results
+  const fields = emptyFields()
+  const fieldConfidence: IdentityScanResult['fieldConfidence'] = {}
+  for (const result of pool) {
+    mergeFields(fields, fieldConfidence, result.fields, result.fieldConfidence, true)
+  }
+  if (!fields.fullName) {
+    const composed = composeFullName(fields.firstNames, fields.lastName)
+    if (composed) {
+      fields.fullName = composed
+      fieldConfidence.fullName = Math.min(
+        fieldConfidence.firstNames ?? 0.55,
+        fieldConfidence.lastName ?? 0.55
+      )
+    }
+  }
+
+  const bestType = pool
+    .filter((result) => result.documentType !== 'unknown')
+    .sort((a, b) => b.confidence - a.confidence)[0]
+  const bestText = pool.slice().sort((a, b) => b.confidence - a.confidence)[0]
+  const warnings = new Set<IdentityScanWarning>()
+  for (const result of pool) {
+    for (const warning of result.warnings) warnings.add(warning)
+  }
+  if (fields.fullName) {
+    warnings.delete('missing_required')
+    warnings.delete('unreadable')
+  }
+  if ((fields.idCardNumber || fields.licenseNumber) && fields.birthDate) {
+    warnings.delete('partial')
+  }
+
+  const confidence = Math.max(...pool.map((result) => result.confidence), 0)
+  return {
+    documentType: bestType?.documentType ?? 'unknown',
+    confidence: Math.round(confidence * 100) / 100,
+    fields,
+    fieldConfidence,
+    warnings: [...warnings],
+    rawTextPreview: bestText?.rawTextPreview ?? '',
+    usedMrz: pool.some((result) => result.usedMrz),
+  }
+}
+
 function mergeFields(
   target: IdentityScanFields,
   targetConfidence: IdentityScanResult['fieldConfidence'],
@@ -714,19 +796,30 @@ function mergeFields(
 }
 
 export default class IdentityScanService {
+  #ocrTail: Promise<void> = Promise.resolve()
+
   async #getWorker() {
     if (!workerPromise) {
       workerPromise = (async () => {
         const worker = await createWorker('fra+eng')
         await worker.setParameters({
-          // Bloc de texte uniforme — mieux pour une CNI cadrée
           tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
           preserve_interword_spaces: '1',
+          user_defined_dpi: '300',
         })
         return worker
       })()
     }
     return workerPromise
+  }
+
+  #enqueue<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.#ocrTail.then(job, job)
+    this.#ocrTail = run.then(
+      () => undefined,
+      () => undefined
+    )
+    return run
   }
 
   validateScanFile(file: MultipartFile | null) {
@@ -787,48 +880,38 @@ export default class IdentityScanService {
   }
 
   async scanBuffer(buffer: Buffer): Promise<IdentityScanResult> {
-    let text = ''
-    let ocrConfidence = 0
+    return this.#enqueue(() => this.#recognize(buffer))
+  }
 
+  async #recognize(buffer: Buffer): Promise<IdentityScanResult> {
     try {
+      const prepared = await prepareOcrImage(buffer)
       const worker = await this.#getWorker()
-      const primary = await worker.recognize(buffer)
-      text = primary.data.text || ''
-      ocrConfidence =
-        typeof primary.data.confidence === 'number' ? primary.data.confidence / 100 : 0.5
+      const first = await this.#readPass(worker, prepared, PSM.SINGLE_BLOCK)
+      if (!scanNeedsAnotherPass(first)) return first
 
-      // 2e passe (PSM 4) si le nom n’apparaît pas clairement
-      const quick = this.parseOcrText(text, ocrConfidence)
-      if (!quick.fields.fullName) {
-        try {
-          await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_COLUMN })
-          const secondary = await worker.recognize(buffer)
-          const alt = secondary.data.text || ''
-          if (alt.length > text.length * 0.5) {
-            text = `${text}\n${alt}`
-            const c2 =
-              typeof secondary.data.confidence === 'number'
-                ? secondary.data.confidence / 100
-                : ocrConfidence
-            ocrConfidence = Math.max(ocrConfidence, c2)
-          }
-        } finally {
-          await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
-        }
+      try {
+        const second = await this.#readPass(worker, prepared, PSM.SPARSE_TEXT)
+        return mergeScanResults([first, second])
+      } finally {
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
       }
     } catch {
-      return {
-        documentType: 'unknown',
-        confidence: 0,
-        fields: emptyFields(),
-        fieldConfidence: {},
-        warnings: ['unreadable'],
-        rawTextPreview: '',
-        usedMrz: false,
-      }
+      return unreadableResult()
     }
+  }
 
-    return this.parseOcrText(text, ocrConfidence)
+  async #readPass(
+    worker: Worker,
+    image: Buffer,
+    mode: PSM
+  ): Promise<IdentityScanResult> {
+    await worker.setParameters({ tessedit_pageseg_mode: mode })
+    const recognized = await worker.recognize(image)
+    const text = recognized.data.text || ''
+    const confidence =
+      typeof recognized.data.confidence === 'number' ? recognized.data.confidence / 100 : 0.5
+    return this.parseOcrText(text, confidence)
   }
 
   /** Parse le texte OCR (exposé pour tests / CNI CEDEAO). */

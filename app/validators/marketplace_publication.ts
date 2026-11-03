@@ -5,6 +5,10 @@ export const rejectMarketplacePublicationValidator = vine.create({
   reason: vine.string().trim().minLength(5).maxLength(1000),
 })
 
+export const approveMarketplacePublicationValidator = vine.create({
+  coverPhotoId: vine.number().positive(),
+})
+
 export const listMarketplacePublicationsValidator = vine.create({
   status: vine.enum(MARKETPLACE_PUBLICATION_STATUSES).optional(),
   agencyId: vine.number().positive().optional(),

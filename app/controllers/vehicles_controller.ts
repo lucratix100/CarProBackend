@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
 import Vehicle from '#models/vehicle'
+import VehicleSale from '#models/vehicle_sale'
 import VehiclePhoto from '#models/vehicle_photo'
 import Owner from '#models/owner'
 import Marque from '#models/marque'
@@ -35,6 +36,14 @@ import ValidationService, { pendingValidationResponse } from '#services/validati
 import { assertVehicleDeletable } from '#services/vehicle_deletion_guard'
 import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
 import { whereVisibleCatalog } from '#services/catalog_scope'
+import { includesRent, includesSale } from '#constants/offer_types'
+import { requestMarketplaceBoostValidator } from '#validators/marketplace_boost'
+import {
+  assertBoostDateWindow,
+  boostWindowEnded,
+  parseBoostDate,
+  resetVehicleBoost,
+} from '#services/marketplace_boost_service'
 
 function toDate(value: string | null | undefined) {
   if (value === undefined) return undefined
@@ -231,6 +240,46 @@ export default class VehiclesController {
     return { total, published, pending, draft, rented, outOfService }
   }
 
+  async #saleByVehicle(vehicleIds: number[]) {
+    const unique = [...new Set(vehicleIds.filter(Boolean))]
+    const map = new Map<
+      number,
+      { status: string; offeredPrice: number; finalPrice: number | null; agencyCommission: number }
+    >()
+    if (unique.length === 0) return map
+    const sales = await VehicleSale.query()
+      .whereIn('vehicleId', unique)
+      .orderBy('id', 'desc')
+    for (const sale of sales) {
+      const current = map.get(sale.vehicleId)
+      if (!current) {
+        map.set(sale.vehicleId, {
+          status: sale.status,
+          offeredPrice: sale.offeredPrice,
+          finalPrice: sale.finalPrice,
+          agencyCommission: sale.agencyCommission,
+        })
+        continue
+      }
+      if (current.status !== 'sold' && sale.status === 'sold') {
+        map.set(sale.vehicleId, {
+          status: sale.status,
+          offeredPrice: sale.offeredPrice,
+          finalPrice: sale.finalPrice,
+          agencyCommission: sale.agencyCommission,
+        })
+      }
+    }
+    return map
+  }
+
+  #withSale(
+    row: Record<string, unknown>,
+    sales: Map<number, { status: string; offeredPrice: number; finalPrice: number | null; agencyCommission: number }>
+  ) {
+    return { ...row, sale: sales.get(Number(row.id)) ?? null }
+  }
+
   async index({ request, serialize, agencyId }: HttpContext) {
     const status = request.input('status')
     const ownerId = request.input('ownerId')
@@ -240,7 +289,11 @@ export default class VehiclesController {
 
     if (!isPaginatedRequest(request)) {
       const vehicles = await this.#vehicleListQuery(agencyId!, filters).orderBy('id', 'desc')
-      return Promise.all(vehicles.map((vehicle) => this.#withPhotos(vehicle, serialize)))
+      const rows = await Promise.all(vehicles.map((vehicle) => this.#withPhotos(vehicle, serialize)))
+      const sales = await this.#saleByVehicle(
+        rows.map((row) => Number((row as unknown as Record<string, unknown>).id))
+      )
+      return rows.map((row) => this.#withSale(row as unknown as Record<string, unknown>, sales))
     }
 
     const { page, perPage } = readPage(request)
@@ -250,9 +303,12 @@ export default class VehiclesController {
     const data = await Promise.all(
       paginator.all().map((vehicle) => this.#withPhotos(vehicle, serialize))
     )
+    const sales = await this.#saleByVehicle(
+      data.map((row) => Number((row as unknown as Record<string, unknown>).id))
+    )
 
     return {
-      data,
+      data: data.map((row) => this.#withSale(row as unknown as Record<string, unknown>, sales)),
       meta: paginationMeta(paginator, page, perPage),
       summary: await this.#catalogSummary(agencyId!, filters),
     }
@@ -286,6 +342,14 @@ export default class VehiclesController {
       throw new Exception('Cette immatriculation existe déjà.', { status: 422, code: 'E_PLATE_TAKEN' })
     }
 
+    const offerType = payload.offerType ?? 'rent'
+    if (includesSale(offerType) && (!payload.salePrice || Number(payload.salePrice) <= 0)) {
+      throw new Exception('Indiquez un prix de vente valide.', {
+        status: 422,
+        code: 'E_SALE_PRICE_REQUIRED',
+      })
+    }
+
     const vehicle = await Vehicle.create({
       agencyId: agencyId!,
       ownerId,
@@ -299,8 +363,11 @@ export default class VehiclesController {
       fuel: payload.fuel,
       vehicleType: payload.vehicleType,
       status: payload.status,
+      offerType,
       mileage: payload.mileage ?? 0,
       dailyPrice: payload.dailyPrice,
+      salePrice: payload.salePrice ?? null,
+      saleNegotiable: payload.saleNegotiable ?? true,
       commissionPerDay:
         payload.commissionPerDay ??
         (await Setting.current(agencyId!)).commissionPerDay,
@@ -671,6 +738,16 @@ export default class VehiclesController {
       vehicle.model = modele.name
     }
 
+    const nextOfferType = payload.offerType ?? vehicle.offerType
+    const nextSalePrice =
+      payload.salePrice === undefined ? vehicle.salePrice : payload.salePrice
+    if (includesSale(nextOfferType) && (!nextSalePrice || Number(nextSalePrice) <= 0)) {
+      throw new Exception('Indiquez un prix de vente valide.', {
+        status: 422,
+        code: 'E_SALE_PRICE_REQUIRED',
+      })
+    }
+
     vehicle.merge({
       ownerId: payload.ownerId === undefined ? vehicle.ownerId : payload.ownerId,
       plate: payload.plate ?? vehicle.plate,
@@ -679,8 +756,14 @@ export default class VehiclesController {
       fuel: payload.fuel ?? vehicle.fuel,
       vehicleType: payload.vehicleType ?? vehicle.vehicleType,
       status: payload.status ?? vehicle.status,
+      offerType: nextOfferType,
       mileage: payload.mileage ?? vehicle.mileage,
       dailyPrice: payload.dailyPrice ?? vehicle.dailyPrice,
+      salePrice: nextSalePrice,
+      saleNegotiable:
+        payload.saleNegotiable === undefined
+          ? vehicle.saleNegotiable
+          : payload.saleNegotiable,
       commissionPerDay: payload.commissionPerDay ?? vehicle.commissionPerDay,
       insuranceCompany:
         payload.insuranceCompany === undefined
@@ -840,13 +923,6 @@ export default class VehiclesController {
       )
     }
 
-    if (!vehicle.dailyPrice || Number(vehicle.dailyPrice) <= 0) {
-      throw new Exception('Indiquez un prix journalier valide.', {
-        status: 422,
-        code: 'E_PRICE_REQUIRED',
-      })
-    }
-
     if (!vehicle.vehicleType) {
       throw new Exception('Indiquez le type de véhicule.', {
         status: 422,
@@ -854,19 +930,51 @@ export default class VehiclesController {
       })
     }
 
-    const settings = await Setting.current(agencyId!)
-    if (settings.depositAmount == null || Number(settings.depositAmount) <= 0) {
-      throw new Exception(
-        'Renseignez une caution (montant > 0) dans Paramètres avant de demander la publication.',
-        { status: 422, code: 'E_DEPOSIT_REQUIRED' }
-      )
+    if (vehicle.status === 'Vendu') {
+      throw new Exception('Un véhicule vendu ne peut pas être publié sur le catalogue.', {
+        status: 422,
+        code: 'E_VEHICLE_SOLD',
+      })
     }
 
-    if (!settings.rentalConditions?.trim()) {
-      throw new Exception(
-        'Renseignez les conditions de location dans Paramètres avant de demander la publication.',
-        { status: 422, code: 'E_CONDITIONS_REQUIRED' }
-      )
+    if (includesRent(vehicle.offerType)) {
+      if (!vehicle.dailyPrice || Number(vehicle.dailyPrice) <= 0) {
+        throw new Exception('Indiquez un prix journalier valide.', {
+          status: 422,
+          code: 'E_PRICE_REQUIRED',
+        })
+      }
+
+      const settings = await Setting.current(agencyId!)
+      if (settings.depositAmount == null || Number(settings.depositAmount) <= 0) {
+        throw new Exception(
+          'Renseignez une caution (montant > 0) dans Paramètres avant de demander la publication.',
+          { status: 422, code: 'E_DEPOSIT_REQUIRED' }
+        )
+      }
+
+      if (!settings.rentalConditions?.trim()) {
+        throw new Exception(
+          'Renseignez les conditions de location dans Paramètres avant de demander la publication.',
+          { status: 422, code: 'E_CONDITIONS_REQUIRED' }
+        )
+      }
+    }
+
+    if (includesSale(vehicle.offerType)) {
+      if (!vehicle.salePrice || Number(vehicle.salePrice) <= 0) {
+        throw new Exception('Indiquez un prix de vente valide.', {
+          status: 422,
+          code: 'E_SALE_PRICE_REQUIRED',
+        })
+      }
+    }
+
+    if (!includesRent(vehicle.offerType) && !includesSale(vehicle.offerType)) {
+      throw new Exception('Choisissez un type d’offre (location, vente ou les deux).', {
+        status: 422,
+        code: 'E_OFFER_TYPE_REQUIRED',
+      })
     }
 
     vehicle.marketplacePublicationStatus = 'pending_review'
@@ -905,6 +1013,7 @@ export default class VehiclesController {
     vehicle.marketplaceReviewedByUserId = null
     vehicle.marketplaceRejectionReason = null
     vehicle.marketplaceIsRereview = false
+    resetVehicleBoost(vehicle)
     await vehicle.save()
 
     await this.#moderation.logEvent({
@@ -917,6 +1026,70 @@ export default class VehiclesController {
       message: wasPublished
         ? 'Véhicule retiré du catalogue.'
         : 'Demande de publication annulée.',
+    })
+  }
+
+  async requestBoost({ params, request, response, serialize, agencyId }: HttpContext) {
+    const vehicle = await this.#loadVehicle(params.id, agencyId!)
+    const payload = await request.validateUsing(requestMarketplaceBoostValidator)
+
+    if (vehicle.marketplacePublicationStatus !== 'published') {
+      throw new Exception('Seule une annonce déjà publiée peut être boostée.', {
+        status: 422,
+        code: 'E_BOOST_NOT_PUBLISHED',
+      })
+    }
+
+    if (vehicle.boostStatus === 'pending_review') {
+      throw new Exception('Une demande de boost est déjà en attente de validation.', {
+        status: 422,
+        code: 'E_BOOST_PENDING',
+      })
+    }
+
+    if (vehicle.boostStatus === 'approved' && !boostWindowEnded(vehicle)) {
+      throw new Exception('Ce boost est déjà validé. Annulez-le avant d’en demander un autre.', {
+        status: 422,
+        code: 'E_BOOST_ALREADY_ACTIVE',
+      })
+    }
+
+    const startsAt = parseBoostDate(payload.startsAt)
+    const endsAt = parseBoostDate(payload.endsAt)
+    assertBoostDateWindow(startsAt, endsAt)
+
+    vehicle.boostStatus = 'pending_review'
+    vehicle.boostStartsAt = startsAt
+    vehicle.boostEndsAt = endsAt
+    vehicle.boostSubmittedAt = DateTime.now()
+    vehicle.boostReviewedAt = null
+    vehicle.boostReviewedByUserId = null
+    vehicle.boostRejectionReason = null
+    await vehicle.save()
+
+    return response.ok({
+      ...(await this.#withPhotos(vehicle, serialize)),
+      message: 'Demande de boost envoyée. mobiprofil la validera avant mise en avant.',
+    })
+  }
+
+  async cancelBoost({ params, response, serialize, agencyId }: HttpContext) {
+    const vehicle = await this.#loadVehicle(params.id, agencyId!)
+
+    if (!['pending_review', 'approved'].includes(vehicle.boostStatus)) {
+      throw new Exception('Aucun boost à annuler sur ce véhicule.', {
+        status: 422,
+        code: 'E_BOOST_NOT_ACTIVE',
+      })
+    }
+
+    const wasPending = vehicle.boostStatus === 'pending_review'
+    resetVehicleBoost(vehicle)
+    await vehicle.save()
+
+    return response.ok({
+      ...(await this.#withPhotos(vehicle, serialize)),
+      message: wasPending ? 'Demande de boost annulée.' : 'Boost arrêté.',
     })
   }
 

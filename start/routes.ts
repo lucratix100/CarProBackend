@@ -89,6 +89,7 @@ router
     router
       .group(() => {
         router.get('/', [controllers.MarketplacePublications, 'index'])
+        router.get('/boosts', [controllers.MarketplacePublications, 'boostIndex'])
         router.get('/agencies', [controllers.MarketplacePublications, 'agencies'])
         router.post('/bulk-approve', [controllers.MarketplacePublications, 'bulkApprove'])
         router.get('/:id/photos/:photoId', [controllers.MarketplacePublications, 'photoFile'])
@@ -97,6 +98,8 @@ router
         router.post('/:id/approve', [controllers.MarketplacePublications, 'approve'])
         router.post('/:id/reject', [controllers.MarketplacePublications, 'reject'])
         router.post('/:id/unpublish', [controllers.MarketplacePublications, 'unpublish'])
+        router.post('/:id/boost/approve', [controllers.MarketplacePublications, 'approveBoost'])
+        router.post('/:id/boost/reject', [controllers.MarketplacePublications, 'rejectBoost'])
       })
       .prefix('marketplace-publications')
       .as('marketplace_publications')
@@ -237,6 +240,12 @@ router
           .post('/:id/marketplace/unpublish', [controllers.Vehicles, 'unpublishMarketplace'])
           .use(middleware.permission({ permission: 'vehicles.update' }))
         router
+          .post('/:id/marketplace/boost', [controllers.Vehicles, 'requestBoost'])
+          .use(middleware.permission({ permission: 'vehicles.update' }))
+        router
+          .post('/:id/marketplace/boost/cancel', [controllers.Vehicles, 'cancelBoost'])
+          .use(middleware.permission({ permission: 'vehicles.update' }))
+        router
           .get('/:id', [controllers.Vehicles, 'show'])
           .use(middleware.permission({ permission: 'vehicles.view' }))
         router
@@ -344,6 +353,31 @@ router
       })
       .prefix('rentals')
       .as('rentals')
+      .use([middleware.auth(), middleware.admin()])
+
+    router
+      .group(() => {
+        router
+          .get('/', [controllers.VehicleSales, 'index'])
+          .use(middleware.permission({ permission: 'sales.view' }))
+        router
+          .post('/', [controllers.VehicleSales, 'store'])
+          .use(middleware.permission({ permission: 'sales.create' }))
+        router
+          .post('/:id/accept', [controllers.VehicleSales, 'accept'])
+          .use(middleware.permission({ permission: 'sales.update' }))
+        router
+          .post('/:id/reject', [controllers.VehicleSales, 'reject'])
+          .use(middleware.permission({ permission: 'sales.update' }))
+        router
+          .post('/:id/mark-sold', [controllers.VehicleSales, 'markSold'])
+          .use(middleware.permission({ permission: 'sales.mark_sold' }))
+        router
+          .get('/:id', [controllers.VehicleSales, 'show'])
+          .use(middleware.permission({ permission: 'sales.view' }))
+      })
+      .prefix('sales')
+      .as('sales')
       .use([middleware.auth(), middleware.admin()])
 
     router
@@ -597,6 +631,10 @@ router
             router.get('bookings/:id', [controllers.MarketplaceBookings, 'show'])
             router.post('bookings/:id/cancel', [controllers.MarketplaceBookings, 'cancel'])
             router.post('bookings/:id/reviews', [controllers.MarketplaceReview, 'store'])
+            router.get('sales', [controllers.MarketplaceSales, 'index'])
+            router.post('sales', [controllers.MarketplaceSales, 'store'])
+            router.get('sales/:id', [controllers.MarketplaceSales, 'show'])
+            router.post('sales/:id/cancel', [controllers.MarketplaceSales, 'cancel'])
             router.get('favorites', [controllers.MarketplaceFavorite, 'index'])
             router.get('favorites/ids', [controllers.MarketplaceFavorite, 'ids'])
             router.post('favorites', [controllers.MarketplaceFavorite, 'store'])

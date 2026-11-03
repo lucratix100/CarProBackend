@@ -2,6 +2,7 @@ import Vehicle from '#models/vehicle'
 import Rental from '#models/rental'
 import Maintenance from '#models/maintenance'
 import VehicleExpense from '#models/vehicle_expense'
+import VehicleSale from '#models/vehicle_sale'
 import VehicleComplianceDocument from '#models/vehicle_compliance_document'
 import { occupancyEndExclusive, rentalFinancials, todayISO } from '#services/finance_service'
 import {
@@ -48,6 +49,21 @@ export default class VehicleSummaryService {
       .orderBy('spentOn', 'desc')
       .orderBy('id', 'desc')
 
+    const soldSales = await VehicleSale.query()
+      .where('vehicleId', vehicle.id)
+      .where('status', 'sold')
+
+    let saleFinalTotal = 0
+    let saleAgencyCommission = 0
+    let saleOwnerNet = 0
+    for (const sale of soldSales) {
+      const finalPrice = Number(sale.finalPrice ?? sale.offeredPrice ?? 0)
+      const commission = Number(sale.agencyCommission ?? 0)
+      saleFinalTotal += finalPrice
+      saleAgencyCommission += commission
+      saleOwnerNet += Math.max(0, finalPrice - commission)
+    }
+
     let daysRented = 0
     let netRevenue = 0
     let grossRevenue = 0
@@ -81,6 +97,13 @@ export default class VehicleSummaryService {
               clientName: rental.client?.fullName ?? null,
             }),
       })
+    }
+
+    if (isAgencyOwned) {
+      grossRevenue += saleFinalTotal
+    } else {
+      grossRevenue += saleAgencyCommission
+      netRevenue += saleOwnerNet
     }
 
     let ownerMaintenance = 0
@@ -267,6 +290,10 @@ export default class VehicleSummaryService {
         agencyMaintenanceExpenses: isAgencyOwned ? 0 : agencyMaintenance,
         otherExpenses: otherOperatingExpenses,
         revenueForBalance,
+        saleCount: soldSales.length,
+        saleFinalTotal,
+        saleAgencyCommission,
+        saleOwnerNet: isAgencyOwned ? 0 : saleOwnerNet,
         pendingExpenseCount: pendingExpenses.length + pendingVehicleExpenses.length + pendingComplianceCount,
         pendingExpenseTotal: pendingExpenseTotal + pendingVehicleExpenseTotal + pendingComplianceTotal,
         balance,

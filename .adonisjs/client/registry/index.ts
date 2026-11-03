@@ -144,6 +144,12 @@ const routes = {
     tokens: [{"old":"/api/v1/marketplace-publications","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-publications","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-publications","type":0,"val":"marketplace-publications","end":""}],
     types: placeholder as Registry['marketplace_publications.marketplace_publications.index']['types'],
   },
+  'marketplace_publications.marketplace_publications.boost_index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace-publications/boosts',
+    tokens: [{"old":"/api/v1/marketplace-publications/boosts","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-publications/boosts","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-publications/boosts","type":0,"val":"marketplace-publications","end":""},{"old":"/api/v1/marketplace-publications/boosts","type":0,"val":"boosts","end":""}],
+    types: placeholder as Registry['marketplace_publications.marketplace_publications.boost_index']['types'],
+  },
   'marketplace_publications.marketplace_publications.agencies': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/marketplace-publications/agencies',
@@ -191,6 +197,18 @@ const routes = {
     pattern: '/api/v1/marketplace-publications/:id/unpublish',
     tokens: [{"old":"/api/v1/marketplace-publications/:id/unpublish","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-publications/:id/unpublish","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-publications/:id/unpublish","type":0,"val":"marketplace-publications","end":""},{"old":"/api/v1/marketplace-publications/:id/unpublish","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace-publications/:id/unpublish","type":0,"val":"unpublish","end":""}],
     types: placeholder as Registry['marketplace_publications.marketplace_publications.unpublish']['types'],
+  },
+  'marketplace_publications.marketplace_publications.approve_boost': {
+    methods: ["POST"],
+    pattern: '/api/v1/marketplace-publications/:id/boost/approve',
+    tokens: [{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":0,"val":"marketplace-publications","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":0,"val":"boost","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/approve","type":0,"val":"approve","end":""}],
+    types: placeholder as Registry['marketplace_publications.marketplace_publications.approve_boost']['types'],
+  },
+  'marketplace_publications.marketplace_publications.reject_boost': {
+    methods: ["POST"],
+    pattern: '/api/v1/marketplace-publications/:id/boost/reject',
+    tokens: [{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":0,"val":"marketplace-publications","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":0,"val":"boost","end":""},{"old":"/api/v1/marketplace-publications/:id/boost/reject","type":0,"val":"reject","end":""}],
+    types: placeholder as Registry['marketplace_publications.marketplace_publications.reject_boost']['types'],
   },
   'marketplace_reports.marketplace_report.index': {
     methods: ["GET","HEAD"],
@@ -402,6 +420,18 @@ const routes = {
     tokens: [{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":0,"val":"api","end":""},{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":0,"val":"v1","end":""},{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":0,"val":"vehicles","end":""},{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":1,"val":"id","end":""},{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":0,"val":"marketplace","end":""},{"old":"/api/v1/vehicles/:id/marketplace/unpublish","type":0,"val":"unpublish","end":""}],
     types: placeholder as Registry['vehicles.vehicles.unpublish_marketplace']['types'],
   },
+  'vehicles.vehicles.request_boost': {
+    methods: ["POST"],
+    pattern: '/api/v1/vehicles/:id/marketplace/boost',
+    tokens: [{"old":"/api/v1/vehicles/:id/marketplace/boost","type":0,"val":"api","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost","type":0,"val":"v1","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost","type":0,"val":"vehicles","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost","type":1,"val":"id","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost","type":0,"val":"marketplace","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost","type":0,"val":"boost","end":""}],
+    types: placeholder as Registry['vehicles.vehicles.request_boost']['types'],
+  },
+  'vehicles.vehicles.cancel_boost': {
+    methods: ["POST"],
+    pattern: '/api/v1/vehicles/:id/marketplace/boost/cancel',
+    tokens: [{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"api","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"v1","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"vehicles","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":1,"val":"id","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"marketplace","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"boost","end":""},{"old":"/api/v1/vehicles/:id/marketplace/boost/cancel","type":0,"val":"cancel","end":""}],
+    types: placeholder as Registry['vehicles.vehicles.cancel_boost']['types'],
+  },
   'vehicles.vehicles.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/vehicles/:id',
@@ -569,6 +599,42 @@ const routes = {
     pattern: '/api/v1/rentals/:id',
     tokens: [{"old":"/api/v1/rentals/:id","type":0,"val":"api","end":""},{"old":"/api/v1/rentals/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/rentals/:id","type":0,"val":"rentals","end":""},{"old":"/api/v1/rentals/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['rentals.rentals.destroy']['types'],
+  },
+  'sales.vehicle_sales.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/sales',
+    tokens: [{"old":"/api/v1/sales","type":0,"val":"api","end":""},{"old":"/api/v1/sales","type":0,"val":"v1","end":""},{"old":"/api/v1/sales","type":0,"val":"sales","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.index']['types'],
+  },
+  'sales.vehicle_sales.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/sales',
+    tokens: [{"old":"/api/v1/sales","type":0,"val":"api","end":""},{"old":"/api/v1/sales","type":0,"val":"v1","end":""},{"old":"/api/v1/sales","type":0,"val":"sales","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.store']['types'],
+  },
+  'sales.vehicle_sales.accept': {
+    methods: ["POST"],
+    pattern: '/api/v1/sales/:id/accept',
+    tokens: [{"old":"/api/v1/sales/:id/accept","type":0,"val":"api","end":""},{"old":"/api/v1/sales/:id/accept","type":0,"val":"v1","end":""},{"old":"/api/v1/sales/:id/accept","type":0,"val":"sales","end":""},{"old":"/api/v1/sales/:id/accept","type":1,"val":"id","end":""},{"old":"/api/v1/sales/:id/accept","type":0,"val":"accept","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.accept']['types'],
+  },
+  'sales.vehicle_sales.reject': {
+    methods: ["POST"],
+    pattern: '/api/v1/sales/:id/reject',
+    tokens: [{"old":"/api/v1/sales/:id/reject","type":0,"val":"api","end":""},{"old":"/api/v1/sales/:id/reject","type":0,"val":"v1","end":""},{"old":"/api/v1/sales/:id/reject","type":0,"val":"sales","end":""},{"old":"/api/v1/sales/:id/reject","type":1,"val":"id","end":""},{"old":"/api/v1/sales/:id/reject","type":0,"val":"reject","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.reject']['types'],
+  },
+  'sales.vehicle_sales.mark_sold': {
+    methods: ["POST"],
+    pattern: '/api/v1/sales/:id/mark-sold',
+    tokens: [{"old":"/api/v1/sales/:id/mark-sold","type":0,"val":"api","end":""},{"old":"/api/v1/sales/:id/mark-sold","type":0,"val":"v1","end":""},{"old":"/api/v1/sales/:id/mark-sold","type":0,"val":"sales","end":""},{"old":"/api/v1/sales/:id/mark-sold","type":1,"val":"id","end":""},{"old":"/api/v1/sales/:id/mark-sold","type":0,"val":"mark-sold","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.mark_sold']['types'],
+  },
+  'sales.vehicle_sales.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/sales/:id',
+    tokens: [{"old":"/api/v1/sales/:id","type":0,"val":"api","end":""},{"old":"/api/v1/sales/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/sales/:id","type":0,"val":"sales","end":""},{"old":"/api/v1/sales/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['sales.vehicle_sales.show']['types'],
   },
   'invoices.invoices.index': {
     methods: ["GET","HEAD"],
@@ -1067,6 +1133,30 @@ const routes = {
     pattern: '/api/v1/marketplace/bookings/:id/reviews',
     tokens: [{"old":"/api/v1/marketplace/bookings/:id/reviews","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/bookings/:id/reviews","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/bookings/:id/reviews","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/bookings/:id/reviews","type":0,"val":"bookings","end":""},{"old":"/api/v1/marketplace/bookings/:id/reviews","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace/bookings/:id/reviews","type":0,"val":"reviews","end":""}],
     types: placeholder as Registry['marketplace.marketplace_review.store']['types'],
+  },
+  'marketplace.marketplace_sales.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace/sales',
+    tokens: [{"old":"/api/v1/marketplace/sales","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"sales","end":""}],
+    types: placeholder as Registry['marketplace.marketplace_sales.index']['types'],
+  },
+  'marketplace.marketplace_sales.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/marketplace/sales',
+    tokens: [{"old":"/api/v1/marketplace/sales","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/sales","type":0,"val":"sales","end":""}],
+    types: placeholder as Registry['marketplace.marketplace_sales.store']['types'],
+  },
+  'marketplace.marketplace_sales.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace/sales/:id',
+    tokens: [{"old":"/api/v1/marketplace/sales/:id","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/sales/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/sales/:id","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/sales/:id","type":0,"val":"sales","end":""},{"old":"/api/v1/marketplace/sales/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['marketplace.marketplace_sales.show']['types'],
+  },
+  'marketplace.marketplace_sales.cancel': {
+    methods: ["POST"],
+    pattern: '/api/v1/marketplace/sales/:id/cancel',
+    tokens: [{"old":"/api/v1/marketplace/sales/:id/cancel","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/sales/:id/cancel","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/sales/:id/cancel","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/sales/:id/cancel","type":0,"val":"sales","end":""},{"old":"/api/v1/marketplace/sales/:id/cancel","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace/sales/:id/cancel","type":0,"val":"cancel","end":""}],
+    types: placeholder as Registry['marketplace.marketplace_sales.cancel']['types'],
   },
   'marketplace.marketplace_favorite.index': {
     methods: ["GET","HEAD"],

@@ -69,6 +69,7 @@ export default class MarketplaceFavoriteController {
           vehicleType: vehicle.vehicleType,
           dailyPrice: vehicle.dailyPrice,
           label: vehicle.label,
+          isBoosted: vehicle.isBoostLive(),
           status: vehicle.status,
           ratingAvg: rating.avg,
           ratingCount: rating.count,

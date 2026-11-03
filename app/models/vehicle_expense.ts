@@ -13,6 +13,7 @@ export const VEHICLE_EXPENSE_TYPES = [
   'Vignette',
   'Réparation',
   'Accessoire',
+  'Commission',
   'Autre',
 ] as const
 

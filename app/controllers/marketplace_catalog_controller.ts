@@ -15,6 +15,8 @@ import AgencyLogoUploadService, {
 } from '#services/agency_logo_upload_service'
 import CityTransformer from '#transformers/city_transformer'
 import { todayISO } from '#services/finance_service'
+import { includesRent, includesSale } from '#constants/offer_types'
+import { BOOST_LIVE_ORDER_SQL } from '#constants/marketplace_boost'
 
 export default class MarketplaceCatalogController {
   #rentals = new RentalService()
@@ -76,14 +78,51 @@ export default class MarketplaceCatalogController {
     return new Map(rows.map((row) => [row.agencyId, row]))
   }
 
-  #publishedVehicleQuery() {
-    return Vehicle.query()
-      .whereIn('status', ['Disponible', 'Loué'])
+  #publishedVehicleQuery(offerType: 'rent' | 'sale' | 'both' = 'rent') {
+    const query = Vehicle.query()
       .where('complianceHold', false)
       .where('marketplacePublicationStatus', 'published')
+      .whereNot('status', 'Vendu')
       .whereHas('agency', (agencyQuery) => {
         agencyQuery.where('isActive', true).where('publishOnMarketplace', true)
       })
+
+    if (offerType === 'sale') {
+      query
+        .whereIn('offerType', ['sale', 'both'])
+        .whereIn('status', ['Disponible', 'Loué', 'À vendre'])
+        .where('salePrice', '>', 0)
+    } else if (offerType === 'both') {
+      query.whereIn('status', ['Disponible', 'Loué', 'À vendre'])
+    } else {
+      // Location (défaut) : exclure les véhicules vente-only
+      query
+        .whereIn('offerType', ['rent', 'both'])
+        .whereIn('status', ['Disponible', 'Loué'])
+    }
+
+    return query
+  }
+
+  #catalogCard(vehicle: Vehicle, extras: Record<string, unknown> = {}) {
+    return {
+      id: vehicle.id,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      year: vehicle.year,
+      color: vehicle.color,
+      fuel: vehicle.fuel,
+      vehicleType: vehicle.vehicleType,
+      dailyPrice: vehicle.dailyPrice,
+      salePrice: vehicle.salePrice,
+      saleNegotiable: vehicle.saleNegotiable,
+      offerType: vehicle.offerType ?? 'rent',
+      status: vehicle.status,
+      label: vehicle.label,
+      isBoosted: vehicle.isBoostLive(),
+      ...extras,
+      ...this.#photoUrls(vehicle),
+    }
   }
 
   async cities({ serialize }: HttpContext) {
@@ -100,27 +139,32 @@ export default class MarketplaceCatalogController {
     const minPrice = request.input('minPrice')
     const maxPrice = request.input('maxPrice')
     const q = request.input('q')
+    const offerTypeRaw = String(request.input('offerType') || 'rent')
+    const offerType = (['rent', 'sale', 'both'].includes(offerTypeRaw)
+      ? offerTypeRaw
+      : 'rent') as 'rent' | 'sale' | 'both'
     const sortRaw = String(request.input('sort') || 'price_asc')
     const sort = ['price_asc', 'price_desc', 'rating_desc'].includes(sortRaw)
       ? sortRaw
       : 'price_asc'
     const page = Math.max(1, Number(request.input('page', 1)) || 1)
     const perPage = Math.min(50, Math.max(1, Number(request.input('perPage', 12)) || 12))
+    const isSaleCatalog = offerType === 'sale'
 
-    if ((startDate && !endDate) || (!startDate && endDate)) {
+    if (!isSaleCatalog && ((startDate && !endDate) || (!startDate && endDate))) {
       throw new Exception('Indiquez les deux dates de début et de fin.', {
         status: 422,
         code: 'E_DATES_REQUIRED',
       })
     }
-    if (startDate && endDate && endDate < startDate) {
+    if (!isSaleCatalog && startDate && endDate && endDate < startDate) {
       throw new Exception('La date de fin doit être postérieure ou égale à la date de début.', {
         status: 422,
         code: 'E_INVALID_DATES',
       })
     }
 
-    const query = this.#publishedVehicleQuery()
+    const query = this.#publishedVehicleQuery(offerType)
     query
       .preload('agency', (aq) => aq.preload('city'))
       .preload('marque')
@@ -132,11 +176,12 @@ export default class MarketplaceCatalogController {
     }
     if (fuel) query.where('fuel', fuel)
     if (vehicleType) query.where('vehicleType', vehicleType)
+    const priceColumn = isSaleCatalog ? 'salePrice' : 'dailyPrice'
     if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
-      query.where('dailyPrice', '>=', Number(minPrice))
+      query.where(priceColumn, '>=', Number(minPrice))
     }
     if (maxPrice !== undefined && maxPrice !== null && maxPrice !== '') {
-      query.where('dailyPrice', '<=', Number(maxPrice))
+      query.where(priceColumn, '<=', Number(maxPrice))
     }
     if (q) {
       const term = `%${String(q).trim()}%`
@@ -156,8 +201,17 @@ export default class MarketplaceCatalogController {
       lastPage: 1,
     }
 
+    const sortPrice = (a: Vehicle, b: Vehicle) => {
+      const priceA = isSaleCatalog ? Number(a.salePrice ?? 0) : a.dailyPrice
+      const priceB = isSaleCatalog ? Number(b.salePrice ?? 0) : b.dailyPrice
+      return priceA - priceB
+    }
+
     if (sort === 'rating_desc') {
-      const allRows = await query.orderBy('dailyPrice', 'asc').limit(200)
+      const allRows = await query
+        .orderByRaw(`${BOOST_LIVE_ORDER_SQL} asc`, [todayISO(), todayISO()])
+        .orderBy(priceColumn, 'asc')
+        .limit(200)
       rows = allRows
       const agencyRatings = await this.#reviews.aggregatesForAgencies(
         rows.map((v) => v.agencyId).filter(Boolean)
@@ -166,20 +220,23 @@ export default class MarketplaceCatalogController {
         rows.map((v) => v.agencyId).filter(Boolean)
       )
       rows = [...rows].sort((a, b) => {
+        const boostA = a.isBoostLive() ? 0 : 1
+        const boostB = b.isBoostLive() ? 0 : 1
+        if (boostA !== boostB) return boostA - boostB
         const ratingA = agencyRatings.get(a.agencyId)?.avg ?? -1
         const ratingB = agencyRatings.get(b.agencyId)?.avg ?? -1
         if (ratingB !== ratingA) return ratingB - ratingA
         const countA = agencyRatings.get(a.agencyId)?.count ?? 0
         const countB = agencyRatings.get(b.agencyId)?.count ?? 0
         if (countB !== countA) return countB - countA
-        return a.dailyPrice - b.dailyPrice
+        return sortPrice(a, b)
       })
       meta.total = rows.length
       meta.lastPage = Math.max(1, Math.ceil(rows.length / perPage))
       const offset = (page - 1) * perPage
       const pageRows = rows.slice(offset, offset + perPage)
       const busyIds =
-        startDate && endDate
+        !isSaleCatalog && startDate && endDate
           ? await this.#rentals.conflictingVehicleIds(
               pageRows.map((vehicle) => vehicle.id),
               startDate,
@@ -189,18 +246,8 @@ export default class MarketplaceCatalogController {
       return response.ok({
         data: pageRows.map((vehicle) => {
           const rating = agencyRatings.get(vehicle.agencyId) ?? { avg: null, count: 0 }
-          return {
-            id: vehicle.id,
-            brand: vehicle.brand,
-            model: vehicle.model,
-            year: vehicle.year,
-            color: vehicle.color,
-            fuel: vehicle.fuel,
-            vehicleType: vehicle.vehicleType,
-            dailyPrice: vehicle.dailyPrice,
-            status: vehicle.status,
+          return this.#catalogCard(vehicle, {
             availableForPeriod: busyIds ? !busyIds.has(vehicle.id) : null,
-            label: vehicle.label,
             ratingAvg: rating.avg,
             ratingCount: rating.count,
             agency: this.#agencyPayload(vehicle.agency, {
@@ -210,19 +257,21 @@ export default class MarketplaceCatalogController {
             }),
             marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
             modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
-            ...this.#photoUrls(vehicle),
-          }
+          })
         }),
         meta,
       })
     }
 
     const priceOrder = sort === 'price_desc' ? 'desc' : 'asc'
-    const paginated = await query.orderBy('dailyPrice', priceOrder).paginate(page, perPage)
+    const paginated = await query
+      .orderByRaw(`${BOOST_LIVE_ORDER_SQL} asc`, [todayISO(), todayISO()])
+      .orderBy(priceColumn, priceOrder)
+      .paginate(page, perPage)
     rows = paginated.all()
 
     const busyIds =
-      startDate && endDate
+      !isSaleCatalog && startDate && endDate
         ? await this.#rentals.conflictingVehicleIds(
             rows.map((vehicle) => vehicle.id),
             startDate,
@@ -240,41 +289,35 @@ export default class MarketplaceCatalogController {
     return response.ok({
       data: rows.map((vehicle) => {
         const rating = agencyRatings.get(vehicle.agencyId) ?? { avg: null, count: 0 }
-        return {
-          id: vehicle.id,
-          brand: vehicle.brand,
-          model: vehicle.model,
-          year: vehicle.year,
-          color: vehicle.color,
-          fuel: vehicle.fuel,
-            vehicleType: vehicle.vehicleType,
-            dailyPrice: vehicle.dailyPrice,
-            status: vehicle.status,
-            availableForPeriod: busyIds ? !busyIds.has(vehicle.id) : null,
-            label: vehicle.label,
+        return this.#catalogCard(vehicle, {
+          availableForPeriod: busyIds ? !busyIds.has(vehicle.id) : null,
+          ratingAvg: rating.avg,
+          ratingCount: rating.count,
+          agency: this.#agencyPayload(vehicle.agency, {
+            settings: settingsByAgency.get(vehicle.agencyId) ?? null,
             ratingAvg: rating.avg,
             ratingCount: rating.count,
-            agency: this.#agencyPayload(vehicle.agency, {
-              settings: settingsByAgency.get(vehicle.agencyId) ?? null,
-              ratingAvg: rating.avg,
-              ratingCount: rating.count,
-            }),
-            marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
-            modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
-            ...this.#photoUrls(vehicle),
-          }
-        }),
-        meta: {
-          total: paginated.total,
-          perPage: paginated.perPage,
-          currentPage: paginated.currentPage,
-          lastPage: paginated.lastPage,
-        },
+          }),
+          marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
+          modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
+        })
+      }),
+      meta: {
+        total: paginated.total,
+        perPage: paginated.perPage,
+        currentPage: paginated.currentPage,
+        lastPage: paginated.lastPage,
+      },
     })
   }
 
-  async show({ params, response }: HttpContext) {
-    const vehicle = await this.#publishedVehicleQuery()
+  async show({ params, request, response }: HttpContext) {
+    const offerTypeRaw = String(request.input('offerType') || 'both')
+    const offerType = (['rent', 'sale', 'both'].includes(offerTypeRaw)
+      ? offerTypeRaw
+      : 'both') as 'rent' | 'sale' | 'both'
+
+    const vehicle = await this.#publishedVehicleQuery(offerType)
       .where('id', params.id)
       .preload('agency', (aq) => aq.preload('city'))
       .preload('marque')
@@ -290,30 +333,23 @@ export default class MarketplaceCatalogController {
     const vehicleRating = vehicleRatings.get(vehicle.id) ?? { avg: null, count: 0 }
 
     return response.ok({
-      id: vehicle.id,
-      brand: vehicle.brand,
-      model: vehicle.model,
-      year: vehicle.year,
-      color: vehicle.color,
-      fuel: vehicle.fuel,
-      vehicleType: vehicle.vehicleType,
-      mileage: vehicle.mileage,
-      dailyPrice: vehicle.dailyPrice,
-      status: vehicle.status,
-      label: vehicle.label,
-      ratingAvg: agencyRating.avg,
-      ratingCount: agencyRating.count,
-      vehicleRatingAvg: vehicleRating.avg,
-      vehicleRatingCount: vehicleRating.count,
-      agency: this.#agencyPayload(vehicle.agency, {
-        settings,
+      ...this.#catalogCard(vehicle, {
+        mileage: vehicle.mileage,
         ratingAvg: agencyRating.avg,
         ratingCount: agencyRating.count,
-        includeTerms: true,
+        vehicleRatingAvg: vehicleRating.avg,
+        vehicleRatingCount: vehicleRating.count,
+        canRent: includesRent(vehicle.offerType) && ['Disponible', 'Loué'].includes(vehicle.status),
+        canBuy: includesSale(vehicle.offerType) && vehicle.status !== 'Vendu',
+        agency: this.#agencyPayload(vehicle.agency, {
+          settings,
+          ratingAvg: agencyRating.avg,
+          ratingCount: agencyRating.count,
+          includeTerms: true,
+        }),
+        marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
+        modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
       }),
-      marque: vehicle.marque ? { id: vehicle.marque.id, name: vehicle.marque.name } : null,
-      modele: vehicle.modele ? { id: vehicle.modele.id, name: vehicle.modele.name } : null,
-      ...this.#photoUrls(vehicle),
     })
   }
 
@@ -367,7 +403,7 @@ export default class MarketplaceCatalogController {
   }
 
   async photoFile({ params, response }: HttpContext) {
-    const vehicle = await this.#publishedVehicleQuery().where('id', params.id).firstOrFail()
+    const vehicle = await this.#publishedVehicleQuery('both').where('id', params.id).firstOrFail()
     const photo = await VehiclePhoto.query()
       .where('id', params.photoId)
       .where('vehicleId', vehicle.id)

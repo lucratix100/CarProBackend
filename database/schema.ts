@@ -963,11 +963,70 @@ export class VehiclePhotoSchema extends BaseModel {
   declare vehicleId: number
 }
 
+export class VehicleSaleSchema extends BaseModel {
+  static $columns = ['acceptedAt', 'agencyCommission', 'agencyId', 'cancelledAt', 'clientAccountId', 'clientId', 'createdAt', 'createdByUserId', 'finalPrice', 'id', 'notes', 'offeredPrice', 'paidCommission', 'rejectReason', 'rejectedAt', 'soldAt', 'status', 'updatedAt', 'updatedByUserId', 'vehicleId'] as const
+  $columns = VehicleSaleSchema.$columns
+  @column.dateTime()
+  declare acceptedAt: DateTime | null
+  @column()
+  declare agencyCommission: number
+  @column()
+  declare agencyId: number
+  @column.dateTime()
+  declare cancelledAt: DateTime | null
+  @column()
+  declare clientAccountId: number | null
+  @column()
+  declare clientId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdByUserId: number | null
+  @column()
+  declare finalPrice: number | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare notes: string | null
+  @column()
+  declare offeredPrice: number
+  @column()
+  declare paidCommission: number
+  @column()
+  declare rejectReason: string | null
+  @column.dateTime()
+  declare rejectedAt: DateTime | null
+  @column.dateTime()
+  declare soldAt: DateTime | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare updatedByUserId: number | null
+  @column()
+  declare vehicleId: number
+}
+
 export class VehicleSchema extends BaseModel {
-  static $columns = ['agencyId', 'brand', 'color', 'commissionPerDay', 'complianceHold', 'createdAt', 'createdByUserId', 'dailyPrice', 'fuel', 'id', 'insuranceAlertStage', 'insuranceCompany', 'insuranceExpiresAt', 'marketplaceIsRereview', 'marketplacePublicationStatus', 'marketplaceRejectionReason', 'marketplaceReviewedAt', 'marketplaceReviewedByUserId', 'marketplaceSubmittedAt', 'marqueId', 'mileage', 'model', 'modeleId', 'notes', 'ownerId', 'photoUrl', 'plate', 'status', 'technicalVisitAlertStage', 'technicalVisitAt', 'updatedAt', 'updatedByUserId', 'vehicleType', 'year'] as const
+  static $columns = ['agencyId', 'boostEndsAt', 'boostRejectionReason', 'boostReviewedAt', 'boostReviewedByUserId', 'boostStartsAt', 'boostStatus', 'boostSubmittedAt', 'brand', 'color', 'commissionPerDay', 'complianceHold', 'createdAt', 'createdByUserId', 'dailyPrice', 'fuel', 'id', 'insuranceAlertStage', 'insuranceCompany', 'insuranceExpiresAt', 'marketplaceIsRereview', 'marketplacePublicationStatus', 'marketplaceRejectionReason', 'marketplaceReviewedAt', 'marketplaceReviewedByUserId', 'marketplaceSubmittedAt', 'marqueId', 'mileage', 'model', 'modeleId', 'notes', 'offerType', 'ownerId', 'photoUrl', 'plate', 'saleNegotiable', 'salePrice', 'status', 'technicalVisitAlertStage', 'technicalVisitAt', 'updatedAt', 'updatedByUserId', 'vehicleType', 'year'] as const
   $columns = VehicleSchema.$columns
   @column()
   declare agencyId: number
+  @column.date()
+  declare boostEndsAt: DateTime | null
+  @column()
+  declare boostRejectionReason: string | null
+  @column.dateTime()
+  declare boostReviewedAt: DateTime | null
+  @column()
+  declare boostReviewedByUserId: number | null
+  @column.date()
+  declare boostStartsAt: DateTime | null
+  @column()
+  declare boostStatus: string
+  @column.dateTime()
+  declare boostSubmittedAt: DateTime | null
   @column()
   declare brand: string
   @column()
@@ -1015,11 +1074,17 @@ export class VehicleSchema extends BaseModel {
   @column()
   declare notes: string | null
   @column()
+  declare offerType: string
+  @column()
   declare ownerId: number | null
   @column()
   declare photoUrl: string | null
   @column()
   declare plate: string
+  @column()
+  declare saleNegotiable: boolean
+  @column()
+  declare salePrice: number | null
   @column()
   declare status: string
   @column()

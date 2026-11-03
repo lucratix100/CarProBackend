@@ -6,6 +6,7 @@
 export type PermissionModule =
   | 'clients'
   | 'rentals'
+  | 'sales'
   | 'vehicles'
   | 'payments'
   | 'invoices'
@@ -51,6 +52,12 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   { code: 'rentals.record_payment', module: 'rentals', label: 'Enregistrer un paiement' },
   { code: 'rentals.update_payment', module: 'rentals', label: 'Modifier un paiement' },
   { code: 'rentals.view_history', module: 'rentals', label: 'Voir l’historique d’une location' },
+
+  // Ventes
+  { code: 'sales.view', module: 'sales', label: 'Voir les offres de vente' },
+  { code: 'sales.create', module: 'sales', label: 'Créer une offre de vente' },
+  { code: 'sales.update', module: 'sales', label: 'Traiter une offre de vente' },
+  { code: 'sales.mark_sold', module: 'sales', label: 'Marquer un véhicule comme vendu' },
 
   // Véhicules
   { code: 'vehicles.view', module: 'vehicles', label: 'Voir les véhicules' },
@@ -163,6 +170,9 @@ const agentPerms = [
   'rentals.update_dates',
   'rentals.record_payment',
   'rentals.view_history',
+  'sales.view',
+  'sales.create',
+  'sales.update',
   'vehicles.view',
   'maintenances.view',
   'maintenances.create',

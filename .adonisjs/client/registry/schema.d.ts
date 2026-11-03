@@ -283,6 +283,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'marketplace_publications.marketplace_publications.boost_index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace-publications/boosts'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/marketplace_boost').listMarketplaceBoostsValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['boostIndex']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['boostIndex']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'marketplace_publications.marketplace_publications.agencies': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/marketplace-publications/agencies'
@@ -347,12 +359,12 @@ export interface Registry {
     methods: ["POST"]
     pattern: '/api/v1/marketplace-publications/:id/approve'
     types: {
-      body: {}
+      body: ExtractBody<InferInput<(typeof import('#validators/marketplace_publication').approveMarketplacePublicationValidator)>>
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
-      query: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/marketplace_publication').approveMarketplacePublicationValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['approve']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['approve']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['approve']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'marketplace_publications.marketplace_publications.reject': {
@@ -377,6 +389,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['unpublish']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['unpublish']>>>
+    }
+  }
+  'marketplace_publications.marketplace_publications.approve_boost': {
+    methods: ["POST"]
+    pattern: '/api/v1/marketplace-publications/:id/boost/approve'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['approveBoost']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['approveBoost']>>>
+    }
+  }
+  'marketplace_publications.marketplace_publications.reject_boost': {
+    methods: ["POST"]
+    pattern: '/api/v1/marketplace-publications/:id/boost/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/marketplace_boost').rejectMarketplaceBoostValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/marketplace_boost').rejectMarketplaceBoostValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['rejectBoost']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_publications_controller').default['rejectBoost']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'marketplace_reports.marketplace_report.index': {
@@ -799,6 +835,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicles_controller').default['unpublishMarketplace']>>>
     }
   }
+  'vehicles.vehicles.request_boost': {
+    methods: ["POST"]
+    pattern: '/api/v1/vehicles/:id/marketplace/boost'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/marketplace_boost').requestMarketplaceBoostValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/marketplace_boost').requestMarketplaceBoostValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicles_controller').default['requestBoost']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicles_controller').default['requestBoost']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'vehicles.vehicles.cancel_boost': {
+    methods: ["POST"]
+    pattern: '/api/v1/vehicles/:id/marketplace/boost/cancel'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicles_controller').default['cancelBoost']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicles_controller').default['cancelBoost']>>>
+    }
+  }
   'vehicles.vehicles.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/vehicles/:id'
@@ -1133,6 +1193,78 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/rental').cancelRentalValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/rentals_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rentals_controller').default['destroy']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'sales.vehicle_sales.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sales'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/vehicle_sale').listVehicleSalesValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'sales.vehicle_sales.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/sales'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/vehicle_sale').createVehicleSaleValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/vehicle_sale').createVehicleSaleValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'sales.vehicle_sales.accept': {
+    methods: ["POST"]
+    pattern: '/api/v1/sales/:id/accept'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['accept']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['accept']>>>
+    }
+  }
+  'sales.vehicle_sales.reject': {
+    methods: ["POST"]
+    pattern: '/api/v1/sales/:id/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/vehicle_sale').rejectVehicleSaleValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/vehicle_sale').rejectVehicleSaleValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['reject']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['reject']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'sales.vehicle_sales.mark_sold': {
+    methods: ["POST"]
+    pattern: '/api/v1/sales/:id/mark-sold'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/vehicle_sale').markSoldVehicleSaleValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/vehicle_sale').markSoldVehicleSaleValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['markSold']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['markSold']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'sales.vehicle_sales.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/sales/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/vehicle_sales_controller').default['show']>>>
     }
   }
   'invoices.invoices.index': {
@@ -2129,6 +2261,54 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/marketplace').marketplaceReviewValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_review_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_review_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'marketplace.marketplace_sales.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/sales'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['index']>>>
+    }
+  }
+  'marketplace.marketplace_sales.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/marketplace/sales'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/vehicle_sale').marketplaceSaleOfferValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/vehicle_sale').marketplaceSaleOfferValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'marketplace.marketplace_sales.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace/sales/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['show']>>>
+    }
+  }
+  'marketplace.marketplace_sales.cancel': {
+    methods: ["POST"]
+    pattern: '/api/v1/marketplace/sales/:id/cancel'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['cancel']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_sales_controller').default['cancel']>>>
     }
   }
   'marketplace.marketplace_favorite.index': {

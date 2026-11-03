@@ -1,8 +1,8 @@
 import vine from '@vinejs/vine'
 import { VEHICLE_TYPES } from '#constants/vehicle_types'
+import { OFFER_TYPES, VEHICLE_STATUSES } from '#constants/offer_types'
 
 const isoDate = () => vine.string().regex(/^\d{4}-\d{2}-\d{2}$/)
-const vehicleStatuses = ['Disponible', 'Loué', 'Entretien', 'Hors service'] as const
 const fuels = ['Essence', 'Diesel', 'Hybride', 'Électrique'] as const
 
 export const createVehicleValidator = vine.create({
@@ -17,9 +17,12 @@ export const createVehicleValidator = vine.create({
   color: vine.string().trim().maxLength(40).optional(),
   fuel: vine.enum(fuels),
   vehicleType: vine.enum(VEHICLE_TYPES),
-  status: vine.enum(vehicleStatuses),
+  status: vine.enum(VEHICLE_STATUSES),
+  offerType: vine.enum(OFFER_TYPES).optional(),
   mileage: vine.number().min(0).optional(),
   dailyPrice: vine.number().min(0),
+  salePrice: vine.number().min(0).nullable().optional(),
+  saleNegotiable: vine.boolean().optional(),
   /** Absent : reprend la commission par défaut de l’agence. */
   commissionPerDay: vine.number().min(0).optional(),
   /** Prix d’achat : crée automatiquement une dépense « Achat » (voitures agence uniquement). */
@@ -43,9 +46,12 @@ export const updateVehicleValidator = vine.create({
   color: vine.string().trim().maxLength(40).nullable().optional(),
   fuel: vine.enum(fuels).optional(),
   vehicleType: vine.enum(VEHICLE_TYPES).optional(),
-  status: vine.enum(vehicleStatuses).optional(),
+  status: vine.enum(VEHICLE_STATUSES).optional(),
+  offerType: vine.enum(OFFER_TYPES).optional(),
   mileage: vine.number().min(0).optional(),
   dailyPrice: vine.number().min(0).optional(),
+  salePrice: vine.number().min(0).nullable().optional(),
+  saleNegotiable: vine.boolean().optional(),
   commissionPerDay: vine.number().min(0).optional(),
   insuranceCompany: vine.string().trim().maxLength(120).nullable().optional(),
   insuranceExpiresAt: isoDate().nullable().optional(),

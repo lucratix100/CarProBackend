@@ -11,6 +11,8 @@ export const ADMIN_NOTIFICATION_TYPES = {
   MARKETPLACE_PUBLICATION_REJECTED: 'marketplace_publication_rejected',
   MARKETPLACE_PUBLICATION_UNPUBLISHED: 'marketplace_publication_unpublished',
   MARKETPLACE_PUBLICATION_BANNED: 'marketplace_publication_banned',
+  MARKETPLACE_BOOST_APPROVED: 'marketplace_boost_approved',
+  MARKETPLACE_BOOST_REJECTED: 'marketplace_boost_rejected',
   PARTNER_OWNER_APPLICATION: 'partner_owner_application',
   VALIDATION_REQUEST: 'validation_request',
   VALIDATION_DECISION: 'validation_decision',

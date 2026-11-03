@@ -39,7 +39,6 @@ router.use([
   () => import('@adonisjs/auth/initialize_auth_middleware'),
   () => import('#middleware/silent_auth_middleware'),
 ])
-
 /**
  * Named middleware collection must be explicitly assigned to
  * the routes or the routes group.

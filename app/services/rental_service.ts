@@ -168,7 +168,7 @@ export default class RentalService {
    */
   async syncVehicleStatus(vehicleId: number) {
     const vehicle = await Vehicle.findOrFail(vehicleId)
-    if (vehicle.status === 'Entretien') {
+    if (vehicle.status === 'Entretien' || vehicle.status === 'Vendu' || vehicle.status === 'À vendre') {
       return vehicle
     }
 
@@ -280,6 +280,19 @@ export default class RentalService {
         : resolveRentalStatus(payload.startDate, payload.endDate)
 
     const vehicle = await Vehicle.findOrFail(payload.vehicleId)
+
+    if (vehicle.status === 'Vendu') {
+      throw new Exception('Ce véhicule est vendu et ne peut plus être loué.', {
+        status: 422,
+        code: 'E_VEHICLE_SOLD',
+      })
+    }
+    if (vehicle.offerType === 'sale') {
+      throw new Exception('Ce véhicule est proposé à la vente uniquement.', {
+        status: 422,
+        code: 'E_NOT_FOR_RENT',
+      })
+    }
 
     const rental = await Rental.create({
       agencyId: payload.agencyId,

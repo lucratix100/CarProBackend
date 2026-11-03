@@ -23,6 +23,7 @@ export const controllers = {
   MarketplacePublications: () => import('#controllers/marketplace_publications_controller'),
   MarketplaceReport: () => import('#controllers/marketplace_report_controller'),
   MarketplaceReview: () => import('#controllers/marketplace_review_controller'),
+  MarketplaceSales: () => import('#controllers/marketplace_sales_controller'),
   Marques: () => import('#controllers/marques_controller'),
   Modeles: () => import('#controllers/modeles_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
@@ -37,6 +38,7 @@ export const controllers = {
   StaffRoles: () => import('#controllers/staff_roles_controller'),
   Validations: () => import('#controllers/validations_controller'),
   VehicleExpenses: () => import('#controllers/vehicle_expenses_controller'),
+  VehicleSales: () => import('#controllers/vehicle_sales_controller'),
   VehicleTypes: () => import('#controllers/vehicle_types_controller'),
   Vehicles: () => import('#controllers/vehicles_controller'),
 }
