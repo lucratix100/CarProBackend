@@ -27,6 +27,14 @@ export interface ApiDefinition {
       destroy: typeof routes['profile.access_tokens.destroy']
     }
   }
+  push: {
+    pushSubscriptions: {
+      vapidPublicKey: typeof routes['push.push_subscriptions.vapid_public_key']
+      status: typeof routes['push.push_subscriptions.status']
+      subscribe: typeof routes['push.push_subscriptions.subscribe']
+      unsubscribe: typeof routes['push.push_subscriptions.unsubscribe']
+    }
+  }
   agencies: {
     agencies: {
       index: typeof routes['agencies.agencies.index']
@@ -38,6 +46,10 @@ export interface ApiDefinition {
       pendingLogoFile: typeof routes['agencies.agencies.pending_logo_file']
       approveLogo: typeof routes['agencies.agencies.approve_logo']
       rejectLogo: typeof routes['agencies.agencies.reject_logo']
+      signatureFile: typeof routes['agencies.agencies.signature_file']
+      pendingSignatureFile: typeof routes['agencies.agencies.pending_signature_file']
+      approveSignature: typeof routes['agencies.agencies.approve_signature']
+      rejectSignature: typeof routes['agencies.agencies.reject_signature']
       inviteAdmin: typeof routes['agencies.agencies.invite_admin']
       resendAdminInvitation: typeof routes['agencies.agencies.resend_admin_invitation']
       reactivateAdmin: typeof routes['agencies.agencies.reactivate_admin']
@@ -216,6 +228,10 @@ export interface ApiDefinition {
       destroyLogo: typeof routes['settings.settings.destroy_logo']
       logoFile: typeof routes['settings.settings.logo_file']
       pendingLogoFile: typeof routes['settings.settings.pending_logo_file']
+      uploadSignature: typeof routes['settings.settings.upload_signature']
+      destroySignature: typeof routes['settings.settings.destroy_signature']
+      signatureFile: typeof routes['settings.settings.signature_file']
+      pendingSignatureFile: typeof routes['settings.settings.pending_signature_file']
     }
   }
   adminNotifications: {

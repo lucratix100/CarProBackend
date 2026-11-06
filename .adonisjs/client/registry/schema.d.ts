@@ -115,6 +115,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/access_tokens_controller').default['destroy']>>>
     }
   }
+  'push.push_subscriptions.vapid_public_key': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/push/vapid-public-key'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['vapidPublicKey']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['vapidPublicKey']>>>
+    }
+  }
+  'push.push_subscriptions.status': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/push/status'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['status']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['status']>>>
+    }
+  }
+  'push.push_subscriptions.subscribe': {
+    methods: ["POST"]
+    pattern: '/api/v1/push/subscribe'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/push_subscription').pushSubscribeValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/push_subscription').pushSubscribeValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['subscribe']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['subscribe']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'push.push_subscriptions.unsubscribe': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/push/subscribe'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/push_subscription').pushUnsubscribeValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/push_subscription').pushUnsubscribeValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['unsubscribe']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/push_subscriptions_controller').default['unsubscribe']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'agencies.agencies.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/agencies'
@@ -221,6 +269,54 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/agency').rejectAgencyLogoValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectLogo']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectLogo']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'agencies.agencies.signature_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/agencies/:id/signature'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['signatureFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['signatureFile']>>>
+    }
+  }
+  'agencies.agencies.pending_signature_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/agencies/:id/signature/pending'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['pendingSignatureFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['pendingSignatureFile']>>>
+    }
+  }
+  'agencies.agencies.approve_signature': {
+    methods: ["POST"]
+    pattern: '/api/v1/agencies/:id/signature/approve'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['approveSignature']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['approveSignature']>>>
+    }
+  }
+  'agencies.agencies.reject_signature': {
+    methods: ["POST"]
+    pattern: '/api/v1/agencies/:id/signature/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/agency').rejectAgencySignatureValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/agency').rejectAgencySignatureValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectSignature']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/agencies_controller').default['rejectSignature']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'agencies.agencies.invite_admin': {
@@ -1565,6 +1661,54 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingLogoFile']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingLogoFile']>>>
+    }
+  }
+  'settings.settings.upload_signature': {
+    methods: ["POST"]
+    pattern: '/api/v1/settings/signature'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['uploadSignature']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['uploadSignature']>>>
+    }
+  }
+  'settings.settings.destroy_signature': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/settings/signature'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['destroySignature']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['destroySignature']>>>
+    }
+  }
+  'settings.settings.signature_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/settings/signature'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['signatureFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['signatureFile']>>>
+    }
+  }
+  'settings.settings.pending_signature_file': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/settings/signature/pending'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingSignatureFile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/settings_controller').default['pendingSignatureFile']>>>
     }
   }
   'admin_notifications.admin_notifications.index': {

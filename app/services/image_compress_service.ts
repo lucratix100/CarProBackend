@@ -92,3 +92,105 @@ export async function preparePdfLogo(absolutePath: string | null): Promise<Buffe
     return null
   }
 }
+
+/**
+ * Rend les pixels clairs (fond blanc / gris papier) transparents pour une
+ * signature manuscrite scannée, tout en conservant l’alpha déjà présent.
+ */
+function stripLightBackground(data: Buffer) {
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]!
+    const g = data[i + 1]!
+    const b = data[i + 2]!
+    const a = data[i + 3]!
+    if (a === 0) continue
+
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const brightness = (r + g + b) / 3
+    const nearGray = max - min < 28
+
+    if (nearGray && brightness >= 245) {
+      data[i + 3] = 0
+    } else if (nearGray && brightness >= 210) {
+      const fade = (brightness - 210) / 35
+      data[i + 3] = Math.max(0, Math.round(a * (1 - fade)))
+    }
+  }
+}
+
+/**
+ * Enregistre une signature en PNG transparent : fond clair retiré, alpha
+ * préservé, dimensions réduites pour les cases du contrat PDF.
+ */
+export async function writeTransparentSignaturePng(
+  sourcePath: string,
+  destinationPath: string,
+  options: { maxWidth: number; maxBytes: number }
+): Promise<void> {
+  let targetWidth = options.maxWidth
+  let last: Buffer | null = null
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const { data, info } = await sharp(sourcePath, { failOn: 'none' })
+      .rotate()
+      .resize({
+        width: targetWidth,
+        height: Math.round(targetWidth * 0.55),
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+    stripLightBackground(data)
+
+    const encoded = await sharp(data, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: 4,
+      },
+    })
+      .png({ compressionLevel: 9 })
+      .toBuffer()
+
+    last = encoded
+    if (encoded.length <= options.maxBytes) break
+    targetWidth = Math.max(96, Math.round(targetWidth * 0.8))
+  }
+
+  if (!last || last.length > options.maxBytes) {
+    throw new Error('IMAGE_STILL_TOO_LARGE')
+  }
+
+  await writeFile(destinationPath, last)
+}
+
+/** Signature ~box PDF (~120–160 pt) : 360 px de large pour un rendu net. */
+export async function preparePdfSignature(absolutePath: string | null): Promise<Buffer | null> {
+  if (!absolutePath) return null
+  try {
+    const { data, info } = await sharp(absolutePath, { failOn: 'none' })
+      .rotate()
+      .resize(360, 160, { fit: 'inside', withoutEnlargement: true })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+    stripLightBackground(data)
+
+    return await sharp(data, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: 4,
+      },
+    })
+      .png({ compressionLevel: 9 })
+      .toBuffer()
+  } catch {
+    return null
+  }
+}

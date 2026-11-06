@@ -41,4 +41,5 @@ export const controllers = {
   VehicleSales: () => import('#controllers/vehicle_sales_controller'),
   VehicleTypes: () => import('#controllers/vehicle_types_controller'),
   Vehicles: () => import('#controllers/vehicles_controller'),
+  PushSubscriptions: () => import('#controllers/push_subscriptions_controller'),
 }

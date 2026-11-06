@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import AdminNotification from '#models/admin_notification'
 import User from '#models/user'
+import PushNotificationService from '#services/push_notification_service'
 
 export type AdminNotifyPayload = {
   type: string
@@ -11,8 +12,12 @@ export type AdminNotifyPayload = {
 }
 
 export default class AdminNotificationService {
+  #push() {
+    return new PushNotificationService()
+  }
+
   async notifyUser(userId: number, payload: AdminNotifyPayload) {
-    return AdminNotification.create({
+    const notification = await AdminNotification.create({
       userId,
       type: payload.type,
       title: payload.title,
@@ -21,6 +26,15 @@ export default class AdminNotificationService {
       meta: payload.meta ?? null,
       readAt: null,
     })
+
+    this.#push().sendToUserLater(userId, {
+      title: payload.title,
+      body: payload.body,
+      href: payload.href ?? '/admin',
+      tag: payload.type,
+    })
+
+    return notification
   }
 
   async notifyAgencyAdmins(agencyId: number, payload: AdminNotifyPayload) {
@@ -29,6 +43,7 @@ export default class AdminNotificationService {
       .where('status', 'active')
       .where('agencyId', agencyId)
     const rows = []
+    const push = this.#push()
     for (const admin of admins) {
       rows.push(
         await AdminNotification.create({
@@ -41,6 +56,12 @@ export default class AdminNotificationService {
           readAt: null,
         })
       )
+      push.sendToUserLater(admin.id, {
+        title: payload.title,
+        body: payload.body,
+        href: payload.href ?? '/admin',
+        tag: payload.type,
+      })
     }
     return rows
   }

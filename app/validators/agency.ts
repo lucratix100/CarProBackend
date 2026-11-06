@@ -26,6 +26,7 @@ export const updateAgencyValidator = vine.create({
   isActive: vine.boolean().optional(),
   isVerified: vine.boolean().optional(),
   canUseCustomLogo: vine.boolean().optional(),
+  canUseCustomSignature: vine.boolean().optional(),
   cityId: vine.number().positive().nullable().optional(),
   publishOnMarketplace: vine.boolean().optional(),
   clearMarketplacePublishBan: vine.boolean().optional(),
@@ -37,6 +38,10 @@ export const updateAgencyValidator = vine.create({
 })
 
 export const rejectAgencyLogoValidator = vine.create({
+  reason: vine.string().trim().maxLength(500).optional(),
+})
+
+export const rejectAgencySignatureValidator = vine.create({
   reason: vine.string().trim().maxLength(500).optional(),
 })
 

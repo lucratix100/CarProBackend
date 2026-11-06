@@ -78,12 +78,14 @@ export class AdminNotificationSchema extends BaseModel {
 }
 
 export class AgencySchema extends BaseModel {
-  static $columns = ['acceptOwnerApplications', 'canUseCustomLogo', 'cityId', 'createdAt', 'id', 'isActive', 'isVerified', 'marketplacePublishBannedUntil', 'marketplaceRejectionStreak', 'name', 'nameKey', 'notes', 'publishOnMarketplace', 'slug', 'staffLimit', 'staffModuleEnabled', 'staffPaused', 'updatedAt', 'vehicleLimit'] as const
+  static $columns = ['acceptOwnerApplications', 'canUseCustomLogo', 'canUseCustomSignature', 'cityId', 'createdAt', 'id', 'isActive', 'isVerified', 'marketplacePublishBannedUntil', 'marketplaceRejectionStreak', 'name', 'nameKey', 'notes', 'publishOnMarketplace', 'slug', 'staffLimit', 'staffModuleEnabled', 'staffPaused', 'updatedAt', 'vehicleLimit'] as const
   $columns = AgencySchema.$columns
   @column()
   declare acceptOwnerApplications: boolean
   @column()
   declare canUseCustomLogo: boolean
+  @column()
+  declare canUseCustomSignature: boolean
   @column()
   declare cityId: number | null
   @column.dateTime({ autoCreate: true })
@@ -642,6 +644,27 @@ export class PermissionSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class PushSubscriptionSchema extends BaseModel {
+  static $columns = ['auth', 'createdAt', 'endpoint', 'id', 'p256Dh', 'updatedAt', 'userAgent', 'userId'] as const
+  $columns = PushSubscriptionSchema.$columns
+  @column()
+  declare auth: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare endpoint: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare p256Dh: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userAgent: string | null
+  @column()
+  declare userId: number
+}
+
 export class RentalExtensionSchema extends BaseModel {
   static $columns = ['addedDays', 'amountHt', 'createdAt', 'createdByUserId', 'dailyPrice', 'id', 'newEndDate', 'notes', 'previousEndDate', 'rentalId', 'updatedAt'] as const
   $columns = RentalExtensionSchema.$columns
@@ -713,7 +736,7 @@ export class RentalSchema extends BaseModel {
 }
 
 export class SettingSchema extends BaseModel {
-  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'documentHeaderColor', 'id', 'logoPath', 'logoPendingPath', 'logoRejectionReason', 'rentalConditions', 'tvaRate', 'updatedAt'] as const
+  static $columns = ['agencyId', 'commissionPerDay', 'companyName', 'createdAt', 'depositAmount', 'documentHeaderColor', 'id', 'logoPath', 'logoPendingPath', 'logoRejectionReason', 'rentalConditions', 'signaturePath', 'signaturePendingPath', 'signatureRejectionReason', 'tvaRate', 'updatedAt'] as const
   $columns = SettingSchema.$columns
   @column()
   declare agencyId: number
@@ -737,6 +760,12 @@ export class SettingSchema extends BaseModel {
   declare logoRejectionReason: string | null
   @column()
   declare rentalConditions: string | null
+  @column()
+  declare signaturePath: string | null
+  @column()
+  declare signaturePendingPath: string | null
+  @column()
+  declare signatureRejectionReason: string | null
   @column()
   declare tvaRate: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

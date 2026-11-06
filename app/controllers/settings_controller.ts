@@ -4,10 +4,12 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import SettingTransformer from '#transformers/setting_transformer'
 import AgencyLogoUploadService from '#services/agency_logo_upload_service'
+import AgencySignatureUploadService from '#services/agency_signature_upload_service'
 import { updateSettingsValidator } from '#validators/setting'
 
 export default class SettingsController {
   #logos = new AgencyLogoUploadService()
+  #signatures = new AgencySignatureUploadService()
 
   async #loadSettings(agencyId: number) {
     const settings = await Setting.current(agencyId)
@@ -120,5 +122,88 @@ export default class SettingsController {
       throw new Exception('Aucun logo en attente.', { status: 404, code: 'E_AGENCY_LOGO_PENDING' })
     }
     return this.#logos.streamFile(response, settings.logoPendingPath)
+  }
+
+  async uploadSignature({ request, response, serialize, agencyId }: HttpContext) {
+    const agency = await Agency.findOrFail(agencyId!)
+    if (!agency.canUseCustomSignature) {
+      throw new Exception(
+        'La signature personnalisée n’est pas activée pour cette agence. Contactez mobiprofil.',
+        { status: 403, code: 'E_AGENCY_SIGNATURE_DISABLED' }
+      )
+    }
+
+    const file = this.#signatures.validateFile(request.file('signature'))
+    if (!file) {
+      throw new Exception(
+        'Ajoutez une signature (PNG transparent recommandé, max 400 Ko).',
+        {
+          status: 422,
+          code: 'E_AGENCY_SIGNATURE_REQUIRED',
+        }
+      )
+    }
+
+    const settings = await this.#loadSettings(agencyId!)
+    const previousPending = settings.signaturePendingPath
+    const path = await this.#signatures.store(file, agencyId!)
+
+    settings.signaturePendingPath = path
+    settings.signatureRejectionReason = null
+    await settings.save()
+
+    if (previousPending && previousPending !== path) {
+      await this.#signatures.removeIfExists(previousPending)
+    }
+
+    await settings.load('agency')
+    return response.ok(await serialize(SettingTransformer.transform(settings)))
+  }
+
+  async destroySignature({ response, serialize, agencyId }: HttpContext) {
+    const agency = await Agency.findOrFail(agencyId!)
+    if (!agency.canUseCustomSignature) {
+      throw new Exception('La signature personnalisée n’est pas activée pour cette agence.', {
+        status: 403,
+        code: 'E_AGENCY_SIGNATURE_DISABLED',
+      })
+    }
+
+    const settings = await this.#loadSettings(agencyId!)
+
+    if (settings.signaturePendingPath) {
+      await this.#signatures.removeIfExists(settings.signaturePendingPath)
+      settings.signaturePendingPath = null
+    } else if (settings.signaturePath) {
+      await this.#signatures.removeIfExists(settings.signaturePath)
+      settings.signaturePath = null
+      settings.signatureRejectionReason = null
+    }
+
+    await settings.save()
+    await settings.load('agency')
+    return response.ok(await serialize(SettingTransformer.transform(settings)))
+  }
+
+  async signatureFile({ response, agencyId }: HttpContext) {
+    const settings = await Setting.current(agencyId!)
+    if (!settings.signaturePath) {
+      throw new Exception('Aucune signature approuvée.', {
+        status: 404,
+        code: 'E_AGENCY_SIGNATURE',
+      })
+    }
+    return this.#signatures.streamFile(response, settings.signaturePath)
+  }
+
+  async pendingSignatureFile({ response, agencyId }: HttpContext) {
+    const settings = await Setting.current(agencyId!)
+    if (!settings.signaturePendingPath) {
+      throw new Exception('Aucune signature en attente.', {
+        status: 404,
+        code: 'E_AGENCY_SIGNATURE_PENDING',
+      })
+    }
+    return this.#signatures.streamFile(response, settings.signaturePendingPath)
   }
 }

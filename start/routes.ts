@@ -55,6 +55,20 @@ router
       .use(middleware.auth())
 
     /**
+     * Web Push subscriptions (PWA)
+     */
+    router
+      .group(() => {
+        router.get('vapid-public-key', [controllers.PushSubscriptions, 'vapidPublicKey'])
+        router.get('status', [controllers.PushSubscriptions, 'status'])
+        router.post('subscribe', [controllers.PushSubscriptions, 'subscribe'])
+        router.delete('subscribe', [controllers.PushSubscriptions, 'unsubscribe'])
+      })
+      .prefix('push')
+      .as('push')
+      .use(middleware.auth())
+
+    /**
      * Super-admin: agencies & agency admins
      */
     router
@@ -68,6 +82,10 @@ router
         router.get('/:id/logo/pending', [controllers.Agencies, 'pendingLogoFile'])
         router.post('/:id/logo/approve', [controllers.Agencies, 'approveLogo'])
         router.post('/:id/logo/reject', [controllers.Agencies, 'rejectLogo'])
+        router.get('/:id/signature', [controllers.Agencies, 'signatureFile'])
+        router.get('/:id/signature/pending', [controllers.Agencies, 'pendingSignatureFile'])
+        router.post('/:id/signature/approve', [controllers.Agencies, 'approveSignature'])
+        router.post('/:id/signature/reject', [controllers.Agencies, 'rejectSignature'])
         router.post('/:id/admins', [controllers.Agencies, 'inviteAdmin'])
         router.post('/:id/admins/:adminId/resend-invitation', [
           controllers.Agencies,
@@ -477,6 +495,18 @@ router
           .use(middleware.permission({ permission: 'settings.view' }))
         router
           .get('/logo/pending', [controllers.Settings, 'pendingLogoFile'])
+          .use(middleware.permission({ permission: 'settings.view' }))
+        router
+          .post('/signature', [controllers.Settings, 'uploadSignature'])
+          .use(middleware.permission({ permission: 'settings.update' }))
+        router
+          .delete('/signature', [controllers.Settings, 'destroySignature'])
+          .use(middleware.permission({ permission: 'settings.update' }))
+        router
+          .get('/signature', [controllers.Settings, 'signatureFile'])
+          .use(middleware.permission({ permission: 'settings.view' }))
+        router
+          .get('/signature/pending', [controllers.Settings, 'pendingSignatureFile'])
           .use(middleware.permission({ permission: 'settings.view' }))
       })
       .prefix('settings')

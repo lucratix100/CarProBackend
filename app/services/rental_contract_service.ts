@@ -6,8 +6,10 @@ import Agency from '#models/agency'
 import Setting from '#models/setting'
 import { rentalFinancials } from '#services/finance_service'
 import { resolvePublicLogoPath } from '#services/agency_logo_upload_service'
+import { resolvePublicSignaturePath } from '#services/agency_signature_upload_service'
 import { headerTheme, type DocumentTheme } from '#services/document_header_color'
 import { resolvePdfLogoBuffer } from '#services/brand_assets'
+import { preparePdfSignature } from '#services/image_compress_service'
 
 const C = {
   ink: '#0f172a',
@@ -342,7 +344,8 @@ function drawSignatures(
   issuedOn: DateTime,
   clientName: string,
   company: string,
-  theme: DocumentTheme
+  theme: DocumentTheme,
+  signature: Buffer | null
 ) {
   let cy = sectionTitle(doc, '06 — Signatures', M.left, y, CONTENT_W, theme)
 
@@ -351,7 +354,7 @@ function drawSignatures(
   cy += 16
 
   const boxW = (CONTENT_W - 24) / 2
-  const boxH = 72
+  const boxH = signature ? 96 : 72
 
   // Locataire
   doc.save()
@@ -374,7 +377,23 @@ function drawSignatures(
   text(doc, 'Le Loueur', rx + 10, cy + 8)
   doc.font('Helvetica').fontSize(7.5).fillColor(C.muted)
   text(doc, company, rx + 10, cy + 20, { width: boxW - 20 })
-  hline(doc, rx + 10, cy + boxH - 18, boxW - 20, C.line)
+
+  if (signature) {
+    try {
+      const sigW = boxW - 28
+      const sigH = boxH - 48
+      doc.image(signature, rx + 14, cy + 30, {
+        fit: [sigW, sigH],
+        align: 'center',
+        valign: 'center',
+      })
+    } catch {
+      hline(doc, rx + 10, cy + boxH - 18, boxW - 20, C.line)
+    }
+  } else {
+    hline(doc, rx + 10, cy + boxH - 18, boxW - 20, C.line)
+  }
+
   doc.font('Helvetica').fontSize(6.5).fillColor(C.muted)
   text(doc, 'Signature & cachet', rx + 10, cy + boxH - 14)
 
@@ -464,6 +483,12 @@ export default class RentalContractService {
     ]
 
     const logo = await resolvePdfLogoBuffer(logoAbsolutePath)
+    const publicSignaturePath =
+      agency && settings ? resolvePublicSignaturePath(agency, settings) : null
+    const signatureAbsolutePath = publicSignaturePath
+      ? app.makePath(publicSignaturePath)
+      : null
+    const signature = await preparePdfSignature(signatureAbsolutePath)
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',
@@ -515,7 +540,15 @@ export default class RentalContractService {
         y = drawNotes(doc, y, rental.notes.trim(), theme)
       }
 
-      drawSignatures(doc, y, issuedOn, displayValue(client.fullName), settings.companyName, theme)
+      drawSignatures(
+        doc,
+        y,
+        issuedOn,
+        displayValue(client.fullName),
+        settings.companyName,
+        theme,
+        signature
+      )
       drawFooter(doc, settings)
 
       doc.end()

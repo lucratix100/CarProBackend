@@ -60,6 +60,30 @@ const routes = {
     tokens: [{"old":"/api/v1/account/logout","type":0,"val":"api","end":""},{"old":"/api/v1/account/logout","type":0,"val":"v1","end":""},{"old":"/api/v1/account/logout","type":0,"val":"account","end":""},{"old":"/api/v1/account/logout","type":0,"val":"logout","end":""}],
     types: placeholder as Registry['profile.access_tokens.destroy']['types'],
   },
+  'push.push_subscriptions.vapid_public_key': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/push/vapid-public-key',
+    tokens: [{"old":"/api/v1/push/vapid-public-key","type":0,"val":"api","end":""},{"old":"/api/v1/push/vapid-public-key","type":0,"val":"v1","end":""},{"old":"/api/v1/push/vapid-public-key","type":0,"val":"push","end":""},{"old":"/api/v1/push/vapid-public-key","type":0,"val":"vapid-public-key","end":""}],
+    types: placeholder as Registry['push.push_subscriptions.vapid_public_key']['types'],
+  },
+  'push.push_subscriptions.status': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/push/status',
+    tokens: [{"old":"/api/v1/push/status","type":0,"val":"api","end":""},{"old":"/api/v1/push/status","type":0,"val":"v1","end":""},{"old":"/api/v1/push/status","type":0,"val":"push","end":""},{"old":"/api/v1/push/status","type":0,"val":"status","end":""}],
+    types: placeholder as Registry['push.push_subscriptions.status']['types'],
+  },
+  'push.push_subscriptions.subscribe': {
+    methods: ["POST"],
+    pattern: '/api/v1/push/subscribe',
+    tokens: [{"old":"/api/v1/push/subscribe","type":0,"val":"api","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"v1","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"push","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"subscribe","end":""}],
+    types: placeholder as Registry['push.push_subscriptions.subscribe']['types'],
+  },
+  'push.push_subscriptions.unsubscribe': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/push/subscribe',
+    tokens: [{"old":"/api/v1/push/subscribe","type":0,"val":"api","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"v1","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"push","end":""},{"old":"/api/v1/push/subscribe","type":0,"val":"subscribe","end":""}],
+    types: placeholder as Registry['push.push_subscriptions.unsubscribe']['types'],
+  },
   'agencies.agencies.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/agencies',
@@ -113,6 +137,30 @@ const routes = {
     pattern: '/api/v1/agencies/:id/logo/reject',
     tokens: [{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"logo","end":""},{"old":"/api/v1/agencies/:id/logo/reject","type":0,"val":"reject","end":""}],
     types: placeholder as Registry['agencies.agencies.reject_logo']['types'],
+  },
+  'agencies.agencies.signature_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/agencies/:id/signature',
+    tokens: [{"old":"/api/v1/agencies/:id/signature","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/signature","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/signature","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/signature","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/signature","type":0,"val":"signature","end":""}],
+    types: placeholder as Registry['agencies.agencies.signature_file']['types'],
+  },
+  'agencies.agencies.pending_signature_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/agencies/:id/signature/pending',
+    tokens: [{"old":"/api/v1/agencies/:id/signature/pending","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/signature/pending","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/signature/pending","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/signature/pending","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/signature/pending","type":0,"val":"signature","end":""},{"old":"/api/v1/agencies/:id/signature/pending","type":0,"val":"pending","end":""}],
+    types: placeholder as Registry['agencies.agencies.pending_signature_file']['types'],
+  },
+  'agencies.agencies.approve_signature': {
+    methods: ["POST"],
+    pattern: '/api/v1/agencies/:id/signature/approve',
+    tokens: [{"old":"/api/v1/agencies/:id/signature/approve","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/signature/approve","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/signature/approve","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/signature/approve","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/signature/approve","type":0,"val":"signature","end":""},{"old":"/api/v1/agencies/:id/signature/approve","type":0,"val":"approve","end":""}],
+    types: placeholder as Registry['agencies.agencies.approve_signature']['types'],
+  },
+  'agencies.agencies.reject_signature': {
+    methods: ["POST"],
+    pattern: '/api/v1/agencies/:id/signature/reject',
+    tokens: [{"old":"/api/v1/agencies/:id/signature/reject","type":0,"val":"api","end":""},{"old":"/api/v1/agencies/:id/signature/reject","type":0,"val":"v1","end":""},{"old":"/api/v1/agencies/:id/signature/reject","type":0,"val":"agencies","end":""},{"old":"/api/v1/agencies/:id/signature/reject","type":1,"val":"id","end":""},{"old":"/api/v1/agencies/:id/signature/reject","type":0,"val":"signature","end":""},{"old":"/api/v1/agencies/:id/signature/reject","type":0,"val":"reject","end":""}],
+    types: placeholder as Registry['agencies.agencies.reject_signature']['types'],
   },
   'agencies.agencies.invite_admin': {
     methods: ["POST"],
@@ -785,6 +833,30 @@ const routes = {
     pattern: '/api/v1/settings/logo/pending',
     tokens: [{"old":"/api/v1/settings/logo/pending","type":0,"val":"api","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"logo","end":""},{"old":"/api/v1/settings/logo/pending","type":0,"val":"pending","end":""}],
     types: placeholder as Registry['settings.settings.pending_logo_file']['types'],
+  },
+  'settings.settings.upload_signature': {
+    methods: ["POST"],
+    pattern: '/api/v1/settings/signature',
+    tokens: [{"old":"/api/v1/settings/signature","type":0,"val":"api","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"signature","end":""}],
+    types: placeholder as Registry['settings.settings.upload_signature']['types'],
+  },
+  'settings.settings.destroy_signature': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/settings/signature',
+    tokens: [{"old":"/api/v1/settings/signature","type":0,"val":"api","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"signature","end":""}],
+    types: placeholder as Registry['settings.settings.destroy_signature']['types'],
+  },
+  'settings.settings.signature_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/settings/signature',
+    tokens: [{"old":"/api/v1/settings/signature","type":0,"val":"api","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/signature","type":0,"val":"signature","end":""}],
+    types: placeholder as Registry['settings.settings.signature_file']['types'],
+  },
+  'settings.settings.pending_signature_file': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/settings/signature/pending',
+    tokens: [{"old":"/api/v1/settings/signature/pending","type":0,"val":"api","end":""},{"old":"/api/v1/settings/signature/pending","type":0,"val":"v1","end":""},{"old":"/api/v1/settings/signature/pending","type":0,"val":"settings","end":""},{"old":"/api/v1/settings/signature/pending","type":0,"val":"signature","end":""},{"old":"/api/v1/settings/signature/pending","type":0,"val":"pending","end":""}],
+    types: placeholder as Registry['settings.settings.pending_signature_file']['types'],
   },
   'admin_notifications.admin_notifications.index': {
     methods: ["GET","HEAD"],

@@ -13,6 +13,10 @@ export type ScannedRoutes = {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.profile.change_password': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.vapid_public_key': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.status': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.subscribe': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.unsubscribe': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.store': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -22,6 +26,10 @@ export type ScannedRoutes = {
     'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.approve_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.reject_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.approve_signature': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.reject_signature': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.invite_admin': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.resend_admin_invitation': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
     'agencies.agencies.reactivate_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
@@ -134,6 +142,10 @@ export type ScannedRoutes = {
     'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
     'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
     'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.upload_signature': { paramsTuple?: []; params?: {} }
+    'settings.settings.destroy_signature': { paramsTuple?: []; params?: {} }
+    'settings.settings.signature_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_signature_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -208,10 +220,14 @@ export type ScannedRoutes = {
     'auth.password_resets.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.vapid_public_key': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.status': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.boost_index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.agencies': { paramsTuple?: []; params?: {} }
@@ -258,6 +274,8 @@ export type ScannedRoutes = {
     'settings.settings.show': { paramsTuple?: []; params?: {} }
     'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
     'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.signature_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_signature_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'staff.staff_roles.catalog': { paramsTuple?: []; params?: {} }
@@ -305,10 +323,14 @@ export type ScannedRoutes = {
     'auth.password_resets.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'invitations.invitations.show': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.vapid_public_key': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.status': { paramsTuple?: []; params?: {} }
     'agencies.agencies.index': { paramsTuple?: []; params?: {} }
     'agencies.agencies.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.pending_logo_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.pending_signature_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace_publications.marketplace_publications.index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.boost_index': { paramsTuple?: []; params?: {} }
     'marketplace_publications.marketplace_publications.agencies': { paramsTuple?: []; params?: {} }
@@ -355,6 +377,8 @@ export type ScannedRoutes = {
     'settings.settings.show': { paramsTuple?: []; params?: {} }
     'settings.settings.logo_file': { paramsTuple?: []; params?: {} }
     'settings.settings.pending_logo_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.signature_file': { paramsTuple?: []; params?: {} }
+    'settings.settings.pending_signature_file': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.index': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.unread_count': { paramsTuple?: []; params?: {} }
     'staff.staff_roles.catalog': { paramsTuple?: []; params?: {} }
@@ -405,9 +429,12 @@ export type ScannedRoutes = {
     'invitations.invitations.accept': { paramsTuple: [ParamValue]; params: {'token': ParamValue} }
     'profile.profile.change_password': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
+    'push.push_subscriptions.subscribe': { paramsTuple?: []; params?: {} }
     'agencies.agencies.store': { paramsTuple?: []; params?: {} }
     'agencies.agencies.approve_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.reject_logo': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.approve_signature': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.reject_signature': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.invite_admin': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'agencies.agencies.resend_admin_invitation': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
     'agencies.agencies.reactivate_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
@@ -450,6 +477,7 @@ export type ScannedRoutes = {
     'maintenances.maintenances.store': { paramsTuple?: []; params?: {} }
     'complianceDocuments.compliance_documents.store': { paramsTuple?: []; params?: {} }
     'settings.settings.upload_logo': { paramsTuple?: []; params?: {} }
+    'settings.settings.upload_signature': { paramsTuple?: []; params?: {} }
     'admin_notifications.admin_notifications.mark_all_read': { paramsTuple?: []; params?: {} }
     'staff.staff_roles.store': { paramsTuple?: []; params?: {} }
     'staff.staff_collaborators.store': { paramsTuple?: []; params?: {} }
@@ -468,6 +496,26 @@ export type ScannedRoutes = {
     'marketplace.marketplace_sales.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_sales.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.store': { paramsTuple?: []; params?: {} }
+  }
+  DELETE: {
+    'push.push_subscriptions.unsubscribe': { paramsTuple?: []; params?: {} }
+    'agencies.agencies.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'agencies.agencies.revoke_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
+    'homepage_banners.homepage_banners.destroy_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'homepage_banners.homepage_banners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'owners.owners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'vehicles.vehicles.destroy_photo': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
+    'vehicles.vehicles.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'vehicle_expenses.vehicle_expenses.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'clients.clients.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rentals.rentals.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.invoice_payments.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'invoiceId': ParamValue,'paymentId': ParamValue} }
+    'invoices.invoices.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'maintenances.maintenances.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'complianceDocuments.compliance_documents.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
+    'settings.settings.destroy_signature': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_favorite.destroy': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
   }
   PATCH: {
     'agencies.agencies.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -488,24 +536,6 @@ export type ScannedRoutes = {
     'owner_portal.owner_portal.mark_notification_read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_auth.update_profile': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.update_notify': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
-  }
-  DELETE: {
-    'agencies.agencies.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'agencies.agencies.revoke_admin': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'adminId': ParamValue} }
-    'homepage_banners.homepage_banners.destroy_image': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'homepage_banners.homepage_banners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'owners.owners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'vehicles.vehicles.destroy_photo': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'photoId': ParamValue} }
-    'vehicles.vehicles.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'vehicle_expenses.vehicle_expenses.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'clients.clients.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'rentals.rentals.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'invoices.invoice_payments.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'invoiceId': ParamValue,'paymentId': ParamValue} }
-    'invoices.invoices.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'maintenances.maintenances.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'complianceDocuments.compliance_documents.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'settings.settings.destroy_logo': { paramsTuple?: []; params?: {} }
-    'marketplace.marketplace_favorite.destroy': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
   }
   PUT: {
     'validations.validations.update_settings': { paramsTuple?: []; params?: {} }

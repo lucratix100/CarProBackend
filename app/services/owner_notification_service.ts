@@ -1,7 +1,9 @@
 import { DateTime } from 'luxon'
 import OwnerNotification from '#models/owner_notification'
+import Owner from '#models/owner'
 import Vehicle from '#models/vehicle'
 import type { OwnerNotificationType } from '#constants/owner_notification_types'
+import PushNotificationService from '#services/push_notification_service'
 
 export type NotifyPayload = {
   type: OwnerNotificationType
@@ -13,7 +15,7 @@ export type NotifyPayload = {
 
 export default class OwnerNotificationService {
   async notify(ownerId: number, payload: NotifyPayload) {
-    return OwnerNotification.create({
+    const notification = await OwnerNotification.create({
       ownerId,
       type: payload.type,
       title: payload.title,
@@ -22,6 +24,18 @@ export default class OwnerNotificationService {
       meta: payload.meta ?? null,
       readAt: null,
     })
+
+    const owner = await Owner.find(ownerId)
+    if (owner?.userId) {
+      new PushNotificationService().sendToUserLater(owner.userId, {
+        title: payload.title,
+        body: payload.body,
+        href: payload.href ?? '/portal/notifications',
+        tag: payload.type,
+      })
+    }
+
+    return notification
   }
 
   /**

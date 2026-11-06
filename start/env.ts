@@ -50,4 +50,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   // Marketplace (web-client Better Auth sync)
   MARKETPLACE_SYNC_SECRET: Env.schema.string.optional(),
   WEB_CLIENT_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+
+  // Web Push (PWA) — optionnel ; sans clés, subscribe/send sont désactivés
+  VAPID_PUBLIC_KEY: Env.schema.string.optional(),
+  VAPID_PRIVATE_KEY: Env.schema.string.optional(),
+  VAPID_SUBJECT: Env.schema.string.optional(),
 })

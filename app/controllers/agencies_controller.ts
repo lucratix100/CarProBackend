@@ -23,12 +23,16 @@ import UserTransformer from '#transformers/user_transformer'
 import AgencyLogoUploadService, {
   agencyLogoStatus,
 } from '#services/agency_logo_upload_service'
+import AgencySignatureUploadService, {
+  agencySignatureStatus,
+} from '#services/agency_signature_upload_service'
 import AgencyPlanService from '#services/agency_plan_service'
 import {
   createAgencyValidator,
   deleteAgencyValidator,
   inviteAgencyAdminValidator,
   rejectAgencyLogoValidator,
+  rejectAgencySignatureValidator,
   updateAgencyValidator,
 } from '#validators/agency'
 import { isPaginatedRequest, paginationMeta, readPage } from '#services/pagination'
@@ -51,6 +55,7 @@ async function countTotal(query: { count: Function }) {
 
 export default class AgenciesController {
   #logos = new AgencyLogoUploadService()
+  #signatures = new AgencySignatureUploadService()
   #plan = new AgencyPlanService()
 
   #brandingPayload(agency: Agency, settings: Setting) {
@@ -62,6 +67,15 @@ export default class AgenciesController {
         ? `/agencies/${agency.id}/logo/pending`
         : null,
       logoRejectionReason: settings.logoRejectionReason,
+      canUseCustomSignature: Boolean(agency.canUseCustomSignature),
+      signatureStatus: agencySignatureStatus(settings),
+      signatureUrl: settings.signaturePath
+        ? `/agencies/${agency.id}/signature`
+        : null,
+      pendingSignatureUrl: settings.signaturePendingPath
+        ? `/agencies/${agency.id}/signature/pending`
+        : null,
+      signatureRejectionReason: settings.signatureRejectionReason,
     }
   }
 
@@ -308,6 +322,9 @@ export default class AgenciesController {
     const logoPaths = [settings?.logoPath, settings?.logoPendingPath].filter(
       (path): path is string => Boolean(path)
     )
+    const signaturePaths = [settings?.signaturePath, settings?.signaturePendingPath].filter(
+      (path): path is string => Boolean(path)
+    )
 
     await db.transaction(async (trx) => {
       await User.query({ client: trx }).where('agencyId', agency.id).delete()
@@ -316,7 +333,10 @@ export default class AgenciesController {
       await agency.delete()
     })
 
-    await Promise.all(logoPaths.map((path) => this.#logos.removeIfExists(path)))
+    await Promise.all([
+      ...logoPaths.map((path) => this.#logos.removeIfExists(path)),
+      ...signaturePaths.map((path) => this.#signatures.removeIfExists(path)),
+    ])
 
     return response.ok({ message: 'Agence supprimée définitivement.' })
   }
@@ -351,6 +371,10 @@ export default class AgenciesController {
         payload.canUseCustomLogo === undefined
           ? agency.canUseCustomLogo
           : payload.canUseCustomLogo,
+      canUseCustomSignature:
+        payload.canUseCustomSignature === undefined
+          ? agency.canUseCustomSignature
+          : payload.canUseCustomSignature,
       cityId: payload.cityId === undefined ? agency.cityId : payload.cityId,
       publishOnMarketplace:
         payload.publishOnMarketplace === undefined
@@ -473,6 +497,90 @@ export default class AgenciesController {
       })
     }
     return this.#logos.streamFile(response, settings.logoPendingPath)
+  }
+
+  async approveSignature({ params, serialize }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    if (!agency.canUseCustomSignature) {
+      throw new Exception('Activez d’abord la signature personnalisée pour cette agence.', {
+        status: 422,
+        code: 'E_AGENCY_SIGNATURE_DISABLED',
+      })
+    }
+
+    const settings = await Setting.current(agency.id)
+    if (!settings.signaturePendingPath) {
+      throw new Exception('Aucune signature en attente de validation.', {
+        status: 422,
+        code: 'E_AGENCY_SIGNATURE_NO_PENDING',
+      })
+    }
+
+    const previousApproved = settings.signaturePath
+    const pending = settings.signaturePendingPath
+    settings.signaturePath = pending
+    settings.signaturePendingPath = null
+    settings.signatureRejectionReason = null
+    await settings.save()
+
+    if (previousApproved && previousApproved !== pending) {
+      await this.#signatures.removeIfExists(previousApproved)
+    }
+
+    return serialize({
+      agency: AgencyTransformer.transform(agency),
+      branding: this.#brandingPayload(agency, settings),
+      message: 'Signature approuvée.',
+    })
+  }
+
+  async rejectSignature({ params, request, serialize }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const payload = await request.validateUsing(rejectAgencySignatureValidator)
+    const settings = await Setting.current(agency.id)
+
+    if (!settings.signaturePendingPath) {
+      throw new Exception('Aucune signature en attente de validation.', {
+        status: 422,
+        code: 'E_AGENCY_SIGNATURE_NO_PENDING',
+      })
+    }
+
+    await this.#signatures.removeIfExists(settings.signaturePendingPath)
+    settings.signaturePendingPath = null
+    settings.signatureRejectionReason =
+      payload.reason?.trim() || 'Signature refusée. Merci de soumettre un autre fichier.'
+    await settings.save()
+
+    return serialize({
+      agency: AgencyTransformer.transform(agency),
+      branding: this.#brandingPayload(agency, settings),
+      message: 'Signature refusée.',
+    })
+  }
+
+  async signatureFile({ params, response }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const settings = await Setting.current(agency.id)
+    if (!settings.signaturePath) {
+      throw new Exception('Aucune signature approuvée.', {
+        status: 404,
+        code: 'E_AGENCY_SIGNATURE',
+      })
+    }
+    return this.#signatures.streamFile(response, settings.signaturePath)
+  }
+
+  async pendingSignatureFile({ params, response }: HttpContext) {
+    const agency = await Agency.findOrFail(params.id)
+    const settings = await Setting.current(agency.id)
+    if (!settings.signaturePendingPath) {
+      throw new Exception('Aucune signature en attente.', {
+        status: 404,
+        code: 'E_AGENCY_SIGNATURE_PENDING',
+      })
+    }
+    return this.#signatures.streamFile(response, settings.signaturePendingPath)
   }
 
   /**
