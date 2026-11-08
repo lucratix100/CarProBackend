@@ -330,6 +330,30 @@ const routes = {
     tokens: [{"old":"/api/v1/homepage-banners/:id","type":0,"val":"api","end":""},{"old":"/api/v1/homepage-banners/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/homepage-banners/:id","type":0,"val":"homepage-banners","end":""},{"old":"/api/v1/homepage-banners/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['homepage_banners.homepage_banners.destroy']['types'],
   },
+  'marketplace_accounts.marketplace_accounts.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace-accounts',
+    tokens: [{"old":"/api/v1/marketplace-accounts","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-accounts","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-accounts","type":0,"val":"marketplace-accounts","end":""}],
+    types: placeholder as Registry['marketplace_accounts.marketplace_accounts.index']['types'],
+  },
+  'marketplace_accounts.marketplace_accounts.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/marketplace-accounts/:id',
+    tokens: [{"old":"/api/v1/marketplace-accounts/:id","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-accounts/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-accounts/:id","type":0,"val":"marketplace-accounts","end":""},{"old":"/api/v1/marketplace-accounts/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['marketplace_accounts.marketplace_accounts.show']['types'],
+  },
+  'marketplace_accounts.marketplace_accounts.update_status': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/marketplace-accounts/:id/status',
+    tokens: [{"old":"/api/v1/marketplace-accounts/:id/status","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-accounts/:id/status","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-accounts/:id/status","type":0,"val":"marketplace-accounts","end":""},{"old":"/api/v1/marketplace-accounts/:id/status","type":1,"val":"id","end":""},{"old":"/api/v1/marketplace-accounts/:id/status","type":0,"val":"status","end":""}],
+    types: placeholder as Registry['marketplace_accounts.marketplace_accounts.update_status']['types'],
+  },
+  'platform_analytics.platform_analytics.overview': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/platform-analytics/overview',
+    tokens: [{"old":"/api/v1/platform-analytics/overview","type":0,"val":"api","end":""},{"old":"/api/v1/platform-analytics/overview","type":0,"val":"v1","end":""},{"old":"/api/v1/platform-analytics/overview","type":0,"val":"platform-analytics","end":""},{"old":"/api/v1/platform-analytics/overview","type":0,"val":"overview","end":""}],
+    types: placeholder as Registry['platform_analytics.platform_analytics.overview']['types'],
+  },
   'owners.owners.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/owners',

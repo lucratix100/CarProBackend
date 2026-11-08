@@ -655,6 +655,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/homepage_banners_controller').default['destroy']>>>
     }
   }
+  'marketplace_accounts.marketplace_accounts.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace-accounts'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: ExtractQueryForGet<InferInput<(typeof import('#validators/marketplace_account').listMarketplaceAccountsValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['index']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'marketplace_accounts.marketplace_accounts.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/marketplace-accounts/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['show']>>>
+    }
+  }
+  'marketplace_accounts.marketplace_accounts.update_status': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/marketplace-accounts/:id/status'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/marketplace_account').updateMarketplaceAccountStatusValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/marketplace_account').updateMarketplaceAccountStatusValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['updateStatus']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_accounts_controller').default['updateStatus']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'platform_analytics.platform_analytics.overview': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/platform-analytics/overview'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/platform_analytics_controller').default['overview']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/platform_analytics_controller').default['overview']>>>
+    }
+  }
   'owners.owners.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/owners'

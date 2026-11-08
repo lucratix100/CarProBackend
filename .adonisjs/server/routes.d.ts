@@ -58,6 +58,10 @@ export type ScannedRoutes = {
     'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'homepage_banners.homepage_banners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'homepage_banners.homepage_banners.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace_accounts.marketplace_accounts.index': { paramsTuple?: []; params?: {} }
+    'marketplace_accounts.marketplace_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace_accounts.marketplace_accounts.update_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'platform_analytics.platform_analytics.overview': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.store': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -239,6 +243,9 @@ export type ScannedRoutes = {
     'homepage_banners.homepage_banners.admin_index': { paramsTuple?: []; params?: {} }
     'homepage_banners.homepage_banners.admin_image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace_accounts.marketplace_accounts.index': { paramsTuple?: []; params?: {} }
+    'marketplace_accounts.marketplace_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'platform_analytics.platform_analytics.overview': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -342,6 +349,9 @@ export type ScannedRoutes = {
     'homepage_banners.homepage_banners.admin_index': { paramsTuple?: []; params?: {} }
     'homepage_banners.homepage_banners.admin_image_file': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'homepage_banners.homepage_banners.admin_show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace_accounts.marketplace_accounts.index': { paramsTuple?: []; params?: {} }
+    'marketplace_accounts.marketplace_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'platform_analytics.platform_analytics.overview': { paramsTuple?: []; params?: {} }
     'owners.owners.index': { paramsTuple?: []; params?: {} }
     'owners.owners.statement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -520,6 +530,7 @@ export type ScannedRoutes = {
   PATCH: {
     'agencies.agencies.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'homepage_banners.homepage_banners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'marketplace_accounts.marketplace_accounts.update_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'owners.owners.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicles.vehicles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'vehicle_expenses.vehicle_expenses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

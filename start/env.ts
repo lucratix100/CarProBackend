@@ -55,4 +55,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   VAPID_PUBLIC_KEY: Env.schema.string.optional(),
   VAPID_PRIVATE_KEY: Env.schema.string.optional(),
   VAPID_SUBJECT: Env.schema.string.optional(),
+
+  // Analytics externe (Plausible) — trafic web ; métriques métier restent en DB
+  PLAUSIBLE_DOMAIN: Env.schema.string.optional(),
+  PLAUSIBLE_DASHBOARD_URL: Env.schema.string.optional(),
 })

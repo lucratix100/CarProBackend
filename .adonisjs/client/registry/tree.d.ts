@@ -96,6 +96,18 @@ export interface ApiDefinition {
       destroy: typeof routes['homepage_banners.homepage_banners.destroy']
     }
   }
+  marketplaceAccounts: {
+    marketplaceAccounts: {
+      index: typeof routes['marketplace_accounts.marketplace_accounts.index']
+      show: typeof routes['marketplace_accounts.marketplace_accounts.show']
+      updateStatus: typeof routes['marketplace_accounts.marketplace_accounts.update_status']
+    }
+  }
+  platformAnalytics: {
+    platformAnalytics: {
+      overview: typeof routes['platform_analytics.platform_analytics.overview']
+    }
+  }
   owners: {
     owners: {
       index: typeof routes['owners.owners.index']

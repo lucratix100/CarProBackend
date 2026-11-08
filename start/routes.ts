@@ -163,6 +163,30 @@ router
       .use([middleware.auth(), middleware.superAdmin()])
 
     /**
+     * Super-admin: comptes marketplace inscrits
+     */
+    router
+      .group(() => {
+        router.get('/', [controllers.MarketplaceAccounts, 'index'])
+        router.get('/:id', [controllers.MarketplaceAccounts, 'show'])
+        router.patch('/:id/status', [controllers.MarketplaceAccounts, 'updateStatus'])
+      })
+      .prefix('marketplace-accounts')
+      .as('marketplace_accounts')
+      .use([middleware.auth(), middleware.superAdmin()])
+
+    /**
+     * Super-admin: métriques métier (+ config Plausible)
+     */
+    router
+      .group(() => {
+        router.get('/overview', [controllers.PlatformAnalytics, 'overview'])
+      })
+      .prefix('platform-analytics')
+      .as('platform_analytics')
+      .use([middleware.auth(), middleware.superAdmin()])
+
+    /**
      * Admin-only resources (gérant + collaborateurs avec permissions)
      */
     router
