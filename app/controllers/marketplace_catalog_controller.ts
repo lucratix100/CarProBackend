@@ -136,6 +136,7 @@ export default class MarketplaceCatalogController {
     const endDate = request.input('endDate')
     const fuel = request.input('fuel')
     const vehicleType = request.input('vehicleType')
+    const agencyId = request.input('agencyId')
     const minPrice = request.input('minPrice')
     const maxPrice = request.input('maxPrice')
     const q = request.input('q')
@@ -176,6 +177,7 @@ export default class MarketplaceCatalogController {
     }
     if (fuel) query.where('fuel', fuel)
     if (vehicleType) query.where('vehicleType', vehicleType)
+    if (agencyId) query.where('agencyId', Number(agencyId))
     const priceColumn = isSaleCatalog ? 'salePrice' : 'dailyPrice'
     if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
       query.where(priceColumn, '>=', Number(minPrice))

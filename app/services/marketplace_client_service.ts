@@ -146,7 +146,7 @@ export default class MarketplaceClientService {
     if (payload.phone) {
       const match = await this.findMatch({ phone: payload.phone })
       if (match && match.id !== client.id) {
-        throw new Exception('Ce numéro de téléphone est déjà utilisé par un autre client.', {
+        throw new Exception('Numéro invalide ou déjà utilisé.', {
           status: 422,
           code: 'E_PHONE_TAKEN',
         })
