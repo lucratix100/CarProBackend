@@ -87,10 +87,16 @@ export default class PlatformAnalyticsController {
       },
       signupsByDay,
       webTraffic: {
-        provider: 'plausible',
-        configured: Boolean(env.get('PLAUSIBLE_DOMAIN')),
-        domain: env.get('PLAUSIBLE_DOMAIN') ?? null,
-        dashboardUrl: env.get('PLAUSIBLE_DASHBOARD_URL') ?? null,
+        plausible: {
+          configured: Boolean(env.get('PLAUSIBLE_DOMAIN')),
+          domain: env.get('PLAUSIBLE_DOMAIN') ?? null,
+          dashboardUrl: env.get('PLAUSIBLE_DASHBOARD_URL') ?? null,
+        },
+        ga: {
+          configured: Boolean(env.get('GA_MEASUREMENT_ID')),
+          measurementId: env.get('GA_MEASUREMENT_ID') ?? null,
+          dashboardUrl: env.get('GA_DASHBOARD_URL') ?? null,
+        },
       },
     })
   }

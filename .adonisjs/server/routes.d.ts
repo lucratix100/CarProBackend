@@ -217,6 +217,10 @@ export type ScannedRoutes = {
     'marketplace.marketplace_favorite.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.update_notify': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
     'marketplace.marketplace_favorite.destroy': { paramsTuple: [ParamValue]; params: {'vehicleId': ParamValue} }
+    'marketplace.marketplace_interest.index': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.ids': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.store': { paramsTuple?: []; params?: {} }
+    'marketplace_interests.marketplace_interest.agency_index': { paramsTuple?: []; params?: {} }
     'cities.index': { paramsTuple?: []; params?: {} }
     'vehicle_types.index': { paramsTuple?: []; params?: {} }
   }
@@ -323,6 +327,9 @@ export type ScannedRoutes = {
     'marketplace.marketplace_sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.index': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.ids': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.index': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.ids': { paramsTuple?: []; params?: {} }
+    'marketplace_interests.marketplace_interest.agency_index': { paramsTuple?: []; params?: {} }
     'cities.index': { paramsTuple?: []; params?: {} }
     'vehicle_types.index': { paramsTuple?: []; params?: {} }
   }
@@ -429,6 +436,9 @@ export type ScannedRoutes = {
     'marketplace.marketplace_sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.index': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_favorite.ids': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.index': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.ids': { paramsTuple?: []; params?: {} }
+    'marketplace_interests.marketplace_interest.agency_index': { paramsTuple?: []; params?: {} }
     'cities.index': { paramsTuple?: []; params?: {} }
     'vehicle_types.index': { paramsTuple?: []; params?: {} }
   }
@@ -506,6 +516,7 @@ export type ScannedRoutes = {
     'marketplace.marketplace_sales.store': { paramsTuple?: []; params?: {} }
     'marketplace.marketplace_sales.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'marketplace.marketplace_favorite.store': { paramsTuple?: []; params?: {} }
+    'marketplace.marketplace_interest.store': { paramsTuple?: []; params?: {} }
   }
   DELETE: {
     'push.push_subscriptions.unsubscribe': { paramsTuple?: []; params?: {} }

@@ -27,3 +27,4 @@ yarn-error.log
 
 storage/uploads/*
 !storage/uploads/.gitkeep
+storage/secrets/

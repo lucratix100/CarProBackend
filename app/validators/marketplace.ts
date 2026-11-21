@@ -49,6 +49,12 @@ export const marketplaceFavoriteNotifyValidator = vine.create({
   notifyAvailable: vine.boolean(),
 })
 
+export const marketplaceInterestValidator = vine.create({
+  vehicleId: vine.number().positive(),
+  phone: vine.string().trim().minLength(5).maxLength(40).optional(),
+  message: vine.string().trim().maxLength(500).optional(),
+})
+
 export const MARKETPLACE_REPORT_REASONS = [
   'misleading',
   'unavailable',
