@@ -6,7 +6,6 @@ export const ADMIN_NOTIFICATION_TYPES = {
   VEHICLE_COMPLIANCE_HOLD: 'vehicle_compliance_hold',
   MARKETPLACE_BOOKING_REQUEST: 'marketplace_booking_request',
   MARKETPLACE_BOOKING_CANCELLED: 'marketplace_booking_cancelled',
-  MARKETPLACE_INTEREST: 'marketplace_interest',
   MARKETPLACE_REPORT: 'marketplace_report',
   MARKETPLACE_PUBLICATION_APPROVED: 'marketplace_publication_approved',
   MARKETPLACE_PUBLICATION_REJECTED: 'marketplace_publication_rejected',

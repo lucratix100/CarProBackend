@@ -56,15 +56,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   VAPID_PRIVATE_KEY: Env.schema.string.optional(),
   VAPID_SUBJECT: Env.schema.string.optional(),
 
-  // Analytics externe — trafic web ; métriques métier restent en DB
+  // Analytics externe (Plausible) — trafic web ; métriques métier restent en DB
   PLAUSIBLE_DOMAIN: Env.schema.string.optional(),
   PLAUSIBLE_DASHBOARD_URL: Env.schema.string.optional(),
-  GA_MEASUREMENT_ID: Env.schema.string.optional(),
-  GA_DASHBOARD_URL: Env.schema.string.optional(),
-
-  // Google Document AI — lecture des pièces. Sans ces clés, le scan reste sur Tesseract.
-  DOCUMENT_AI_PROJECT_ID: Env.schema.string.optional(),
-  DOCUMENT_AI_LOCATION: Env.schema.string.optional(),
-  DOCUMENT_AI_PROCESSOR_ID: Env.schema.string.optional(),
-  DOCUMENT_AI_CREDENTIALS: Env.schema.string.optional(),
 })

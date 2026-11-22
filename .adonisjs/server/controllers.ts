@@ -21,7 +21,6 @@ export const controllers = {
   MarketplaceBookings: () => import('#controllers/marketplace_bookings_controller'),
   MarketplaceCatalog: () => import('#controllers/marketplace_catalog_controller'),
   MarketplaceFavorite: () => import('#controllers/marketplace_favorite_controller'),
-  MarketplaceInterest: () => import('#controllers/marketplace_interest_controller'),
   MarketplacePublications: () => import('#controllers/marketplace_publications_controller'),
   MarketplaceReport: () => import('#controllers/marketplace_report_controller'),
   MarketplaceReview: () => import('#controllers/marketplace_review_controller'),

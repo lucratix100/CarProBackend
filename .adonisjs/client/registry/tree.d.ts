@@ -356,16 +356,6 @@ export interface ApiDefinition {
       updateNotify: typeof routes['marketplace.marketplace_favorite.update_notify']
       destroy: typeof routes['marketplace.marketplace_favorite.destroy']
     }
-    marketplaceInterest: {
-      index: typeof routes['marketplace.marketplace_interest.index']
-      ids: typeof routes['marketplace.marketplace_interest.ids']
-      store: typeof routes['marketplace.marketplace_interest.store']
-    }
-  }
-  marketplaceInterests: {
-    marketplaceInterest: {
-      agencyIndex: typeof routes['marketplace_interests.marketplace_interest.agency_index']
-    }
   }
   cities: {
     index: typeof routes['cities.index']

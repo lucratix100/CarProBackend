@@ -6,7 +6,6 @@ import { Exception } from '@adonisjs/core/exceptions'
 import Vehicle from '#models/vehicle'
 import VehicleSale from '#models/vehicle_sale'
 import VehiclePhoto from '#models/vehicle_photo'
-import MarketplaceFavorite from '#models/marketplace_favorite'
 import Owner from '#models/owner'
 import Marque from '#models/marque'
 import Modele from '#models/modele'
@@ -281,26 +280,6 @@ export default class VehiclesController {
     return { ...row, sale: sales.get(Number(row.id)) ?? null }
   }
 
-  async #likesByVehicle(vehicleIds: number[]) {
-    const unique = [...new Set(vehicleIds.filter(Boolean))]
-    const map = new Map<number, number>()
-    if (unique.length === 0) return map
-    const rows = await MarketplaceFavorite.query()
-      .whereIn('vehicleId', unique)
-      .groupBy('vehicle_id')
-      .select('vehicle_id')
-      .count('* as total')
-    for (const row of rows) {
-      map.set(Number(row.vehicleId), Number(row.$extras.total ?? 0))
-    }
-    return map
-  }
-
-  #withLikes(row: Record<string, unknown>, likes: Map<number, number>) {
-    const id = Number(row.id)
-    return { ...row, likesCount: likes.get(id) ?? 0 }
-  }
-
   async index({ request, serialize, agencyId }: HttpContext) {
     const status = request.input('status')
     const ownerId = request.input('ownerId')
@@ -311,12 +290,10 @@ export default class VehiclesController {
     if (!isPaginatedRequest(request)) {
       const vehicles = await this.#vehicleListQuery(agencyId!, filters).orderBy('id', 'desc')
       const rows = await Promise.all(vehicles.map((vehicle) => this.#withPhotos(vehicle, serialize)))
-      const ids = rows.map((row) => Number((row as unknown as Record<string, unknown>).id))
-      const sales = await this.#saleByVehicle(ids)
-      const likes = await this.#likesByVehicle(ids)
-      return rows.map((row) =>
-        this.#withLikes(this.#withSale(row as unknown as Record<string, unknown>, sales), likes)
+      const sales = await this.#saleByVehicle(
+        rows.map((row) => Number((row as unknown as Record<string, unknown>).id))
       )
+      return rows.map((row) => this.#withSale(row as unknown as Record<string, unknown>, sales))
     }
 
     const { page, perPage } = readPage(request)
@@ -326,14 +303,12 @@ export default class VehiclesController {
     const data = await Promise.all(
       paginator.all().map((vehicle) => this.#withPhotos(vehicle, serialize))
     )
-    const ids = data.map((row) => Number((row as unknown as Record<string, unknown>).id))
-    const sales = await this.#saleByVehicle(ids)
-    const likes = await this.#likesByVehicle(ids)
+    const sales = await this.#saleByVehicle(
+      data.map((row) => Number((row as unknown as Record<string, unknown>).id))
+    )
 
     return {
-      data: data.map((row) =>
-        this.#withLikes(this.#withSale(row as unknown as Record<string, unknown>, sales), likes)
-      ),
+      data: data.map((row) => this.#withSale(row as unknown as Record<string, unknown>, sales)),
       meta: paginationMeta(paginator, page, perPage),
       summary: await this.#catalogSummary(agencyId!, filters),
     }
@@ -482,9 +457,7 @@ export default class VehiclesController {
 
   async show({ params, serialize, agencyId }: HttpContext) {
     const vehicle = await this.#loadVehicle(params.id, agencyId!)
-    const row = await this.#withPhotos(vehicle, serialize)
-    const likes = await this.#likesByVehicle([vehicle.id])
-    return this.#withLikes(row as unknown as Record<string, unknown>, likes)
+    return this.#withPhotos(vehicle, serialize)
   }
 
   async uploadPhotos({ params, request, response, serialize, agencyId }: HttpContext) {

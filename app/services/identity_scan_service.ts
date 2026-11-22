@@ -4,7 +4,6 @@ import { Exception } from '@adonisjs/core/exceptions'
 import type { MultipartFile } from '@adonisjs/bodyparser/types'
 import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
-import { recognizeWithDocumentAi } from '#services/document_ai_ocr_service'
 
 export type IdentityDocumentType = 'cni' | 'passport' | 'driving_license' | 'unknown'
 
@@ -881,15 +880,6 @@ export default class IdentityScanService {
   }
 
   async scanBuffer(buffer: Buffer): Promise<IdentityScanResult> {
-    try {
-      const google = await recognizeWithDocumentAi(buffer)
-      if (google && google.text.trim().length >= 20) {
-        return this.parseOcrText(google.text, google.confidence)
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Document AI indisponible'
-      console.warn(`[scan] Document AI ignoré, repli Tesseract: ${message}`)
-    }
     return this.#enqueue(() => this.#recognize(buffer))
   }
 

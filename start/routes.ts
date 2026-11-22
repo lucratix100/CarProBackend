@@ -694,25 +694,11 @@ router
             router.post('favorites', [controllers.MarketplaceFavorite, 'store'])
             router.patch('favorites/:vehicleId', [controllers.MarketplaceFavorite, 'updateNotify'])
             router.delete('favorites/:vehicleId', [controllers.MarketplaceFavorite, 'destroy'])
-            router.get('interests', [controllers.MarketplaceInterest, 'index'])
-            router.get('interests/ids', [controllers.MarketplaceInterest, 'ids'])
-            router.post('interests', [controllers.MarketplaceInterest, 'store'])
           })
           .use(middleware.marketplaceAuth())
       })
       .prefix('marketplace')
       .as('marketplace')
-
-    /**
-     * Leads « intéressé » marketplace (agence)
-     */
-    router
-      .group(() => {
-        router.get('/', [controllers.MarketplaceInterest, 'agencyIndex'])
-      })
-      .prefix('marketplace-interests')
-      .as('marketplace_interests')
-      .use([middleware.auth(), middleware.admin()])
 
     /**
      * Cities reference (super-admin + shared)

@@ -2563,54 +2563,6 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_favorite_controller').default['destroy']>>>
     }
   }
-  'marketplace.marketplace_interest.index': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/marketplace/interests'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['index']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['index']>>>
-    }
-  }
-  'marketplace.marketplace_interest.ids': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/marketplace/interests/ids'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['ids']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['ids']>>>
-    }
-  }
-  'marketplace.marketplace_interest.store': {
-    methods: ["POST"]
-    pattern: '/api/v1/marketplace/interests'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/marketplace').marketplaceInterestValidator)>>
-      paramsTuple: []
-      params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/marketplace').marketplaceInterestValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['store']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'marketplace_interests.marketplace_interest.agency_index': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/marketplace-interests'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['agencyIndex']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/marketplace_interest_controller').default['agencyIndex']>>>
-    }
-  }
   'cities.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/cities'

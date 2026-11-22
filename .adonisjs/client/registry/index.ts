@@ -1284,30 +1284,6 @@ const routes = {
     tokens: [{"old":"/api/v1/marketplace/favorites/:vehicleId","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/favorites/:vehicleId","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/favorites/:vehicleId","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/favorites/:vehicleId","type":0,"val":"favorites","end":""},{"old":"/api/v1/marketplace/favorites/:vehicleId","type":1,"val":"vehicleId","end":""}],
     types: placeholder as Registry['marketplace.marketplace_favorite.destroy']['types'],
   },
-  'marketplace.marketplace_interest.index': {
-    methods: ["GET","HEAD"],
-    pattern: '/api/v1/marketplace/interests',
-    tokens: [{"old":"/api/v1/marketplace/interests","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"interests","end":""}],
-    types: placeholder as Registry['marketplace.marketplace_interest.index']['types'],
-  },
-  'marketplace.marketplace_interest.ids': {
-    methods: ["GET","HEAD"],
-    pattern: '/api/v1/marketplace/interests/ids',
-    tokens: [{"old":"/api/v1/marketplace/interests/ids","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/interests/ids","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/interests/ids","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/interests/ids","type":0,"val":"interests","end":""},{"old":"/api/v1/marketplace/interests/ids","type":0,"val":"ids","end":""}],
-    types: placeholder as Registry['marketplace.marketplace_interest.ids']['types'],
-  },
-  'marketplace.marketplace_interest.store': {
-    methods: ["POST"],
-    pattern: '/api/v1/marketplace/interests',
-    tokens: [{"old":"/api/v1/marketplace/interests","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"marketplace","end":""},{"old":"/api/v1/marketplace/interests","type":0,"val":"interests","end":""}],
-    types: placeholder as Registry['marketplace.marketplace_interest.store']['types'],
-  },
-  'marketplace_interests.marketplace_interest.agency_index': {
-    methods: ["GET","HEAD"],
-    pattern: '/api/v1/marketplace-interests',
-    tokens: [{"old":"/api/v1/marketplace-interests","type":0,"val":"api","end":""},{"old":"/api/v1/marketplace-interests","type":0,"val":"v1","end":""},{"old":"/api/v1/marketplace-interests","type":0,"val":"marketplace-interests","end":""}],
-    types: placeholder as Registry['marketplace_interests.marketplace_interest.agency_index']['types'],
-  },
   'cities.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/cities',

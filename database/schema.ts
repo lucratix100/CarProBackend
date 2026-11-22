@@ -396,31 +396,6 @@ export class MarketplaceFavoriteSchema extends BaseModel {
   declare vehicleId: number
 }
 
-export class MarketplaceInterestSchema extends BaseModel {
-  static $columns = ['agencyId', 'clientAccountId', 'clientName', 'clientPhone', 'createdAt', 'id', 'message', 'notifiedAt', 'updatedAt', 'vehicleId'] as const
-  $columns = MarketplaceInterestSchema.$columns
-  @column()
-  declare agencyId: number
-  @column()
-  declare clientAccountId: number
-  @column()
-  declare clientName: string | null
-  @column()
-  declare clientPhone: string | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare message: string | null
-  @column.dateTime()
-  declare notifiedAt: DateTime | null
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
-  @column()
-  declare vehicleId: number
-}
-
 export class MarketplacePublicationEventSchema extends BaseModel {
   static $columns = ['action', 'actorUserId', 'agencyId', 'createdAt', 'id', 'reason', 'vehicleId'] as const
   $columns = MarketplacePublicationEventSchema.$columns
