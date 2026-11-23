@@ -30,6 +30,7 @@ export const MARKETPLACE_PUBLICATION_EVENT_ACTIONS = [
   'unpublished',
   'rereview_requested',
   'agency_unpublished',
+  'cover_updated',
 ] as const
 
 export type MarketplacePublicationEventAction =
@@ -45,6 +46,7 @@ export const MARKETPLACE_PUBLICATION_EVENT_LABELS: Record<
   unpublished: 'Retirée (mobiprofil)',
   rereview_requested: 'Re-revue demandée',
   agency_unpublished: 'Retirée (agence)',
+  cover_updated: 'Couverture modifiée',
 }
 
 /** Nombre de refus consécutifs avant frein temporaire. */

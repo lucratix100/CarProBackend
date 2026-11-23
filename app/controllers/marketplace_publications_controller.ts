@@ -20,6 +20,7 @@ import {
   bulkApproveMarketplacePublicationsValidator,
   listMarketplacePublicationsValidator,
   rejectMarketplacePublicationValidator,
+  setCoverMarketplacePublicationValidator,
 } from '#validators/marketplace_publication'
 import {
   listMarketplaceBoostsValidator,
@@ -318,6 +319,35 @@ export default class MarketplacePublicationsController {
     return response.ok({
       ...(await this.#serializeVehicle(vehicle)),
       message: 'Véhicule publié sur le catalogue.',
+    })
+  }
+
+  async setCover({ params, request, auth, response }: HttpContext) {
+    const reviewer = auth.use('api').getUserOrFail()
+    const payload = await request.validateUsing(setCoverMarketplacePublicationValidator)
+    const vehicle = await Vehicle.query().where('id', params.id).firstOrFail()
+
+    const photosCount = await VehiclePhoto.query().where('vehicleId', vehicle.id).count('* as total')
+    if (Number(photosCount[0]?.$extras?.total ?? 0) === 0) {
+      throw new Exception('Aucune photo disponible pour ce véhicule.', {
+        status: 422,
+        code: 'E_PHOTOS_REQUIRED',
+      })
+    }
+
+    await this.#setCoverPhoto(vehicle, payload.coverPhotoId)
+    await vehicle.save()
+
+    await this.#moderation.logEvent({
+      vehicle,
+      action: 'cover_updated',
+      actorUserId: reviewer.id,
+    })
+
+    await vehicle.load('agency', (aq) => aq.preload('city'))
+    return response.ok({
+      ...(await this.#serializeVehicle(vehicle, true)),
+      message: 'Photo de couverture mise à jour.',
     })
   }
 

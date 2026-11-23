@@ -114,6 +114,7 @@ router
         router.get('/:id/history', [controllers.MarketplacePublications, 'history'])
         router.get('/:id', [controllers.MarketplacePublications, 'show'])
         router.post('/:id/approve', [controllers.MarketplacePublications, 'approve'])
+        router.post('/:id/cover', [controllers.MarketplacePublications, 'setCover'])
         router.post('/:id/reject', [controllers.MarketplacePublications, 'reject'])
         router.post('/:id/unpublish', [controllers.MarketplacePublications, 'unpublish'])
         router.post('/:id/boost/approve', [controllers.MarketplacePublications, 'approveBoost'])

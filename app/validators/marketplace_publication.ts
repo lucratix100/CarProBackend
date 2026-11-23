@@ -9,6 +9,10 @@ export const approveMarketplacePublicationValidator = vine.create({
   coverPhotoId: vine.number().positive(),
 })
 
+export const setCoverMarketplacePublicationValidator = vine.create({
+  coverPhotoId: vine.number().positive(),
+})
+
 export const listMarketplacePublicationsValidator = vine.create({
   status: vine.enum(MARKETPLACE_PUBLICATION_STATUSES).optional(),
   agencyId: vine.number().positive().optional(),
